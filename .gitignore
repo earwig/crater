@@ -1,3 +1,5 @@
 build
 roms/*
 !roms/README
+crater
+crater-dev
