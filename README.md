@@ -25,6 +25,19 @@ Only OS X and Linux are tested. You'll need a decent compiler that supports C11
 (gcc, clang) and SDL 2. Using Homebrew, you can `brew install sdl2`; using apt,
 you can `apt-get install libsdl2-dev`.
 
-Run `make` and then `./crater`. To build the development version with debug
-symbols (they can exist simultaneously), run `make DEBUG=1` and then
+Run `make` to create `./crater`. To build the development version with debug
+symbols (they can exist simultaneously), run `make DEBUG=1`, which creates
 `./crater-dev`.
+
+Usage
+-----
+
+Running `./crater`  without arguments will display a list of ROM images located
+in the `roms/` directory, and then ask the user to pick one, or enter their own
+ROM path. You can provide a path directly with `./crater path/to/rom`.
+
+Add or symlink ROMs to `roms/` at your leisure. Note that they should end in
+`.gg` or `.bin`.
+
+`./crater -h` gives (fairly basic) command-line usage, and `./crater -v` gives
+the current version.

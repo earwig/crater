@@ -4,5 +4,6 @@
 #pragma once
 
 typedef struct {
-    int pc;
-} register_type;
+    char* name;
+    char* data;
+} rom_type;

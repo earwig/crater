@@ -3,6 +3,4 @@
 
 #pragma once
 
-typedef struct {
-    int pc;
-} register_type;
+#define CRATER_VERSION "0.1.dev"

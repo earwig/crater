@@ -3,6 +3,4 @@
 
 #pragma once
 
-typedef struct {
-    int pc;
-} register_type;
+void out_of_memory();
