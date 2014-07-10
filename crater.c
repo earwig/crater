@@ -16,7 +16,7 @@
 #define ROMS_DIR "roms"
 
 /* Print command-line help/usage. */
-static void print_help(char *arg1)
+static void print_help(const char *arg1)
 {
     printf("%s [--help|-h] [--version|-v] [rom_path]\n", arg1);
 }
@@ -54,7 +54,7 @@ static void parse_args(int argc, char *argv[])
 }
 
 /* Return whether the given string ends with the given suffix. */
-static bool ends_with(char *input, char *suffix)
+static bool ends_with(const char *input, const char *suffix)
 {
     size_t ilen = strlen(input), slen = strlen(suffix);
 
@@ -156,9 +156,11 @@ int main(int argc, char *argv[])
         else
             FATAL_ERRNO("couldn't load ROM image '%s'", rom_path)
     }
-    printf("Loaded ROM image: %s.\n", rom_path);
     if (argc <= 1)
         free(rom_path);
+    printf("Loaded ROM image: %s.\n", rom->name);
+
+    // TODO: start from here
 
     close_rom(rom);
     return 0;

@@ -3,6 +3,11 @@
 
 #pragma once
 
+/* Clock speed in Hz was taken from the official Sega GG documentation */
+#define CLOCK_SPEED 3579545
+
+/* Structs */
+
 typedef struct {
     int pc;
-} register_type;
+} z80_type;

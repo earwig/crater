@@ -3,12 +3,13 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "rom.h"
 
 /* Create and return a ROM object located at the given path. Return NULL if
    there was an error; errno will be set appropriately. */
-rom_type* open_rom(char *path)
+rom_type* open_rom(const char *path)
 {
     rom_type *rom;
     FILE* fp;
@@ -17,9 +18,12 @@ rom_type* open_rom(char *path)
         return NULL;
     if (!(rom = malloc(sizeof(rom_type))))
         return NULL;
+    rom->name = malloc(sizeof(char) * (strlen(path) + 1));
+    strcpy(rom->name, path);
 
     // load data from file into a buffer
 
+    fclose(fp);
     return rom;
 }
 
