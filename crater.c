@@ -48,8 +48,7 @@ static void parse_args(int argc, char *argv[])
             print_version();
             exit(0);
         } else {
-            printf("Error: unknown argument: %s\n", argv[i]);
-            exit(1);
+            FATAL("unknown argument: %s", argv[i])
         }
     }
 }
@@ -65,7 +64,7 @@ static bool ends_with(char *input, char *suffix)
 }
 
 /* Load all potential ROM files in roms/ into a data structure. */
-static int load_rom_paths(char ***path_ptr)
+static int get_rom_paths(char ***path_ptr)
 {
     DIR *dirp;
     struct dirent *entry;
@@ -76,19 +75,19 @@ static int load_rom_paths(char ***path_ptr)
     if (dirp) {
         paths = malloc(sizeof(char*) * psize);
         if (!paths)
-            out_of_memory();
+            OUT_OF_MEMORY()
         while ((entry = readdir(dirp))) {
             path = entry->d_name;
             if (ends_with(path, ".gg") || ends_with(path, ".bin")) {
                 if (npaths >= psize) {
                     paths = realloc(paths, sizeof(char*) * (psize *= 2));
                     if (!paths)
-                        out_of_memory();
+                        OUT_OF_MEMORY()
                 }
                 paths[npaths] = malloc(sizeof(char*) *
                         (strlen(path) + strlen(ROMS_DIR) + 1));
                 if (!paths[npaths])
-                    out_of_memory();
+                    OUT_OF_MEMORY()
                 strcpy(paths[npaths], ROMS_DIR "/");
                 strcat(paths[npaths], path);
                 npaths++;
@@ -96,18 +95,14 @@ static int load_rom_paths(char ***path_ptr)
         }
         closedir(dirp);
     } else {
-        if (errno == ENOENT)
-            printf("Warning: couldn't find roms/ directory.\n");
-        else
-            perror("Warning: couldn't open roms/ directory");
+        WARN_ERRNO("couldn't open 'roms/'")
     }
     *path_ptr = paths;
     return npaths;
 }
 
 /* Find all potential ROM files in the roms/ directory, then ask the user which
- * one they want to run.
- */
+   one they want to run. */
 static char* get_rom_path_from_user()
 {
     char **paths, *path, *input = NULL;
@@ -116,7 +111,7 @@ static char* get_rom_path_from_user()
     size_t size = 0;
     ssize_t len;
 
-    npaths = load_rom_paths(&paths);
+    npaths = get_rom_paths(&paths);
     for (i = 0; i < npaths; i++)
         printf("[%2d] %s\n", i + 1, paths[i]);
     if (npaths)
@@ -126,7 +121,7 @@ static char* get_rom_path_from_user()
 
     len = getline(&input, &size, stdin);
     if (!input)
-        out_of_memory();
+        OUT_OF_MEMORY()
     if (len > 0 && input[len - 1] == '\n')
         input[len - 1] = '\0';
     index = strtol(input, NULL, 10);
@@ -147,14 +142,24 @@ static char* get_rom_path_from_user()
 int main(int argc, char *argv[])
 {
     char *rom_path;
+    rom_type *rom;
 
     parse_args(argc, argv);
+    printf("crater: a Sega Game Gear emulator\n\n");
     rom_path = argc > 1 ? argv[1] : get_rom_path_from_user();
+    if (rom_path[0] == '\0')
+        FATAL("no image given")
 
-    // TODO: main logic hook here
-    printf("Loading ROM: %s\n", rom_path);
-
+    if (!(rom = open_rom(rom_path))) {
+        if (errno == ENOMEM)
+            OUT_OF_MEMORY()
+        else
+            FATAL_ERRNO("couldn't load ROM image '%s'", rom_path)
+    }
+    printf("Loaded ROM image: %s.\n", rom_path);
     if (argc <= 1)
         free(rom_path);
+
+    close_rom(rom);
     return 0;
 }

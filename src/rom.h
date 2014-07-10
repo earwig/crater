@@ -3,7 +3,14 @@
 
 #pragma once
 
+/* Structs */
+
 typedef struct {
     char* name;
     char* data;
 } rom_type;
+
+/* Functions */
+
+rom_type* open_rom(char*);
+void close_rom(rom_type*);
