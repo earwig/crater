@@ -150,7 +150,7 @@ int main(int argc, char *argv[])
     if (rom_path[0] == '\0')
         FATAL("no image given")
 
-    if (!(rom = open_rom(rom_path))) {
+    if (!(rom = rom_open(rom_path))) {
         if (errno == ENOMEM)
             OUT_OF_MEMORY()
         else
@@ -162,6 +162,6 @@ int main(int argc, char *argv[])
 
     // TODO: start from here
 
-    close_rom(rom);
+    rom_close(rom);
     return 0;
 }

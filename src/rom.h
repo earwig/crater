@@ -12,5 +12,5 @@ typedef struct {
 
 /* Functions */
 
-rom_type* open_rom(const char*);
-void close_rom(rom_type*);
+rom_type* rom_open(const char*);
+void rom_close(rom_type*);
