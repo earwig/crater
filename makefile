@@ -6,36 +6,37 @@ SOURCES = src
 BUILD   = build
 DEVEXT  = -dev
 
-CC     = gcc
-FLAGS  = -O2 -Wall -pedantic -std=c11
+CC     = clang
+FLAGS  = -O2 -Wall -Wextra -pedantic -std=c11
 CFLAGS = $(shell sdl2-config --cflags)
 LIBS   = $(shell sdl2-config --libs)
 MKDIR  = mkdir -p
 RM     = rm -rf
 
 MODE = release
+BNRY = $(PROGRAM)
 SRCS = $(foreach d,.,$(wildcard *.c)) $(foreach d,$(SOURCES),$(wildcard $(addprefix $(d)/*,.c)))
 OBJS = $(patsubst %.c,%.o,$(addprefix $(BUILD)/$(MODE)/,$(SRCS)))
 DEPS = $(OBJS:%.o=%.d)
 DIRS = $(sort $(dir $(OBJS)))
 
 ifdef DEBUG
-	PROGRAM := $(PROGRAM)$(DEVEXT)
-	FLAGS   += -g
-	MODE     = debug
+	BNRY  := $(BNRY)$(DEVEXT)
+	FLAGS += -g -DDEBUG_MODE
+	MODE   = debug
 endif
 
 .PHONY: all clean
 
-all: $(PROGRAM)
+all: $(BNRY)
 
 clean:
-	$(RM) $(PROGRAM) $(PROGRAM)$(DEVEXT) $(BUILD)
+	$(RM) $(BUILD) $(PROGRAM) $(PROGRAM)$(DEVEXT)
 
 $(DIRS):
 	$(MKDIR) $@
 
-$(PROGRAM): $(OBJS)
+$(BNRY): $(OBJS)
 	$(CC) $(FLAGS) $(LIBS) $(OBJS) -o $@
 
 $(OBJS): | $(DIRS)

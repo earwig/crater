@@ -22,8 +22,8 @@ Installing
 ----------
 
 Only OS X and Linux are tested. You'll need a decent compiler that supports C11
-(gcc, clang) and SDL 2. Using Homebrew, you can `brew install sdl2`; using apt,
-you can `apt-get install libsdl2-dev`.
+(clang preferred) and SDL 2. Using Homebrew, you can `brew install sdl2`; using
+apt, you can `apt-get install libsdl2-dev`.
 
 Run `make` to create `./crater`. To build the development version with debug
 symbols (they can exist simultaneously), run `make DEBUG=1`, which creates
