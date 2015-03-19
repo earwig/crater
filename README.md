@@ -11,7 +11,7 @@ Why?
 While the internet is full of emulators for retro game systems, writing one is
 nevertheless a fun learning project.
 
-Crater is named after [31 Crateris][crateris], a star that was – for a short
+crater is named after [31 Crateris][crateris], a star that was – for a short
 time in 1974 – misidentified as [a moon of Mercury][moon]. Mercury was Sega's
 codename for the Game Gear during development.
 
@@ -39,5 +39,19 @@ ROM path. You can provide a path directly with `./crater path/to/rom`.
 Add or symlink ROMs to `roms/` at your leisure. Note that they should end in
 `.gg` or `.bin`.
 
+Add `--fullscreen` (`-f`) to enable fullscreen mode, or `--scale <n>`
+(`-s <n>`) to scale the game screen by an integer factor.
+
 `./crater -h` gives (fairly basic) command-line usage, and `./crater -v` gives
 the current version.
+
+### Advanced options
+
+crater supports several advanced features. Add `--debug` (`-g`) to display
+detailed information about emulation state while running, including register
+values and memory contents. You can also pause emulation to set breakpoints and
+change state.
+
+`--assemble <input> <output>` (`-a`) converts z80 assembly source code into a
+`.gg` binary that can be run by crater. `--disassemble <input> <output>` (`-d`)
+executes the opposite operation.

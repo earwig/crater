@@ -18,7 +18,25 @@
 /* Print command-line help/usage. */
 static void print_help(const char *arg1)
 {
-    printf("%s [--help|-h] [--version|-v] [rom_path]\n", arg1);
+    printf("%s [-h] [-v] [-f] [-s <n>] [<rom_path>] ...\n"
+"\n"
+"basic options:\n"
+"    -h, --help        show this help message and exit\n"
+"    -v, --version     show crater's version number and exit\n"
+"    -f, --fullscreen  enable fullscreen mode\n"
+"    -s, --scale <n>   scale the game screen by an integer factor\n"
+"                      (applies to windowed mode only)\n"
+"    <rom_path>        path to the rom file to execute; if not given, will look\n"
+"                      in the roms/ directory and prompt the user\n"
+"\n"
+"advanced options:\n"
+"    -g, --debug       display information about emulation state while running,\n"
+"                      including register and memory values; can also pause\n"
+"                      emulation, set breakpoints, and change state\n"
+"    -a, --assemble <in> <out>     convert z80 assembly source code into a\n"
+"                                  binary file that can be run by crater\n"
+"    -d, --disassemble <in> <out>  convert a binary file into z80 assembly code\n",
+    arg1);
 }
 
 /* Print crater's version. */
@@ -47,6 +65,11 @@ static void parse_args(int argc, char *argv[])
         } else if (!strcmp(arg, "v") || !strcmp(arg, "version")) {
             print_version();
             exit(0);
+        // f   fullscreen
+        // s   scale
+        // g   debug
+        // a   assemble
+        // d   disassemble
         } else {
             FATAL("unknown argument: %s", argv[i])
         }
