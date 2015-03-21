@@ -10,4 +10,4 @@
 
 typedef struct {
     int pc;
-} z80_type;
+} Z80;

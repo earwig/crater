@@ -9,11 +9,13 @@
 
 #include "rom.h"
 
-/* Create and return a ROM object located at the given path. Return NULL if
-   there was an error; errno will be set appropriately. */
-rom_type* rom_open(const char *path)
+/*
+    Create and return a ROM object located at the given path. Return NULL if
+    there was an error; errno will be set appropriately.
+*/
+ROM* rom_open(const char *path)
 {
-    rom_type *rom;
+    ROM *rom;
     FILE* fp;
     struct stat s;
 
@@ -31,7 +33,7 @@ rom_type* rom_open(const char *path)
         return NULL;
     }
 
-    if (!(rom = malloc(sizeof(rom_type)))) {
+    if (!(rom = malloc(sizeof(ROM)))) {
         fclose(fp);
         return NULL;
     }
@@ -44,8 +46,10 @@ rom_type* rom_open(const char *path)
     return rom;
 }
 
-/* Free a ROM object previously created with rom_open(). */
-void rom_close(rom_type *rom)
+/*
+    Free a ROM object previously created with rom_open().
+*/
+void rom_close(ROM *rom)
 {
     free(rom);
 }

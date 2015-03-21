@@ -8,9 +8,9 @@
 typedef struct {
     char* name;
     char* data;
-} rom_type;
+} ROM;
 
 /* Functions */
 
-rom_type* rom_open(const char*);
-void rom_close(rom_type*);
+ROM* rom_open(const char*);
+void rom_close(ROM*);
