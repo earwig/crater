@@ -205,6 +205,7 @@ static int parse_args(Config *config, int argc, char *argv[])
                 ERROR("scale factor of %s is not an integer or is out of range", arg)
                 return CONFIG_EXIT_FAILURE;
             }
+            config->scale = scale;
         } else if (!strcmp(arg, "g") || !strcmp(arg, "debug")) {
             config->debug = true;
         } else if (!strcmp(arg, "a") || !strcmp(arg, "assemble")) {
@@ -246,14 +247,14 @@ static int parse_args(Config *config, int argc, char *argv[])
 */
 bool sanity_check(Config* config)
 {
-    if (config->fullscreen && config->scale) {
+    if (config->fullscreen && config->scale > 1) {
         ERROR("cannot specify a scale in fullscreen mode")
         return false;
     } else if (config->assemble && config->disassemble) {
         ERROR("cannot assemble and disassemble at the same time")
         return false;
     } else if ((config->assemble || config->disassemble) &&
-               (config->debug || config->fullscreen || config->scale)) {
+               (config->debug || config->fullscreen || config->scale > 1)) {
         ERROR("cannot specify emulator options in assembler mode")
         return false;
     } else if ((config->assemble || config->disassemble) &&
@@ -319,22 +320,22 @@ void config_destroy(Config *config)
 void config_dump_args(Config* config)
 {
     DEBUG("Dumping arguments:")
-    DEBUG("- fullscreen:  %d", config->fullscreen)
+    DEBUG("- fullscreen:  %s", config->fullscreen ? "true" : "false")
     DEBUG("- scale:       %d", config->scale)
-    DEBUG("- debug:       %d", config->debug)
-    DEBUG("- assemble:    %d", config->assemble)
-    DEBUG("- disassemble: %d", config->disassemble)
+    DEBUG("- debug:       %s", config->debug ? "true" : "false")
+    DEBUG("- assemble:    %s", config->assemble ? "true" : "false")
+    DEBUG("- disassemble: %s", config->disassemble ? "true" : "false")
     if (config->rom_path)
         DEBUG("- rom_path:    %s", config->rom_path)
     else
-        DEBUG("- rom_path:    NULL")
+        DEBUG("- rom_path:    (null)")
     if (config->src_path)
         DEBUG("- src_path:    %s", config->src_path)
     else
-        DEBUG("- src_path:    NULL")
+        DEBUG("- src_path:    (null)")
     if (config->dst_path)
         DEBUG("- dst_path:    %s", config->dst_path)
     else
-        DEBUG("- dst_path:    NULL")
+        DEBUG("- dst_path:    (null)")
 }
 #endif
