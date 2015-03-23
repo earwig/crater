@@ -27,8 +27,7 @@ ROM* rom_open(const char *path)
         return NULL;
     }
     if (!(s.st_mode & S_IFREG)) {
-        if (s.st_mode & S_IFDIR)
-            errno = EISDIR;
+        errno = (s.st_mode & S_IFDIR) ? EISDIR : ENOENT;
         fclose(fp);
         return NULL;
     }

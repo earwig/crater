@@ -312,7 +312,9 @@ static bool sanity_check(Config* config)
     Create a new config object and load default values into it.
 
     Return value is one of CONFIG_OK, CONFIG_EXIT_SUCCESS, CONFIG_EXIT_FAILURE
-    and indicates how the caller should proceed.
+    and indicates how the caller should proceed. If the caller should exit,
+    then the config object should *not* be freed; otherwise it should be freed
+    with config_destroy() when the caller is ready.
 */
 int config_create(Config** config_ptr, int argc, char* argv[])
 {

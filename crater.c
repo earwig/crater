@@ -2,8 +2,11 @@
    Released under the terms of the MIT License. See LICENSE for details. */
 
 #include <stdlib.h>
+#include <stdio.h>
 
+#include "src/assembler.h"
 #include "src/config.h"
+#include "src/disassembler.h"
 #include "src/logging.h"
 #include "src/rom.h"
 
@@ -13,7 +16,7 @@
 int main(int argc, char *argv[])
 {
     Config *config;
-    int retval;
+    int retval = EXIT_SUCCESS;
 
     retval = config_create(&config, argc, argv);
     if (retval != CONFIG_OK)
@@ -23,10 +26,15 @@ int main(int argc, char *argv[])
     config_dump_args(config);
 #endif
 
-    if (config->assemble) {
-        printf("Running assembler: %s -> %s.\n", config->src_path, config->dst_path);
-    } else if (config->disassemble) {
-        printf("Running disassembler: %s -> %s.\n", config->src_path, config->dst_path);
+    if (config->assemble || config->disassemble) {
+        printf("crater: running %s: %s -> %s\n",
+               config->assemble ? "assembler" : "disassembler",
+               config->src_path, config->dst_path);
+        if (config->assemble)
+            retval = assemble(config->src_path, config->dst_path);
+        else
+            retval = disassemble(config->src_path, config->dst_path);
+        retval = retval ? EXIT_SUCCESS : EXIT_FAILURE;
     } else {
         ROM *rom;
 
@@ -37,12 +45,13 @@ int main(int argc, char *argv[])
             else
                 FATAL_ERRNO("couldn't load ROM image '%s'", config->rom_path)
         }
-        printf("Loaded ROM image: %s.\n", rom->name);
+        printf("Loaded ROM image: %s\n", rom->name);
 
-        // TODO: start from here
+        // TODO: emulate game here...
+
         rom_close(rom);
     }
 
     config_destroy(config);
-    return EXIT_SUCCESS;
+    return retval;
 }
