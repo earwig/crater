@@ -37,19 +37,18 @@ int main(int argc, char *argv[])
         retval = retval ? EXIT_SUCCESS : EXIT_FAILURE;
     } else {
         ROM *rom;
+        const char* errmsg;
 
-        printf("crater: a Sega Game Gear emulator\n\n");
-        if (!(rom = rom_open(config->rom_path))) {
-            if (errno == ENOMEM)
-                OUT_OF_MEMORY()
-            else
-                FATAL_ERRNO("couldn't load ROM image '%s'", config->rom_path)
+        if ((errmsg = rom_open(&rom, config->rom_path))) {
+            ERROR("couldn't load ROM image '%s': %s", config->rom_path, errmsg)
+            retval = EXIT_FAILURE;
+        } else {
+            printf("crater: emulating: %s\n", rom->name);
+
+            // TODO: emulate game here...
+
+            rom_close(rom);
         }
-        printf("Loaded ROM image: %s\n", rom->name);
-
-        // TODO: emulate game here...
-
-        rom_close(rom);
     }
 
     config_destroy(config);

@@ -26,12 +26,15 @@ ifdef DEBUG
 	MODE   = debug
 endif
 
-.PHONY: all clean
+.PHONY: all clean test
 
 all: $(BNRY)
 
 clean:
 	$(RM) $(BUILD) $(PROGRAM) $(PROGRAM)$(DEVEXT)
+
+test:
+	@echo "not implemented yet"
 
 $(DIRS):
 	$(MKDIR) $@

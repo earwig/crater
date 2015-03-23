@@ -2,51 +2,86 @@
    Released under the terms of the MIT License. See LICENSE for details. */
 
 #include <errno.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
 
 #include "rom.h"
+#include "logging.h"
 
 /*
-    Create and return a ROM object located at the given path. Return NULL if
-    there was an error; errno will be set appropriately.
+    Return whether or not the given ROM image size is valid.
 */
-ROM* rom_open(const char *path)
+static bool validate_size(off_t size)
+{
+    off_t kbytes = size >> 10;
+    if (kbytes << 10 != size)
+        return false;
+    if (kbytes < 8 || kbytes > 1024)
+        return false;
+    return !(kbytes & (kbytes - 1));
+}
+
+/*
+    Create and load a ROM image located at the given path.
+
+    rom_ptr will point to the new object if created successfully, and NULL will
+    be returned. Otherwise, rom_ptr will not be modified and an error string
+    will be returned. The error string should not be freed.
+*/
+const char* rom_open(ROM **rom_ptr, const char *path)
 {
     ROM *rom;
     FILE* fp;
-    struct stat s;
+    struct stat st;
 
     if (!(fp = fopen(path, "r")))
-        return NULL;
+        return strerror(errno);
 
-    if (fstat(fileno(fp), &s)) {
+    if (fstat(fileno(fp), &st)) {
         fclose(fp);
-        return NULL;
+        return strerror(errno);
     }
-    if (!(s.st_mode & S_IFREG)) {
-        errno = (s.st_mode & S_IFDIR) ? EISDIR : ENOENT;
+    if (!(st.st_mode & S_IFREG)) {
         fclose(fp);
-        return NULL;
+        return (st.st_mode & S_IFDIR) ? rom_err_isdir : rom_err_notfile;
     }
 
-    if (!(rom = malloc(sizeof(ROM)))) {
-        fclose(fp);
-        return NULL;
-    }
-    rom->name = malloc(sizeof(char) * (strlen(path) + 1));
-    if (!rom->name) {
-        fclose(fp);
-        return NULL;
-    }
+    if (!(rom = malloc(sizeof(ROM))))
+        OUT_OF_MEMORY()
+
+    // Set defaults:
+    rom->name = NULL;
+    rom->data = NULL;
+    rom->size = 0;
+
+    // Set rom->name:
+    if (!(rom->name = malloc(sizeof(char) * (strlen(path) + 1))))
+        OUT_OF_MEMORY()
     strcpy(rom->name, path);
 
-    // TODO: load data from file into a buffer
+    // Set rom->size:
+    if (!validate_size(st.st_size)) {
+        rom_close(rom);
+        fclose(fp);
+        return rom_err_badsize;
+    }
+    rom->size = st.st_size;
+
+    // Set rom->data:
+    if (!(rom->data = malloc(sizeof(char) * st.st_size)))
+        OUT_OF_MEMORY()
+    if (!(fread(rom->data, st.st_size, 1, fp))) {
+        rom_close(rom);
+        fclose(fp);
+        return rom_err_badread;
+    }
 
     fclose(fp);
-    return rom;
+    *rom_ptr = rom;
+    return NULL;
 }
 
 /*
@@ -54,5 +89,9 @@ ROM* rom_open(const char *path)
 */
 void rom_close(ROM *rom)
 {
+    if (rom->name)
+        free(rom->name);
+    if (rom->data)
+        free(rom->data);
     free(rom);
 }
