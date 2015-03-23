@@ -34,9 +34,12 @@ static void print_help(const char *arg1)
 "    -g, --debug       display information about emulation state while running,\n"
 "                      including register and memory values; can also pause\n"
 "                      emulation, set breakpoints, and change state\n"
-"    -a, --assemble <in> <out>     convert z80 assembly source code into a\n"
-"                                  binary file that can be run by crater\n"
-"    -d, --disassemble <in> <out>  convert a binary file into z80 assembly code\n",
+"    -a, --assemble <in> [<out>]     convert z80 assembly source code into a\n"
+"                                    binary file that can be run by crater\n"
+"    -d, --disassemble <in> [<out>]  convert a binary file into z80 assembly\n"
+"                                    source code\n"
+"    -r, --overwrite   allow crater to write assembler output to the same\n"
+"                      filename as the input\n",
     arg1);
 }
 
@@ -160,6 +163,8 @@ static int parse_args(Config *config, int argc, char *argv[])
             }
 
             path = malloc(sizeof(char) * (strlen(arg) + 1));
+            if (!path)
+                OUT_OF_MEMORY()
             strcpy(path, arg);
 
             if (paths_read == 1) {
@@ -220,6 +225,8 @@ static int parse_args(Config *config, int argc, char *argv[])
                 config->rom_path = NULL;
             }
             config->disassemble = true;
+        } else if (!strcmp(arg, "r") || !strcmp(arg, "overwrite")) {
+            config->overwrite = true;
         } else {
             ERROR("unknown argument: %s", argv[i])
             return CONFIG_EXIT_FAILURE;
@@ -243,30 +250,69 @@ static int parse_args(Config *config, int argc, char *argv[])
 }
 
 /*
-    Ensure that the combination of arguments in a config object are valid.
+    If no output file is specified for the assembler, this function picks a
+    filename based on the input file, replacing its extension with '.gg' or
+    '.s' (or adding it, if none is present).
 */
-bool sanity_check(Config* config)
+static void guess_assembler_output_file(Config* config)
 {
+    char *src = config->src_path, *ptr = src + strlen(src) - 1,
+         *ext = config->assemble ? ".gg" : ".s";
+    size_t until_ext = ptr - src + 1;
+
+    do {
+        if (*ptr == '.') {
+            until_ext = ptr - src;
+            break;
+        }
+    } while (ptr-- >= src);
+
+    config->dst_path = malloc(sizeof(char) * (until_ext + 4));
+    if (!config->dst_path)
+        OUT_OF_MEMORY()
+    strcpy(stpncpy(config->dst_path, src, until_ext), ext);
+}
+
+/*
+    Ensure that the combination of arguments in a config object are valid.
+
+    Some modifications are made in the case of missing arguments, like guessing
+    the filenames for assembler output files.
+*/
+static bool sanity_check(Config* config)
+{
+    bool assembler = config->assemble || config->disassemble;
+
     if (config->fullscreen && config->scale > 1) {
         ERROR("cannot specify a scale in fullscreen mode")
         return false;
     } else if (config->assemble && config->disassemble) {
         ERROR("cannot assemble and disassemble at the same time")
         return false;
-    } else if ((config->assemble || config->disassemble) &&
-               (config->debug || config->fullscreen || config->scale > 1)) {
+    } else if (assembler && (config->debug || config->fullscreen || config->scale > 1)) {
         ERROR("cannot specify emulator options in assembler mode")
         return false;
-    } else if ((config->assemble || config->disassemble) &&
-               !(config->src_path && config->dst_path)) {
-        ERROR("assembler mode requires both an input and an output file")
+    } else if (assembler && !config->src_path) {
+        ERROR("assembler mode requires an input file")
         return false;
     }
+
+    if (assembler && !config->dst_path) {
+        guess_assembler_output_file(config);
+    }
+    if (assembler && !config->overwrite && !strcmp(config->src_path, config->dst_path)) {
+        ERROR("refusing to overwrite the assembler input file; pass -r to override")
+        return false;
+    }
+
     return true;
 }
 
 /*
     Create a new config object and load default values into it.
+
+    Return value is one of CONFIG_OK, CONFIG_EXIT_SUCCESS, CONFIG_EXIT_FAILURE
+    and indicates how the caller should proceed.
 */
 int config_create(Config** config_ptr, int argc, char* argv[])
 {
@@ -286,6 +332,7 @@ int config_create(Config** config_ptr, int argc, char* argv[])
     config->rom_path = NULL;
     config->src_path = NULL;
     config->dst_path = NULL;
+    config->overwrite = false;
 
     retval = parse_args(config, argc, argv);
     if (retval == CONFIG_OK && !sanity_check(config))
@@ -337,5 +384,6 @@ void config_dump_args(Config* config)
         DEBUG("- dst_path:    %s", config->dst_path)
     else
         DEBUG("- dst_path:    (null)")
+    DEBUG("- overwrite:   %s", config->overwrite ? "true" : "false")
 }
 #endif

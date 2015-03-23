@@ -52,6 +52,9 @@ detailed information about emulation state while running, including register
 values and memory contents. You can also pause emulation to set breakpoints and
 change state.
 
-`--assemble <input> <output>` (`-a`) converts z80 assembly source code into a
-`.gg` binary that can be run by crater. `--disassemble <input> <output>` (`-d`)
-executes the opposite operation.
+`--assemble <input> [<output>]` (`-a`) converts z80 assembly source code into a
+`.gg` binary that can be run by crater. `--disassemble <input> [<output>]`
+(`-d`) executes the opposite operation. If no output file is given, crater will
+use the name of the input file, with the extension replaced with `.gg` for `-a`
+and `.s` for `-d`. By default, this will never overwrite the original filename;
+pass `--overwrite` (`-r`) to let crater do so.

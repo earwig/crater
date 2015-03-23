@@ -24,7 +24,7 @@ int main(int argc, char *argv[])
 #endif
 
     if (config->assemble) {
-        printf("Running assembler: %s -> %s.\n",config->src_path, config->dst_path);
+        printf("Running assembler: %s -> %s.\n", config->src_path, config->dst_path);
     } else if (config->disassemble) {
         printf("Running disassembler: %s -> %s.\n", config->src_path, config->dst_path);
     } else {

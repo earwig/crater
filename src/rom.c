@@ -38,6 +38,10 @@ ROM* rom_open(const char *path)
         return NULL;
     }
     rom->name = malloc(sizeof(char) * (strlen(path) + 1));
+    if (!rom->name) {
+        fclose(fp);
+        return NULL;
+    }
     strcpy(rom->name, path);
 
     // TODO: load data from file into a buffer

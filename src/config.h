@@ -26,6 +26,7 @@ typedef struct {
     char *rom_path;
     char *src_path;
     char *dst_path;
+    bool overwrite;
 } Config;
 
 /* Functions */
