@@ -30,6 +30,9 @@
 #ifdef DEBUG_MODE
 #define DEBUG(...)       LOG_MSG("[DEBUG]", {},            {},                 __VA_ARGS__)
 #define DEBUG_ERRNO(...) LOG_MSG("[DEBUG]", PRINT_ERRNO(), {},                 __VA_ARGS__)
+#else
+#define DEBUG(...)       {}
+#define DEBUG_ERRNO(...) {}
 #endif
 
 #define OUT_OF_MEMORY() FATAL("couldn't allocate enough memory")

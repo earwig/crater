@@ -5,10 +5,11 @@
 
 /* Error strings */
 
-static const char* rom_err_isdir   = "Is a directory";
-static const char* rom_err_notfile = "Is not a regular file";
-static const char* rom_err_badsize = "Invalid size";
-static const char* rom_err_badread = "Couldn't read the entire file";
+static const char* rom_err_isdir     = "Is a directory";
+static const char* rom_err_notfile   = "Is not a regular file";
+static const char* rom_err_badsize   = "Invalid size";
+static const char* rom_err_badread   = "Couldn't read the entire file";
+static const char* rom_err_badheader = "Invalid header";
 
 /* Structs */
 
