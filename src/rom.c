@@ -11,12 +11,13 @@
 
 #include "rom.h"
 #include "logging.h"
+#include "util.h"
 
 #define NUM_LOCATIONS 3
 #define MAGIC_LEN 8
 #define HEADER_SIZE 16
 
-static size_t header_locations[NUM_LOCATIONS] = {0x7ff0, 0x1ff0, 0x3ff0};
+static size_t header_locations[NUM_LOCATIONS] = {0x7FF0, 0x1FF0, 0x3FF0};
 static const char header_magic[MAGIC_LEN + 1] = "TMR SEGA";
 
 /*
@@ -35,12 +36,12 @@ static bool validate_size(off_t size)
 /*
     DEBUG FUNCTION: Print out the header to stdout.
 */
-static void print_header(const char *header)
+static void print_header(const uint8_t *header)
 {
     char header_hex[3 * HEADER_SIZE], header_chr[3 * HEADER_SIZE];
 
     for (int i = 0; i < HEADER_SIZE; i++) {
-        snprintf(&header_hex[3 * i], 3, "%02x", header[i]);
+        snprintf(&header_hex[3 * i], 3, "%02X", header[i]);
         if (isprint(header[i]))
             snprintf(&header_chr[3 * i], 3, "%2c", header[i]);
         else {
@@ -56,28 +57,74 @@ static void print_header(const char *header)
 #endif
 
 /*
-    Read a ROM image's header, and return whether or not it is valid.
+    Parse a ROM image's header, and return whether or not it is valid.
+
+    The header is 16 bytes long, consisting of:
+    byte 0:             magic ('T')
+    byte 1:             magic ('M')
+    byte 2:             magic ('R')
+    byte 3:             magic (' ')
+    byte 4:             magic ('S')
+    byte 5:             magic ('E')
+    byte 6:             magic ('G')
+    byte 7:             magic ('A')
+    byte 8:             unused
+    byte 9:             unused
+    byte A:             checksum (LSB)
+    byte B:             checksum (MSB)
+    byte C:             product code (LSB)
+    byte D:             product code (middle byte)
+    byte E (hi nibble): product code (most-significant nibble)
+    byte E (lo nibble): version
+    byte F (hi nibble): region code
+    byte F (lo nibble): ROM size
+
+    (Based on: http://www.smspower.org/Development/ROMHeader)
 */
-static bool read_header(ROM *rom)
+static bool parse_header(ROM *rom, const uint8_t *header)
+{
+#ifdef DEBUG_MODE
+    print_header(header);
+#endif
+
+    rom->checksum = header[0xA] + (header[0xB] << 8);
+    rom->product_code = bcd_decode(header[0xC]) +
+        (bcd_decode(header[0xD]) * 100) + ((header[0xE] >> 4) * 10000);
+    rom->version = header[0xE] & 0x0F;
+    rom->region_code = header[0xF] >> 4;
+    const char* region = rom_region(rom);
+
+    DEBUG("- header info:")
+    DEBUG("  - checksum:     0x%04X", rom->checksum)
+    DEBUG("  - product code: %u", rom->product_code)
+    DEBUG("  - version:      %u", rom->version)
+    DEBUG("  - region code:  %u (%s)", rom->region_code, region ? region : "unknown")
+    return true;
+}
+
+/*
+    Find and read a ROM image's header, and return whether or not it is valid.
+*/
+static bool find_and_read_header(ROM *rom)
 {
     size_t location, i;
-    const char *header;
+    const uint8_t *header;
 
     DEBUG("- looking for header:")
     for (i = 0; i < NUM_LOCATIONS; i++) {
         location = header_locations[i];
-        DEBUG("  - trying location 0x%zx:", location)
+        if (location + HEADER_SIZE > rom->size) {
+            DEBUG("  - skipping location 0x%zX, out of range", location)
+            continue;
+        }
+        DEBUG("  - trying location 0x%zX:", location)
         header = &rom->data[location];
         if (memcmp(header, header_magic, MAGIC_LEN)) {
             DEBUG("    - magic not present")
         }
         else {
             DEBUG("    - magic found")
-#ifdef DEBUG_MODE
-            print_header(header);
-#endif
-            // TODO: parse header
-            return true;
+            return parse_header(rom, header);
         }
     }
     DEBUG("  - could not find header")
@@ -116,6 +163,10 @@ const char* rom_open(ROM **rom_ptr, const char *path)
     rom->name = NULL;
     rom->data = NULL;
     rom->size = 0;
+    rom->checksum = 0;
+    rom->product_code = 0;
+    rom->version = 0;
+    rom->region_code = 0;
 
     // Set rom->name:
     if (!(rom->name = malloc(sizeof(char) * (strlen(path) + 1))))
@@ -133,7 +184,7 @@ const char* rom_open(ROM **rom_ptr, const char *path)
     rom->size = st.st_size;
 
     // Set rom->data:
-    if (!(rom->data = malloc(sizeof(char) * st.st_size)))
+    if (!(rom->data = malloc(sizeof(uint8_t) * st.st_size)))
         OUT_OF_MEMORY()
     if (!(fread(rom->data, st.st_size, 1, fp))) {
         rom_close(rom);
@@ -143,7 +194,7 @@ const char* rom_open(ROM **rom_ptr, const char *path)
     fclose(fp);
 
     // Parse the header:
-    if (!read_header(rom)) {
+    if (!find_and_read_header(rom)) {
         rom_close(rom);
         return rom_err_badheader;
     }
@@ -162,4 +213,23 @@ void rom_close(ROM *rom)
     if (rom->data)
         free(rom->data);
     free(rom);
+}
+
+/*
+    Return the region this ROM was intended for, based on header information.
+
+    NULL is returned if the region code is invalid.
+
+    Region code information is taken from http://www.smspower.org/Development/ROMHeader.
+*/
+const char* rom_region(const ROM *rom)
+{
+    switch (rom->region_code) {
+        case 3:  return "SMS Japan";
+        case 4:  return "SMS Export";
+        case 5:  return "GG Japan";
+        case 6:  return "GG Export";
+        case 7:  return "GG International";
+        default: return NULL;
+    }
 }

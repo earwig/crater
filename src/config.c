@@ -374,18 +374,9 @@ void config_dump_args(Config* config)
     DEBUG("- debug:       %s", config->debug ? "true" : "false")
     DEBUG("- assemble:    %s", config->assemble ? "true" : "false")
     DEBUG("- disassemble: %s", config->disassemble ? "true" : "false")
-    if (config->rom_path)
-        DEBUG("- rom_path:    %s", config->rom_path)
-    else
-        DEBUG("- rom_path:    (null)")
-    if (config->src_path)
-        DEBUG("- src_path:    %s", config->src_path)
-    else
-        DEBUG("- src_path:    (null)")
-    if (config->dst_path)
-        DEBUG("- dst_path:    %s", config->dst_path)
-    else
-        DEBUG("- dst_path:    (null)")
+    DEBUG("- rom_path:    %s", config->rom_path ? config->rom_path : "(null)")
+    DEBUG("- src_path:    %s", config->src_path ? config->src_path : "(null)")
+    DEBUG("- dst_path:    %s", config->dst_path ? config->dst_path : "(null)")
     DEBUG("- overwrite:   %s", config->overwrite ? "true" : "false")
 }
 #endif

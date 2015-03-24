@@ -2,6 +2,7 @@
    Released under the terms of the MIT License. See LICENSE for details. */
 
 #pragma once
+#include <stdint.h>
 
 /* Error strings */
 
@@ -14,12 +15,17 @@ static const char* rom_err_badheader = "Invalid header";
 /* Structs */
 
 typedef struct {
-    char* name;
-    char* data;
-    unsigned size;
+    char *name;
+    uint8_t *data;
+    size_t size;
+    uint16_t checksum;
+    uint32_t product_code;
+    uint8_t version;
+    uint8_t region_code;
 } ROM;
 
 /* Functions */
 
 const char* rom_open(ROM**, const char*);
 void rom_close(ROM*);
+const char* rom_region(const ROM*);
