@@ -3,12 +3,15 @@
 
 #pragma once
 
+#include <stdbool.h>
+
 #include "rom.h"
 
 /* Structs */
 
 typedef struct {
     ROM *rom;
+    bool state;
 } GameGear;
 
 /* Functions */
@@ -16,4 +19,4 @@ typedef struct {
 GameGear* gamegear_create();
 void gamegear_destroy(GameGear*);
 void gamegear_load(GameGear*, ROM*);
-void gamegear_power(GameGear*);
+void gamegear_power(GameGear*, bool);

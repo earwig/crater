@@ -1,6 +1,8 @@
 /* Copyright (C) 2014-2015 Ben Kurtovic <ben.kurtovic@gmail.com>
    Released under the terms of the MIT License. See LICENSE for details. */
 
+#include <stdlib.h>
+
 #include "gamegear.h"
 #include "logging.h"
 
@@ -24,7 +26,7 @@ GameGear* gamegear_create()
 
     Does *not* destroy any loaded ROM objects.
 */
-void gamegear_destroy(GameGear* gg)
+void gamegear_destroy(GameGear *gg)
 {
     free(gg);
 }
@@ -34,17 +36,25 @@ void gamegear_destroy(GameGear* gg)
 
     Does *not* steal the reference to the ROM object.
 */
-void gamegear_load(GameGear* gg, ROM* rom)
+void gamegear_load(GameGear *gg, ROM *rom)
 {
     gg->rom = rom;
 }
 
 /*
-    Powers a GameGear object, beginning emulation.
+    Set the GameGear object's power state (true = on; false = off).
 
-    This function call blocks until the GameGear is powered off.
+    Powering on the GameGear executes boot code (e.g. clearing memory and
+    setting initial register values) and starts the clock. Powering it off
+    stops the clock.
+
+    Setting the power state to its current value has no effect.
 */
-void gamegear_power(GameGear* gg)
+void gamegear_power(GameGear *gg, bool state)
 {
+    if (gg->state == state)
+        return;
+
     // TODO
+    gg->state = state;
 }

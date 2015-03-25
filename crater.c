@@ -8,6 +8,7 @@
 #include "src/config.h"
 #include "src/disassembler.h"
 #include "src/gamegear.h"
+#include "src/iomanager.h"
 #include "src/logging.h"
 #include "src/rom.h"
 
@@ -48,7 +49,7 @@ int main(int argc, char *argv[])
 
             printf("crater: emulating: %s\n", rom->name);
             gamegear_load(gg, rom);
-            gamegear_power(gg);
+            iomanager_emulate(gg);
 
             gamegear_destroy(gg);
             rom_close(rom);
