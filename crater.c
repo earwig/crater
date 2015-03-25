@@ -7,6 +7,7 @@
 #include "src/assembler.h"
 #include "src/config.h"
 #include "src/disassembler.h"
+#include "src/gamegear.h"
 #include "src/logging.h"
 #include "src/rom.h"
 
@@ -43,10 +44,13 @@ int main(int argc, char *argv[])
             ERROR("couldn't load ROM image '%s': %s", config->rom_path, errmsg)
             retval = EXIT_FAILURE;
         } else {
+            GameGear *gg = gamegear_create();
+
             printf("crater: emulating: %s\n", rom->name);
+            gamegear_load(gg, rom);
+            gamegear_power(gg);
 
-            // TODO: emulate game here...
-
+            gamegear_destroy(gg);
             rom_close(rom);
         }
     }

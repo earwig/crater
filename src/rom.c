@@ -220,7 +220,8 @@ void rom_close(ROM *rom)
 
     NULL is returned if the region code is invalid.
 
-    Region code information is taken from http://www.smspower.org/Development/ROMHeader.
+    Region code information is taken from:
+    http://www.smspower.org/Development/ROMHeader
 */
 const char* rom_region(const ROM *rom)
 {

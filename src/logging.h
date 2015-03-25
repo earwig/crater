@@ -10,29 +10,27 @@
 
 /* Internal usage only */
 
-#define LOG_MSG(level, extra, after, ...) {      \
-        fprintf(stderr, level ": " __VA_ARGS__); \
-        extra;                                   \
-        fprintf(stderr, "\n");                   \
-        after;                                   \
+#define LOG_MSG(dest, level, extra, after, ...) { \
+        fprintf(dest, level ": " __VA_ARGS__);    \
+        extra;                                    \
+        fprintf(dest, "\n");                      \
+        after;                                    \
     }
 #define PRINT_ERRNO() fprintf(stderr, ": %s", strerror(errno))
 
 /* Public logging macros */
 
-#define FATAL(...)       LOG_MSG("Error",   {},            exit(EXIT_FAILURE), __VA_ARGS__)
-#define FATAL_ERRNO(...) LOG_MSG("Error",   PRINT_ERRNO(), exit(EXIT_FAILURE), __VA_ARGS__)
-#define ERROR(...)       LOG_MSG("Error",   {},            {},                 __VA_ARGS__)
-#define ERROR_ERRNO(...) LOG_MSG("Error",   PRINT_ERRNO(), {},                 __VA_ARGS__)
-#define WARN(...)        LOG_MSG("Warning", {},            {},                 __VA_ARGS__)
-#define WARN_ERRNO(...)  LOG_MSG("Warning", PRINT_ERRNO(), {},                 __VA_ARGS__)
+#define FATAL(...)       LOG_MSG(stderr, "Error",   {},            exit(EXIT_FAILURE), __VA_ARGS__)
+#define FATAL_ERRNO(...) LOG_MSG(stderr, "Error",   PRINT_ERRNO(), exit(EXIT_FAILURE), __VA_ARGS__)
+#define ERROR(...)       LOG_MSG(stderr, "Error",   {},            {},                 __VA_ARGS__)
+#define ERROR_ERRNO(...) LOG_MSG(stderr, "Error",   PRINT_ERRNO(), {},                 __VA_ARGS__)
+#define WARN(...)        LOG_MSG(stderr, "Warning", {},            {},                 __VA_ARGS__)
+#define WARN_ERRNO(...)  LOG_MSG(stderr, "Warning", PRINT_ERRNO(), {},                 __VA_ARGS__)
 
 #ifdef DEBUG_MODE
-#define DEBUG(...)       LOG_MSG("[DEBUG]", {},            {},                 __VA_ARGS__)
-#define DEBUG_ERRNO(...) LOG_MSG("[DEBUG]", PRINT_ERRNO(), {},                 __VA_ARGS__)
+#define DEBUG(...)       LOG_MSG(stdout, "[DEBUG]", {},            {},                 __VA_ARGS__)
 #else
 #define DEBUG(...)       {}
-#define DEBUG_ERRNO(...) {}
 #endif
 
 #define OUT_OF_MEMORY() FATAL("couldn't allocate enough memory")

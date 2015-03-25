@@ -2,6 +2,7 @@
    Released under the terms of the MIT License. See LICENSE for details. */
 
 #pragma once
+
 #include <stdbool.h>
 
 #define CONFIG_OK 0
