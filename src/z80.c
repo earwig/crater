@@ -14,14 +14,21 @@
 
 /*
     Initialize a Z80 object.
+
+    Register values are invalid until z80_power() is called. No other Z80
+    functions should be called before it.
 */
-void z80_init(Z80 *z80, uint64_t clock_speed)
+void z80_init(Z80 *z80, MMU *mmu)
 {
-    z80->clock_speed = clock_speed;
+    z80->mmu = mmu;
+    z80->except = true;
 }
 
 /*
     Power on the Z80, setting registers to their default values.
+
+    This also clears the exception flag, which is necessary before the Z80 can
+    begin emulation.
 */
 void z80_power(Z80 *z80)
 {
@@ -46,6 +53,9 @@ void z80_power(Z80 *z80)
 
     regfile->im_a = regfile->im_b = 0;
     regfile->iff1 = regfile->iff2 = 0;
+
+    z80->except = false;
+    z80->pending_cycles = 0;
 }
 
 /*
@@ -74,6 +84,24 @@ static inline uint8_t get_interrupt_mode(Z80 *z80)
     if (!z80->regfile.im_b)
         return 1;
     return 2;
+}
+
+/*
+    Emulate the given number of cycles of the Z80, or until an exception.
+
+    The return value indicates whether the exception flag is set. If it is,
+    then emulation must be stopped because further calls to z80_do_cycles()
+    will have no effect. The exception flag can be reset with z80_power().
+*/
+bool z80_do_cycles(Z80 *z80, double cycles)
+{
+    if (z80->except)
+        return true;
+
+    z80->pending_cycles += cycles;
+    // TODO: fetch instruction...
+
+    return false;
 }
 
 #ifdef DEBUG_MODE
@@ -119,7 +147,8 @@ void z80_dump_registers(Z80 *z80)
     DEBUG("- I:    0x%2X", regfile->i)
     DEBUG("- R:    0x%2X", regfile->r)
 
-    DEBUG("- IM:   0b%u%u (mode: %u)", regfile->im_a, regfile->im_b, get_interrupt_mode(z80))
+    DEBUG("- IM:   0b%u%u (mode: %u)", regfile->im_a, regfile->im_b,
+          get_interrupt_mode(z80))
     DEBUG("- IFF1: %u", regfile->iff1)
     DEBUG("- IFF2: %u", regfile->iff2)
 }

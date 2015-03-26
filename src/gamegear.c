@@ -5,6 +5,10 @@
 
 #include "gamegear.h"
 #include "logging.h"
+#include "util.h"
+
+/* Clock speed in Hz was taken from the official Sega GG documentation */
+#define CPU_CLOCK_SPEED 3579545
 
 /*
     Create and return a pointer to a new GameGear object.
@@ -18,7 +22,7 @@ GameGear* gamegear_create()
         OUT_OF_MEMORY()
 
     // mmu_init(&gg->mmu, ...);
-    z80_init(&gg->cpu, CPU_CLOCK_SPEED);
+    z80_init(&gg->cpu, &gg->mmu);
     gg->powered = false;
     return gg;
 }
@@ -30,6 +34,7 @@ GameGear* gamegear_create()
 */
 void gamegear_destroy(GameGear *gg)
 {
+    // mmu_free(&gg->mmu);
     free(gg);
 }
 
@@ -64,6 +69,9 @@ void gamegear_power(GameGear *gg, bool state)
     if (state) {
         // mmu_power(&gg->mmu);
         z80_power(&gg->cpu);
+        gg->last_tick = get_time_ns();
+    } else {
+        // TODO: free exception buffer
     }
     gg->powered = state;
 }
@@ -75,12 +83,37 @@ void gamegear_power(GameGear *gg, bool state)
     time since the last call to gamegear_simulate() or gamegear_power() if the
     system was just powered on. If the system is powered off, this function
     does nothing.
+
+    The return value indicates whether an exception flag has been set
+    somewhere. If true, emulation must be stopped. gamegear_get_exception() can
+    be used to fetch exception information. Power-cycling the GameGear with
+    gamegear_power(gg, false) followed by gamegear_power(gg, true) will reset
+    the exception flag and allow emulation to restart normally.
 */
-void gamegear_simulate(GameGear *gg)
+bool gamegear_simulate(GameGear *gg)
 {
     if (!gg->powered)
-        return;
+        return false;
 
-    // TODO
-    // z80_do_cycles(&gg->cpu, ...);
+    uint64_t last = gg->last_tick, tick;
+    tick = gg->last_tick = get_time_ns();
+    return z80_do_cycles(&gg->cpu, (tick - last) * CPU_CLOCK_SPEED / 1e9);
+}
+
+/*
+    If an exception flag has been set in the GameGear, return the reason.
+
+    This function returns a const pointer to a buffer holding a human-readable
+    exception string (although it may be cryptic to an end-user). The buffer is
+    owned by the GameGear object and should not be freed - it lasts until the
+    GameGear's power state is changed. If no exception flag is set, this
+    function returns NULL.
+*/
+const char* gamegear_get_exception(GameGear *gg)
+{
+    if (!gg->powered)
+        return NULL;
+
+    // TODO: return ptr to exception buffer
+    return "Unknown exception";
 }

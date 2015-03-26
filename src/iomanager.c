@@ -16,13 +16,15 @@ void iomanager_emulate(GameGear *gg)
     DEBUG("IOManager powering GameGear")
     gamegear_power(gg, true);
 
-#ifdef DEBUG_MODE
-    z80_dump_registers(&gg->cpu);
-#endif
-
     // TODO: use SDL events
     while (1) {
-        gamegear_simulate(gg);
+        if (gamegear_simulate(gg)) {
+            DEBUG("IOManager caught exception: %s", gamegear_get_exception(gg))
+#ifdef DEBUG_MODE
+            z80_dump_registers(&gg->cpu);
+#endif
+            break;
+        }
         usleep(1000 * 1000 / 60);
     }
 

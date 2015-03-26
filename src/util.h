@@ -8,3 +8,4 @@
 /* Functions */
 
 uint8_t bcd_decode(uint8_t);
+uint64_t get_time_ns();

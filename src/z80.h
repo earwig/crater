@@ -6,6 +6,8 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#include "mmu.h"
+
 /* Structs */
 
 typedef struct {
@@ -19,13 +21,16 @@ typedef struct {
 
 typedef struct {
     Z80RegFile regfile;
-    uint64_t clock_speed;
+    MMU *mmu;
+    bool except;
+    double pending_cycles;
 } Z80;
 
 /* Functions */
 
-void z80_init(Z80*, uint64_t);
+void z80_init(Z80*, MMU*);
 void z80_power(Z80*);
+bool z80_do_cycles(Z80*, double);
 
 #ifdef DEBUG_MODE
 void z80_dump_registers(Z80*);
