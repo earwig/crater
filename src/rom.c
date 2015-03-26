@@ -57,6 +57,25 @@ static void print_header(const uint8_t *header)
 #endif
 
 /*
+    Return a string indicating the ROM's size, according to its header.
+*/
+static const char* parse_reported_size(uint8_t value)
+{
+    switch (value) {
+        case 0x0: return "256 KB";
+        case 0x1: return "512 KB";
+        case 0x2: return "1 MB";
+        case 0xA: return "8 KB";
+        case 0xB: return "16 KB";
+        case 0xC: return "32 KB";
+        case 0xD: return "48 KB";
+        case 0xE: return "64 KB";
+        case 0xF: return "128 KB";
+        default:  return "Unknown";
+    }
+}
+
+/*
     Parse a ROM image's header, and return whether or not it is valid.
 
     The header is 16 bytes long, consisting of:
@@ -95,10 +114,11 @@ static bool parse_header(ROM *rom, const uint8_t *header)
     const char* region = rom_region(rom);
 
     DEBUG("- header info:")
-    DEBUG("  - checksum:     0x%04X", rom->checksum)
-    DEBUG("  - product code: %u", rom->product_code)
-    DEBUG("  - version:      %u", rom->version)
-    DEBUG("  - region code:  %u (%s)", rom->region_code, region ? region : "unknown")
+    DEBUG("  - checksum:      0x%04X", rom->checksum)
+    DEBUG("  - product code:  %u", rom->product_code)
+    DEBUG("  - version:       %u", rom->version)
+    DEBUG("  - region code:   %u (%s)", rom->region_code, region ? region : "unknown")
+    DEBUG("  - reported size: %s", parse_reported_size(header[0xF] & 0xF))
     return true;
 }
 
