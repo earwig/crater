@@ -8,6 +8,9 @@
 
 #include "mmu.h"
 
+#define Z80_EXC_NOT_POWERED          0
+#define Z80_EXC_UNIMPLEMENTED_OPCODE 1
+
 /* Structs */
 
 typedef struct {
@@ -23,6 +26,7 @@ typedef struct {
     Z80RegFile regfile;
     MMU *mmu;
     bool except;
+    uint8_t exc_code, exc_data;
     double pending_cycles;
 } Z80;
 

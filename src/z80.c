@@ -22,6 +22,8 @@ void z80_init(Z80 *z80, MMU *mmu)
 {
     z80->mmu = mmu;
     z80->except = true;
+    z80->exc_code = Z80_EXC_NOT_POWERED;
+    z80->exc_data = 0;
 }
 
 /*
@@ -86,18 +88,7 @@ static inline uint8_t get_interrupt_mode(Z80 *z80)
     return 2;
 }
 
-/* ------------------------------------------------------------------------- */
-
-static uint8_t z80_inst_nop(Z80 *z80) {
-    z80->regfile.pc++;
-    return 4;
-}
-
-static uint8_t (*instruction_lookup_table[256])(Z80*) = {
-    z80_inst_nop
-};
-
-/* ------------------------------------------------------------------------- */
+#include "z80_instructions.inc"
 
 /*
     Emulate the given number of cycles of the Z80, or until an exception.
@@ -108,18 +99,15 @@ static uint8_t (*instruction_lookup_table[256])(Z80*) = {
 */
 bool z80_do_cycles(Z80 *z80, double cycles)
 {
-    if (z80->except)
-        return true;
-
     cycles -= z80->pending_cycles;
-    while (cycles > 0) {
+    while (cycles > 0 && !z80->except) {
         // uint8_t opcode = mmu_read_byte(&z80->mmu, z80->regfile.pc);
         uint8_t opcode = 0x00;
-        cycles -= (*instruction_lookup_table[opcode])(z80) - 2;
+        cycles -= (*instruction_lookup_table[opcode])(z80, opcode) - 2;
     }
 
     z80->pending_cycles = -cycles;
-    return false;
+    return z80->except;
 }
 
 #ifdef DEBUG_MODE

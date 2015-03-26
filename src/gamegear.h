@@ -10,6 +10,8 @@
 #include "rom.h"
 #include "z80.h"
 
+#define GG_EXC_BUFF_SIZE 128
+
 /* Structs */
 
 typedef struct {
@@ -17,6 +19,7 @@ typedef struct {
     Z80 cpu;
     bool powered;
     uint64_t last_tick;
+    char exc_buffer[GG_EXC_BUFF_SIZE];
 } GameGear;
 
 /* Functions */

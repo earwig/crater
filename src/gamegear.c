@@ -24,6 +24,7 @@ GameGear* gamegear_create()
     // mmu_init(&gg->mmu, ...);
     z80_init(&gg->cpu, &gg->mmu);
     gg->powered = false;
+    gg->exc_buffer[0] = '\0';
     return gg;
 }
 
@@ -57,7 +58,7 @@ void gamegear_load(GameGear *gg, ROM *rom)
 
     Powering on the GameGear executes boot code (e.g. clearing memory and
     setting initial register values) and starts the clock. Powering it off
-    stops the clock.
+    stops the clock and clears any exception data.
 
     Setting the power state to its current value has no effect.
 */
@@ -71,7 +72,7 @@ void gamegear_power(GameGear *gg, bool state)
         z80_power(&gg->cpu);
         gg->last_tick = get_time_ns();
     } else {
-        // TODO: free exception buffer
+        gg->exc_buffer[0] = '\0';
     }
     gg->powered = state;
 }
@@ -105,15 +106,33 @@ bool gamegear_simulate(GameGear *gg)
 
     This function returns a const pointer to a buffer holding a human-readable
     exception string (although it may be cryptic to an end-user). The buffer is
-    owned by the GameGear object and should not be freed - it lasts until the
-    GameGear's power state is changed. If no exception flag is set, this
-    function returns NULL.
+    owned by the GameGear object and should not be freed - its contents last
+    until the GameGear's power state is changed. If no exception flag is set,
+    this function returns NULL.
 */
 const char* gamegear_get_exception(GameGear *gg)
 {
+#define SET_EXC(...) snprintf(gg->exc_buffer, GG_EXC_BUFF_SIZE, __VA_ARGS__);
     if (!gg->powered)
         return NULL;
 
-    // TODO: return ptr to exception buffer
-    return "Unknown exception";
+    if (!gg->exc_buffer[0]) {
+        if (gg->cpu.except) {
+            switch (gg->cpu.exc_code) {
+                case Z80_EXC_NOT_POWERED:
+                    SET_EXC("CPU not powered")
+                    break;
+                case Z80_EXC_UNIMPLEMENTED_OPCODE:
+                    SET_EXC("Unimplemented opcode: 0x%02X", gg->cpu.exc_data)
+                    break;
+                default:
+                    SET_EXC("Unknown exception")
+                    break;
+            }
+        } else {
+            return NULL;
+        }
+    }
+    return gg->exc_buffer;
+#undef SET_EXC
 }
