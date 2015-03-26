@@ -17,7 +17,9 @@ GameGear* gamegear_create()
     if (!gg)
         OUT_OF_MEMORY()
 
-    gg->rom = NULL;
+    // mmu_init(&gg->mmu, ...);
+    z80_init(&gg->cpu, CPU_CLOCK_SPEED);
+    gg->powered = false;
     return gg;
 }
 
@@ -34,11 +36,15 @@ void gamegear_destroy(GameGear *gg)
 /*
     Load a ROM image into the GameGear object.
 
-    Does *not* steal the reference to the ROM object.
+    Does *not* steal a reference to the ROM object. Calling this function while
+    the GameGear is powered on has no effect.
 */
 void gamegear_load(GameGear *gg, ROM *rom)
 {
-    gg->rom = rom;
+    if (gg->powered)
+        return;
+
+    // mmu_hard_map(&gg->mmu, rom->data, ..., ...);
 }
 
 /*
@@ -52,9 +58,29 @@ void gamegear_load(GameGear *gg, ROM *rom)
 */
 void gamegear_power(GameGear *gg, bool state)
 {
-    if (gg->state == state)
+    if (gg->powered == state)
+        return;
+
+    if (state) {
+        // mmu_power(&gg->mmu);
+        z80_power(&gg->cpu);
+    }
+    gg->powered = state;
+}
+
+/*
+    Update the simulation of the GameGear.
+
+    This function simulates the number of clock cycles corresponding to the
+    time since the last call to gamegear_simulate() or gamegear_power() if the
+    system was just powered on. If the system is powered off, this function
+    does nothing.
+*/
+void gamegear_simulate(GameGear *gg)
+{
+    if (!gg->powered)
         return;
 
     // TODO
-    gg->state = state;
+    // z80_do_cycles(&gg->cpu, ...);
 }

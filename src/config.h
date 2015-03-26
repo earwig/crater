@@ -5,6 +5,8 @@
 
 #include <stdbool.h>
 
+#define ROMS_DIR "roms"
+
 #define CONFIG_OK 0
 #define CONFIG_EXIT_SUCCESS 1
 #define CONFIG_EXIT_FAILURE 2

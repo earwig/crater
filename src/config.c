@@ -12,8 +12,6 @@
 #include "logging.h"
 #include "version.h"
 
-#define ROMS_DIR "roms"
-
 /*
     Print command-line help/usage.
 */

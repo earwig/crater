@@ -3,11 +3,30 @@
 
 #pragma once
 
-/* Clock speed in Hz was taken from the official Sega GG documentation */
-#define CLOCK_SPEED 3579545
+#include <stdbool.h>
+#include <stdint.h>
 
 /* Structs */
 
 typedef struct {
-    int pc;
+    uint8_t  a,  f,  b,  c,  d,  e,  h,  l;
+    uint8_t  a_, f_, b_, c_, d_, e_, h_, l_;
+    uint16_t ix, iy, sp, pc;
+    uint8_t  i,  r;
+    bool     im_a, im_b;
+    bool     iff1, iff2;
+} Z80RegFile;
+
+typedef struct {
+    Z80RegFile regfile;
+    uint64_t clock_speed;
 } Z80;
+
+/* Functions */
+
+void z80_init(Z80*, uint64_t);
+void z80_power(Z80*);
+
+#ifdef DEBUG_MODE
+void z80_dump_registers(Z80*);
+#endif
