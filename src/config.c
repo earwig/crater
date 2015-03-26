@@ -364,7 +364,7 @@ void config_destroy(Config *config)
 /*
     DEBUG FUNCTION: Print out all config arguments to stdout.
 */
-void config_dump_args(Config* config)
+void config_dump_args(const Config* config)
 {
     DEBUG("Dumping arguments:")
     DEBUG("- fullscreen:  %s", config->fullscreen ? "true" : "false")

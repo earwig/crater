@@ -21,7 +21,8 @@ GameGear* gamegear_create()
     if (!gg)
         OUT_OF_MEMORY()
 
-    // mmu_init(&gg->mmu, ...);
+    if (!mmu_init(&gg->mmu))
+        OUT_OF_MEMORY()
     z80_init(&gg->cpu, &gg->mmu);
     gg->powered = false;
     gg->exc_buffer[0] = '\0';
@@ -35,22 +36,23 @@ GameGear* gamegear_create()
 */
 void gamegear_destroy(GameGear *gg)
 {
-    // mmu_free(&gg->mmu);
+    mmu_free(&gg->mmu);
     free(gg);
 }
 
 /*
     Load a ROM image into the GameGear object.
 
-    Does *not* steal a reference to the ROM object. Calling this function while
-    the GameGear is powered on has no effect.
+    Does *not* steal a reference to the ROM object, so it must be kept alive
+    until another ROM is loaded or the GameGear is destroyed. Calling this
+    function while the GameGear is powered on has no effect.
 */
-void gamegear_load(GameGear *gg, ROM *rom)
+void gamegear_load(GameGear *gg, const ROM *rom)
 {
     if (gg->powered)
         return;
 
-    // mmu_hard_map(&gg->mmu, rom->data, ..., ...);
+    mmu_load_rom(&gg->mmu, rom->data, rom->size);
 }
 
 /*
@@ -68,7 +70,7 @@ void gamegear_power(GameGear *gg, bool state)
         return;
 
     if (state) {
-        // mmu_power(&gg->mmu);
+        mmu_power(&gg->mmu);
         z80_power(&gg->cpu);
         gg->last_tick = get_time_ns();
     } else {

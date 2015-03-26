@@ -26,7 +26,7 @@ typedef struct {
 
 GameGear* gamegear_create();
 void gamegear_destroy(GameGear*);
-void gamegear_load(GameGear*, ROM*);
+void gamegear_load(GameGear*, const ROM*);
 void gamegear_power(GameGear*, bool);
 bool gamegear_simulate(GameGear*);
 const char* gamegear_get_exception(GameGear*);

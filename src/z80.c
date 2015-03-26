@@ -63,7 +63,7 @@ void z80_power(Z80 *z80)
 /*
     Return whether a particular flag is set in the F register.
 */
-static inline bool get_flag(Z80 *z80, uint8_t flag)
+static inline bool get_flag(const Z80 *z80, uint8_t flag)
 {
     return z80->regfile.f & (1 << flag);
 }
@@ -71,7 +71,7 @@ static inline bool get_flag(Z80 *z80, uint8_t flag)
 /*
     Return whether a particular flag is set in the F' register.
 */
-static inline bool get_shadow_flag(Z80 *z80, uint8_t flag)
+static inline bool get_shadow_flag(const Z80 *z80, uint8_t flag)
 {
     return z80->regfile.f_ & (1 << flag);
 }
@@ -79,7 +79,7 @@ static inline bool get_shadow_flag(Z80 *z80, uint8_t flag)
 /*
     Return the CPU's current interrupt mode.
 */
-static inline uint8_t get_interrupt_mode(Z80 *z80)
+static inline uint8_t get_interrupt_mode(const Z80 *z80)
 {
     if (!z80->regfile.im_a)
         return 0;
@@ -101,8 +101,7 @@ bool z80_do_cycles(Z80 *z80, double cycles)
 {
     cycles -= z80->pending_cycles;
     while (cycles > 0 && !z80->except) {
-        // uint8_t opcode = mmu_read_byte(&z80->mmu, z80->regfile.pc);
-        uint8_t opcode = 0x00;
+        uint8_t opcode = mmu_read_byte(z80->mmu, z80->regfile.pc);
         cycles -= (*instruction_lookup_table[opcode])(z80, opcode) - 2;
     }
 
@@ -114,9 +113,9 @@ bool z80_do_cycles(Z80 *z80, double cycles)
 /*
     DEBUG FUNCTION: Print out all register values to stdout.
 */
-void z80_dump_registers(Z80 *z80)
+void z80_dump_registers(const Z80 *z80)
 {
-    Z80RegFile *regfile = &z80->regfile;
+    const Z80RegFile *regfile = &z80->regfile;
     DEBUG("Dumping Z80 register values:")
 
     DEBUG("- AF:   0x%02X%02X (C: %u, N: %u, P/V: %u, H: %u, Z: %u, S: %u)",

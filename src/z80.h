@@ -37,5 +37,5 @@ void z80_power(Z80*);
 bool z80_do_cycles(Z80*, double);
 
 #ifdef DEBUG_MODE
-void z80_dump_registers(Z80*);
+void z80_dump_registers(const Z80*);
 #endif

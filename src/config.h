@@ -38,5 +38,5 @@ int config_create(Config**, int, char*[]);
 void config_destroy(Config*);
 
 #ifdef DEBUG_MODE
-void config_dump_args(Config*);
+void config_dump_args(const Config*);
 #endif
