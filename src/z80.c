@@ -86,6 +86,19 @@ static inline uint8_t get_interrupt_mode(Z80 *z80)
     return 2;
 }
 
+/* ------------------------------------------------------------------------- */
+
+static uint8_t z80_inst_nop(Z80 *z80) {
+    z80->regfile.pc++;
+    return 4;
+}
+
+static uint8_t (*instruction_lookup_table[256])(Z80*) = {
+    z80_inst_nop
+};
+
+/* ------------------------------------------------------------------------- */
+
 /*
     Emulate the given number of cycles of the Z80, or until an exception.
 
@@ -98,9 +111,14 @@ bool z80_do_cycles(Z80 *z80, double cycles)
     if (z80->except)
         return true;
 
-    z80->pending_cycles += cycles;
-    // TODO: fetch instruction...
+    cycles -= z80->pending_cycles;
+    while (cycles > 0) {
+        // uint8_t opcode = mmu_read_byte(&z80->mmu, z80->regfile.pc);
+        uint8_t opcode = 0x00;
+        cycles -= (*instruction_lookup_table[opcode])(z80) - 2;
+    }
 
+    z80->pending_cycles = -cycles;
     return false;
 }
 
