@@ -19,7 +19,7 @@ void iomanager_emulate(GameGear *gg)
     // TODO: use SDL events
     while (1) {
         if (gamegear_simulate(gg)) {
-            DEBUG("IOManager caught exception: %s", gamegear_get_exception(gg))
+            ERROR("caught exception: %s", gamegear_get_exception(gg))
 #ifdef DEBUG_MODE
             z80_dump_registers(&gg->cpu);
 #endif
