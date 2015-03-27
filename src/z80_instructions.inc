@@ -5,17 +5,13 @@
     This file contains code to implement the Z80 instruction set. Since there
     are a lot of functions, it is kept separate from the main z80.c file. It is
     included in the middle of z80.c and should not be compiled separately.
-*/
 
-/*
-    0x00: NOP
+    Most of this information can be found in the Z80 User Manual, Revision 06.
+
+    Undocumented opcodes, flags, and some additional details come from:
+    - http://clrhome.org/table/
+    - http://www.z80.info/z80sflag.htm
 */
-static uint8_t z80_inst_nop(Z80 *z80, uint8_t opcode)
-{
-    (void) opcode;
-    z80->regfile.pc++;
-    return 4;
-}
 
 /*
     Unimplemented opcode handler.
@@ -28,261 +24,299 @@ static uint8_t z80_inst_unimplemented(Z80 *z80, uint8_t opcode)
     return 2;
 }
 
+/*
+    NOP (0x00):
+    No operation is performed.
+*/
+static uint8_t z80_inst_nop(Z80 *z80, uint8_t opcode)
+{
+    (void) opcode;
+    z80->regfile.pc++;
+    return 4;
+}
+
+/*
+    INC r (0x04, 0x0C, 0x14, 0x1C, 0x24, 0x2C, 0x3C):
+    Increment the 8-bit register encoded in the opcode.
+*/
+static uint8_t z80_inst_inc_r(Z80 *z80, uint8_t opcode)
+{
+    uint8_t *reg;
+
+    switch(opcode) {
+        case 0x3C: reg = &z80->regfile.a; break;
+        case 0x04: reg = &z80->regfile.b; break;
+        case 0x0C: reg = &z80->regfile.c; break;
+        case 0x14: reg = &z80->regfile.d; break;
+        case 0x1C: reg = &z80->regfile.e; break;
+        case 0x24: reg = &z80->regfile.h; break;
+        case 0x2C: reg = &z80->regfile.l; break;
+    }
+
+    bool halfcarry = !!(((*reg & 0x0F) + 1) & 0x10);
+    (*reg)++;
+    update_flags(z80, 0, 0, *reg == 0x80, !!(*reg & 0x08), halfcarry,
+                 !!(*reg & 0x20), *reg == 0, !!(*reg & 0x80), 0xFE);
+
+    z80->regfile.pc++;
+    return 4;
+}
+
 static uint8_t (*instruction_lookup_table[256])(Z80*, uint8_t) = {
     /* 0x00 */ z80_inst_nop,
-    /* 0x01 */ z80_inst_unimplemented,
-    /* 0x02 */ z80_inst_unimplemented,
-    /* 0x03 */ z80_inst_unimplemented,
-    /* 0x04 */ z80_inst_unimplemented,
-    /* 0x05 */ z80_inst_unimplemented,
-    /* 0x06 */ z80_inst_unimplemented,
-    /* 0x07 */ z80_inst_unimplemented,
-    /* 0x08 */ z80_inst_unimplemented,
-    /* 0x09 */ z80_inst_unimplemented,
-    /* 0x0A */ z80_inst_unimplemented,
-    /* 0x0B */ z80_inst_unimplemented,
-    /* 0x0C */ z80_inst_unimplemented,
-    /* 0x0D */ z80_inst_unimplemented,
-    /* 0x0E */ z80_inst_unimplemented,
-    /* 0x0F */ z80_inst_unimplemented,
-    /* 0x10 */ z80_inst_unimplemented,
-    /* 0x11 */ z80_inst_unimplemented,
-    /* 0x12 */ z80_inst_unimplemented,
-    /* 0x13 */ z80_inst_unimplemented,
-    /* 0x14 */ z80_inst_unimplemented,
-    /* 0x15 */ z80_inst_unimplemented,
-    /* 0x16 */ z80_inst_unimplemented,
-    /* 0x17 */ z80_inst_unimplemented,
-    /* 0x18 */ z80_inst_unimplemented,
-    /* 0x19 */ z80_inst_unimplemented,
-    /* 0x1A */ z80_inst_unimplemented,
-    /* 0x1B */ z80_inst_unimplemented,
-    /* 0x1C */ z80_inst_unimplemented,
-    /* 0x1D */ z80_inst_unimplemented,
-    /* 0x1E */ z80_inst_unimplemented,
-    /* 0x1F */ z80_inst_unimplemented,
-    /* 0x20 */ z80_inst_unimplemented,
-    /* 0x21 */ z80_inst_unimplemented,
-    /* 0x22 */ z80_inst_unimplemented,
-    /* 0x23 */ z80_inst_unimplemented,
-    /* 0x24 */ z80_inst_unimplemented,
-    /* 0x25 */ z80_inst_unimplemented,
-    /* 0x26 */ z80_inst_unimplemented,
-    /* 0x27 */ z80_inst_unimplemented,
-    /* 0x28 */ z80_inst_unimplemented,
-    /* 0x29 */ z80_inst_unimplemented,
-    /* 0x2A */ z80_inst_unimplemented,
-    /* 0x2B */ z80_inst_unimplemented,
-    /* 0x2C */ z80_inst_unimplemented,
-    /* 0x2D */ z80_inst_unimplemented,
-    /* 0x2E */ z80_inst_unimplemented,
-    /* 0x2F */ z80_inst_unimplemented,
-    /* 0x30 */ z80_inst_unimplemented,
-    /* 0x31 */ z80_inst_unimplemented,
-    /* 0x32 */ z80_inst_unimplemented,
-    /* 0x33 */ z80_inst_unimplemented,
-    /* 0x34 */ z80_inst_unimplemented,
-    /* 0x35 */ z80_inst_unimplemented,
-    /* 0x36 */ z80_inst_unimplemented,
-    /* 0x37 */ z80_inst_unimplemented,
-    /* 0x38 */ z80_inst_unimplemented,
-    /* 0x39 */ z80_inst_unimplemented,
-    /* 0x3A */ z80_inst_unimplemented,
-    /* 0x3B */ z80_inst_unimplemented,
-    /* 0x3C */ z80_inst_unimplemented,
-    /* 0x3D */ z80_inst_unimplemented,
-    /* 0x3E */ z80_inst_unimplemented,
-    /* 0x3F */ z80_inst_unimplemented,
-    /* 0x40 */ z80_inst_unimplemented,
-    /* 0x41 */ z80_inst_unimplemented,
-    /* 0x42 */ z80_inst_unimplemented,
-    /* 0x43 */ z80_inst_unimplemented,
-    /* 0x44 */ z80_inst_unimplemented,
-    /* 0x45 */ z80_inst_unimplemented,
-    /* 0x46 */ z80_inst_unimplemented,
-    /* 0x47 */ z80_inst_unimplemented,
-    /* 0x48 */ z80_inst_unimplemented,
-    /* 0x49 */ z80_inst_unimplemented,
-    /* 0x4A */ z80_inst_unimplemented,
-    /* 0x4B */ z80_inst_unimplemented,
-    /* 0x4C */ z80_inst_unimplemented,
-    /* 0x4D */ z80_inst_unimplemented,
-    /* 0x4E */ z80_inst_unimplemented,
-    /* 0x4F */ z80_inst_unimplemented,
-    /* 0x50 */ z80_inst_unimplemented,
-    /* 0x51 */ z80_inst_unimplemented,
-    /* 0x52 */ z80_inst_unimplemented,
-    /* 0x53 */ z80_inst_unimplemented,
-    /* 0x54 */ z80_inst_unimplemented,
-    /* 0x55 */ z80_inst_unimplemented,
-    /* 0x56 */ z80_inst_unimplemented,
-    /* 0x57 */ z80_inst_unimplemented,
-    /* 0x58 */ z80_inst_unimplemented,
-    /* 0x59 */ z80_inst_unimplemented,
-    /* 0x5A */ z80_inst_unimplemented,
-    /* 0x5B */ z80_inst_unimplemented,
-    /* 0x5C */ z80_inst_unimplemented,
-    /* 0x5D */ z80_inst_unimplemented,
-    /* 0x5E */ z80_inst_unimplemented,
-    /* 0x5F */ z80_inst_unimplemented,
-    /* 0x60 */ z80_inst_unimplemented,
-    /* 0x61 */ z80_inst_unimplemented,
-    /* 0x62 */ z80_inst_unimplemented,
-    /* 0x63 */ z80_inst_unimplemented,
-    /* 0x64 */ z80_inst_unimplemented,
-    /* 0x65 */ z80_inst_unimplemented,
-    /* 0x66 */ z80_inst_unimplemented,
-    /* 0x67 */ z80_inst_unimplemented,
-    /* 0x68 */ z80_inst_unimplemented,
-    /* 0x69 */ z80_inst_unimplemented,
-    /* 0x6A */ z80_inst_unimplemented,
-    /* 0x6B */ z80_inst_unimplemented,
-    /* 0x6C */ z80_inst_unimplemented,
-    /* 0x6D */ z80_inst_unimplemented,
-    /* 0x6E */ z80_inst_unimplemented,
-    /* 0x6F */ z80_inst_unimplemented,
-    /* 0x70 */ z80_inst_unimplemented,
-    /* 0x71 */ z80_inst_unimplemented,
-    /* 0x72 */ z80_inst_unimplemented,
-    /* 0x73 */ z80_inst_unimplemented,
-    /* 0x74 */ z80_inst_unimplemented,
-    /* 0x75 */ z80_inst_unimplemented,
-    /* 0x76 */ z80_inst_unimplemented,
-    /* 0x77 */ z80_inst_unimplemented,
-    /* 0x78 */ z80_inst_unimplemented,
-    /* 0x79 */ z80_inst_unimplemented,
-    /* 0x7A */ z80_inst_unimplemented,
-    /* 0x7B */ z80_inst_unimplemented,
-    /* 0x7C */ z80_inst_unimplemented,
-    /* 0x7D */ z80_inst_unimplemented,
-    /* 0x7E */ z80_inst_unimplemented,
-    /* 0x7F */ z80_inst_unimplemented,
-    /* 0x80 */ z80_inst_unimplemented,
-    /* 0x81 */ z80_inst_unimplemented,
-    /* 0x82 */ z80_inst_unimplemented,
-    /* 0x83 */ z80_inst_unimplemented,
-    /* 0x84 */ z80_inst_unimplemented,
-    /* 0x85 */ z80_inst_unimplemented,
-    /* 0x86 */ z80_inst_unimplemented,
-    /* 0x87 */ z80_inst_unimplemented,
-    /* 0x88 */ z80_inst_unimplemented,
-    /* 0x89 */ z80_inst_unimplemented,
-    /* 0x8A */ z80_inst_unimplemented,
-    /* 0x8B */ z80_inst_unimplemented,
-    /* 0x8C */ z80_inst_unimplemented,
-    /* 0x8D */ z80_inst_unimplemented,
-    /* 0x8E */ z80_inst_unimplemented,
-    /* 0x8F */ z80_inst_unimplemented,
-    /* 0x90 */ z80_inst_unimplemented,
-    /* 0x91 */ z80_inst_unimplemented,
-    /* 0x92 */ z80_inst_unimplemented,
-    /* 0x93 */ z80_inst_unimplemented,
-    /* 0x94 */ z80_inst_unimplemented,
-    /* 0x95 */ z80_inst_unimplemented,
-    /* 0x96 */ z80_inst_unimplemented,
-    /* 0x97 */ z80_inst_unimplemented,
-    /* 0x98 */ z80_inst_unimplemented,
-    /* 0x99 */ z80_inst_unimplemented,
-    /* 0x9A */ z80_inst_unimplemented,
-    /* 0x9B */ z80_inst_unimplemented,
-    /* 0x9C */ z80_inst_unimplemented,
-    /* 0x9D */ z80_inst_unimplemented,
-    /* 0x9E */ z80_inst_unimplemented,
-    /* 0x9F */ z80_inst_unimplemented,
-    /* 0xA0 */ z80_inst_unimplemented,
-    /* 0xA1 */ z80_inst_unimplemented,
-    /* 0xA2 */ z80_inst_unimplemented,
-    /* 0xA3 */ z80_inst_unimplemented,
-    /* 0xA4 */ z80_inst_unimplemented,
-    /* 0xA5 */ z80_inst_unimplemented,
-    /* 0xA6 */ z80_inst_unimplemented,
-    /* 0xA7 */ z80_inst_unimplemented,
-    /* 0xA8 */ z80_inst_unimplemented,
-    /* 0xA9 */ z80_inst_unimplemented,
-    /* 0xAA */ z80_inst_unimplemented,
-    /* 0xAB */ z80_inst_unimplemented,
-    /* 0xAC */ z80_inst_unimplemented,
-    /* 0xAD */ z80_inst_unimplemented,
-    /* 0xAE */ z80_inst_unimplemented,
-    /* 0xAF */ z80_inst_unimplemented,
-    /* 0xB0 */ z80_inst_unimplemented,
-    /* 0xB1 */ z80_inst_unimplemented,
-    /* 0xB2 */ z80_inst_unimplemented,
-    /* 0xB3 */ z80_inst_unimplemented,
-    /* 0xB4 */ z80_inst_unimplemented,
-    /* 0xB5 */ z80_inst_unimplemented,
-    /* 0xB6 */ z80_inst_unimplemented,
-    /* 0xB7 */ z80_inst_unimplemented,
-    /* 0xB8 */ z80_inst_unimplemented,
-    /* 0xB9 */ z80_inst_unimplemented,
-    /* 0xBA */ z80_inst_unimplemented,
-    /* 0xBB */ z80_inst_unimplemented,
-    /* 0xBC */ z80_inst_unimplemented,
-    /* 0xBD */ z80_inst_unimplemented,
-    /* 0xBE */ z80_inst_unimplemented,
-    /* 0xBF */ z80_inst_unimplemented,
-    /* 0xC0 */ z80_inst_unimplemented,
-    /* 0xC1 */ z80_inst_unimplemented,
-    /* 0xC2 */ z80_inst_unimplemented,
-    /* 0xC3 */ z80_inst_unimplemented,
-    /* 0xC4 */ z80_inst_unimplemented,
-    /* 0xC5 */ z80_inst_unimplemented,
-    /* 0xC6 */ z80_inst_unimplemented,
-    /* 0xC7 */ z80_inst_unimplemented,
-    /* 0xC8 */ z80_inst_unimplemented,
-    /* 0xC9 */ z80_inst_unimplemented,
-    /* 0xCA */ z80_inst_unimplemented,
-    /* 0xCB */ z80_inst_unimplemented,
-    /* 0xCC */ z80_inst_unimplemented,
-    /* 0xCD */ z80_inst_unimplemented,
-    /* 0xCE */ z80_inst_unimplemented,
-    /* 0xCF */ z80_inst_unimplemented,
-    /* 0xD0 */ z80_inst_unimplemented,
-    /* 0xD1 */ z80_inst_unimplemented,
-    /* 0xD2 */ z80_inst_unimplemented,
-    /* 0xD3 */ z80_inst_unimplemented,
-    /* 0xD4 */ z80_inst_unimplemented,
-    /* 0xD5 */ z80_inst_unimplemented,
-    /* 0xD6 */ z80_inst_unimplemented,
-    /* 0xD7 */ z80_inst_unimplemented,
-    /* 0xD8 */ z80_inst_unimplemented,
-    /* 0xD9 */ z80_inst_unimplemented,
-    /* 0xDA */ z80_inst_unimplemented,
-    /* 0xDB */ z80_inst_unimplemented,
-    /* 0xDC */ z80_inst_unimplemented,
-    /* 0xDD */ z80_inst_unimplemented,
-    /* 0xDE */ z80_inst_unimplemented,
-    /* 0xDF */ z80_inst_unimplemented,
-    /* 0xE0 */ z80_inst_unimplemented,
-    /* 0xE1 */ z80_inst_unimplemented,
-    /* 0xE2 */ z80_inst_unimplemented,
-    /* 0xE3 */ z80_inst_unimplemented,
-    /* 0xE4 */ z80_inst_unimplemented,
-    /* 0xE5 */ z80_inst_unimplemented,
-    /* 0xE6 */ z80_inst_unimplemented,
-    /* 0xE7 */ z80_inst_unimplemented,
-    /* 0xE8 */ z80_inst_unimplemented,
-    /* 0xE9 */ z80_inst_unimplemented,
-    /* 0xEA */ z80_inst_unimplemented,
-    /* 0xEB */ z80_inst_unimplemented,
-    /* 0xEC */ z80_inst_unimplemented,
-    /* 0xED */ z80_inst_unimplemented,
-    /* 0xEE */ z80_inst_unimplemented,
-    /* 0xEF */ z80_inst_unimplemented,
-    /* 0xF0 */ z80_inst_unimplemented,
-    /* 0xF1 */ z80_inst_unimplemented,
-    /* 0xF2 */ z80_inst_unimplemented,
-    /* 0xF3 */ z80_inst_unimplemented,
-    /* 0xF4 */ z80_inst_unimplemented,
-    /* 0xF5 */ z80_inst_unimplemented,
-    /* 0xF6 */ z80_inst_unimplemented,
-    /* 0xF7 */ z80_inst_unimplemented,
-    /* 0xF8 */ z80_inst_unimplemented,
-    /* 0xF9 */ z80_inst_unimplemented,
-    /* 0xFA */ z80_inst_unimplemented,
-    /* 0xFB */ z80_inst_unimplemented,
-    /* 0xFC */ z80_inst_unimplemented,
-    /* 0xFD */ z80_inst_unimplemented,
-    /* 0xFE */ z80_inst_unimplemented,
-    /* 0xFF */ z80_inst_unimplemented
+    /* 0x01 */ z80_inst_unimplemented,  // TODO
+    /* 0x02 */ z80_inst_unimplemented,  // TODO
+    /* 0x03 */ z80_inst_unimplemented,  // TODO
+    /* 0x04 */ z80_inst_inc_r,
+    /* 0x05 */ z80_inst_unimplemented,  // TODO
+    /* 0x06 */ z80_inst_unimplemented,  // TODO
+    /* 0x07 */ z80_inst_unimplemented,  // TODO
+    /* 0x08 */ z80_inst_unimplemented,  // TODO
+    /* 0x09 */ z80_inst_unimplemented,  // TODO
+    /* 0x0A */ z80_inst_unimplemented,  // TODO
+    /* 0x0B */ z80_inst_unimplemented,  // TODO
+    /* 0x0C */ z80_inst_inc_r,
+    /* 0x0D */ z80_inst_unimplemented,  // TODO
+    /* 0x0E */ z80_inst_unimplemented,  // TODO
+    /* 0x0F */ z80_inst_unimplemented,  // TODO
+    /* 0x10 */ z80_inst_unimplemented,  // TODO
+    /* 0x11 */ z80_inst_unimplemented,  // TODO
+    /* 0x12 */ z80_inst_unimplemented,  // TODO
+    /* 0x13 */ z80_inst_unimplemented,  // TODO
+    /* 0x14 */ z80_inst_inc_r,
+    /* 0x15 */ z80_inst_unimplemented,  // TODO
+    /* 0x16 */ z80_inst_unimplemented,  // TODO
+    /* 0x17 */ z80_inst_unimplemented,  // TODO
+    /* 0x18 */ z80_inst_unimplemented,  // TODO
+    /* 0x19 */ z80_inst_unimplemented,  // TODO
+    /* 0x1A */ z80_inst_unimplemented,  // TODO
+    /* 0x1B */ z80_inst_unimplemented,  // TODO
+    /* 0x1C */ z80_inst_inc_r,
+    /* 0x1D */ z80_inst_unimplemented,  // TODO
+    /* 0x1E */ z80_inst_unimplemented,  // TODO
+    /* 0x1F */ z80_inst_unimplemented,  // TODO
+    /* 0x20 */ z80_inst_unimplemented,  // TODO
+    /* 0x21 */ z80_inst_unimplemented,  // TODO
+    /* 0x22 */ z80_inst_unimplemented,  // TODO
+    /* 0x23 */ z80_inst_unimplemented,  // TODO
+    /* 0x24 */ z80_inst_inc_r,
+    /* 0x25 */ z80_inst_unimplemented,  // TODO
+    /* 0x26 */ z80_inst_unimplemented,  // TODO
+    /* 0x27 */ z80_inst_unimplemented,  // TODO
+    /* 0x28 */ z80_inst_unimplemented,  // TODO
+    /* 0x29 */ z80_inst_unimplemented,  // TODO
+    /* 0x2A */ z80_inst_unimplemented,  // TODO
+    /* 0x2B */ z80_inst_unimplemented,  // TODO
+    /* 0x2C */ z80_inst_inc_r,
+    /* 0x2D */ z80_inst_unimplemented,  // TODO
+    /* 0x2E */ z80_inst_unimplemented,  // TODO
+    /* 0x2F */ z80_inst_unimplemented,  // TODO
+    /* 0x30 */ z80_inst_unimplemented,  // TODO
+    /* 0x31 */ z80_inst_unimplemented,  // TODO
+    /* 0x32 */ z80_inst_unimplemented,  // TODO
+    /* 0x33 */ z80_inst_unimplemented,  // TODO
+    /* 0x34 */ z80_inst_unimplemented,  // TODO
+    /* 0x35 */ z80_inst_unimplemented,  // TODO
+    /* 0x36 */ z80_inst_unimplemented,  // TODO
+    /* 0x37 */ z80_inst_unimplemented,  // TODO
+    /* 0x38 */ z80_inst_unimplemented,  // TODO
+    /* 0x39 */ z80_inst_unimplemented,  // TODO
+    /* 0x3A */ z80_inst_unimplemented,  // TODO
+    /* 0x3B */ z80_inst_unimplemented,  // TODO
+    /* 0x3C */ z80_inst_inc_r,
+    /* 0x3D */ z80_inst_unimplemented,  // TODO
+    /* 0x3E */ z80_inst_unimplemented,  // TODO
+    /* 0x3F */ z80_inst_unimplemented,  // TODO
+    /* 0x40 */ z80_inst_unimplemented,  // TODO
+    /* 0x41 */ z80_inst_unimplemented,  // TODO
+    /* 0x42 */ z80_inst_unimplemented,  // TODO
+    /* 0x43 */ z80_inst_unimplemented,  // TODO
+    /* 0x44 */ z80_inst_unimplemented,  // TODO
+    /* 0x45 */ z80_inst_unimplemented,  // TODO
+    /* 0x46 */ z80_inst_unimplemented,  // TODO
+    /* 0x47 */ z80_inst_unimplemented,  // TODO
+    /* 0x48 */ z80_inst_unimplemented,  // TODO
+    /* 0x49 */ z80_inst_unimplemented,  // TODO
+    /* 0x4A */ z80_inst_unimplemented,  // TODO
+    /* 0x4B */ z80_inst_unimplemented,  // TODO
+    /* 0x4C */ z80_inst_unimplemented,  // TODO
+    /* 0x4D */ z80_inst_unimplemented,  // TODO
+    /* 0x4E */ z80_inst_unimplemented,  // TODO
+    /* 0x4F */ z80_inst_unimplemented,  // TODO
+    /* 0x50 */ z80_inst_unimplemented,  // TODO
+    /* 0x51 */ z80_inst_unimplemented,  // TODO
+    /* 0x52 */ z80_inst_unimplemented,  // TODO
+    /* 0x53 */ z80_inst_unimplemented,  // TODO
+    /* 0x54 */ z80_inst_unimplemented,  // TODO
+    /* 0x55 */ z80_inst_unimplemented,  // TODO
+    /* 0x56 */ z80_inst_unimplemented,  // TODO
+    /* 0x57 */ z80_inst_unimplemented,  // TODO
+    /* 0x58 */ z80_inst_unimplemented,  // TODO
+    /* 0x59 */ z80_inst_unimplemented,  // TODO
+    /* 0x5A */ z80_inst_unimplemented,  // TODO
+    /* 0x5B */ z80_inst_unimplemented,  // TODO
+    /* 0x5C */ z80_inst_unimplemented,  // TODO
+    /* 0x5D */ z80_inst_unimplemented,  // TODO
+    /* 0x5E */ z80_inst_unimplemented,  // TODO
+    /* 0x5F */ z80_inst_unimplemented,  // TODO
+    /* 0x60 */ z80_inst_unimplemented,  // TODO
+    /* 0x61 */ z80_inst_unimplemented,  // TODO
+    /* 0x62 */ z80_inst_unimplemented,  // TODO
+    /* 0x63 */ z80_inst_unimplemented,  // TODO
+    /* 0x64 */ z80_inst_unimplemented,  // TODO
+    /* 0x65 */ z80_inst_unimplemented,  // TODO
+    /* 0x66 */ z80_inst_unimplemented,  // TODO
+    /* 0x67 */ z80_inst_unimplemented,  // TODO
+    /* 0x68 */ z80_inst_unimplemented,  // TODO
+    /* 0x69 */ z80_inst_unimplemented,  // TODO
+    /* 0x6A */ z80_inst_unimplemented,  // TODO
+    /* 0x6B */ z80_inst_unimplemented,  // TODO
+    /* 0x6C */ z80_inst_unimplemented,  // TODO
+    /* 0x6D */ z80_inst_unimplemented,  // TODO
+    /* 0x6E */ z80_inst_unimplemented,  // TODO
+    /* 0x6F */ z80_inst_unimplemented,  // TODO
+    /* 0x70 */ z80_inst_unimplemented,  // TODO
+    /* 0x71 */ z80_inst_unimplemented,  // TODO
+    /* 0x72 */ z80_inst_unimplemented,  // TODO
+    /* 0x73 */ z80_inst_unimplemented,  // TODO
+    /* 0x74 */ z80_inst_unimplemented,  // TODO
+    /* 0x75 */ z80_inst_unimplemented,  // TODO
+    /* 0x76 */ z80_inst_unimplemented,  // TODO
+    /* 0x77 */ z80_inst_unimplemented,  // TODO
+    /* 0x78 */ z80_inst_unimplemented,  // TODO
+    /* 0x79 */ z80_inst_unimplemented,  // TODO
+    /* 0x7A */ z80_inst_unimplemented,  // TODO
+    /* 0x7B */ z80_inst_unimplemented,  // TODO
+    /* 0x7C */ z80_inst_unimplemented,  // TODO
+    /* 0x7D */ z80_inst_unimplemented,  // TODO
+    /* 0x7E */ z80_inst_unimplemented,  // TODO
+    /* 0x7F */ z80_inst_unimplemented,  // TODO
+    /* 0x80 */ z80_inst_unimplemented,  // TODO
+    /* 0x81 */ z80_inst_unimplemented,  // TODO
+    /* 0x82 */ z80_inst_unimplemented,  // TODO
+    /* 0x83 */ z80_inst_unimplemented,  // TODO
+    /* 0x84 */ z80_inst_unimplemented,  // TODO
+    /* 0x85 */ z80_inst_unimplemented,  // TODO
+    /* 0x86 */ z80_inst_unimplemented,  // TODO
+    /* 0x87 */ z80_inst_unimplemented,  // TODO
+    /* 0x88 */ z80_inst_unimplemented,  // TODO
+    /* 0x89 */ z80_inst_unimplemented,  // TODO
+    /* 0x8A */ z80_inst_unimplemented,  // TODO
+    /* 0x8B */ z80_inst_unimplemented,  // TODO
+    /* 0x8C */ z80_inst_unimplemented,  // TODO
+    /* 0x8D */ z80_inst_unimplemented,  // TODO
+    /* 0x8E */ z80_inst_unimplemented,  // TODO
+    /* 0x8F */ z80_inst_unimplemented,  // TODO
+    /* 0x90 */ z80_inst_unimplemented,  // TODO
+    /* 0x91 */ z80_inst_unimplemented,  // TODO
+    /* 0x92 */ z80_inst_unimplemented,  // TODO
+    /* 0x93 */ z80_inst_unimplemented,  // TODO
+    /* 0x94 */ z80_inst_unimplemented,  // TODO
+    /* 0x95 */ z80_inst_unimplemented,  // TODO
+    /* 0x96 */ z80_inst_unimplemented,  // TODO
+    /* 0x97 */ z80_inst_unimplemented,  // TODO
+    /* 0x98 */ z80_inst_unimplemented,  // TODO
+    /* 0x99 */ z80_inst_unimplemented,  // TODO
+    /* 0x9A */ z80_inst_unimplemented,  // TODO
+    /* 0x9B */ z80_inst_unimplemented,  // TODO
+    /* 0x9C */ z80_inst_unimplemented,  // TODO
+    /* 0x9D */ z80_inst_unimplemented,  // TODO
+    /* 0x9E */ z80_inst_unimplemented,  // TODO
+    /* 0x9F */ z80_inst_unimplemented,  // TODO
+    /* 0xA0 */ z80_inst_unimplemented,  // TODO
+    /* 0xA1 */ z80_inst_unimplemented,  // TODO
+    /* 0xA2 */ z80_inst_unimplemented,  // TODO
+    /* 0xA3 */ z80_inst_unimplemented,  // TODO
+    /* 0xA4 */ z80_inst_unimplemented,  // TODO
+    /* 0xA5 */ z80_inst_unimplemented,  // TODO
+    /* 0xA6 */ z80_inst_unimplemented,  // TODO
+    /* 0xA7 */ z80_inst_unimplemented,  // TODO
+    /* 0xA8 */ z80_inst_unimplemented,  // TODO
+    /* 0xA9 */ z80_inst_unimplemented,  // TODO
+    /* 0xAA */ z80_inst_unimplemented,  // TODO
+    /* 0xAB */ z80_inst_unimplemented,  // TODO
+    /* 0xAC */ z80_inst_unimplemented,  // TODO
+    /* 0xAD */ z80_inst_unimplemented,  // TODO
+    /* 0xAE */ z80_inst_unimplemented,  // TODO
+    /* 0xAF */ z80_inst_unimplemented,  // TODO
+    /* 0xB0 */ z80_inst_unimplemented,  // TODO
+    /* 0xB1 */ z80_inst_unimplemented,  // TODO
+    /* 0xB2 */ z80_inst_unimplemented,  // TODO
+    /* 0xB3 */ z80_inst_unimplemented,  // TODO
+    /* 0xB4 */ z80_inst_unimplemented,  // TODO
+    /* 0xB5 */ z80_inst_unimplemented,  // TODO
+    /* 0xB6 */ z80_inst_unimplemented,  // TODO
+    /* 0xB7 */ z80_inst_unimplemented,  // TODO
+    /* 0xB8 */ z80_inst_unimplemented,  // TODO
+    /* 0xB9 */ z80_inst_unimplemented,  // TODO
+    /* 0xBA */ z80_inst_unimplemented,  // TODO
+    /* 0xBB */ z80_inst_unimplemented,  // TODO
+    /* 0xBC */ z80_inst_unimplemented,  // TODO
+    /* 0xBD */ z80_inst_unimplemented,  // TODO
+    /* 0xBE */ z80_inst_unimplemented,  // TODO
+    /* 0xBF */ z80_inst_unimplemented,  // TODO
+    /* 0xC0 */ z80_inst_unimplemented,  // TODO
+    /* 0xC1 */ z80_inst_unimplemented,  // TODO
+    /* 0xC2 */ z80_inst_unimplemented,  // TODO
+    /* 0xC3 */ z80_inst_unimplemented,  // TODO
+    /* 0xC4 */ z80_inst_unimplemented,  // TODO
+    /* 0xC5 */ z80_inst_unimplemented,  // TODO
+    /* 0xC6 */ z80_inst_unimplemented,  // TODO
+    /* 0xC7 */ z80_inst_unimplemented,  // TODO
+    /* 0xC8 */ z80_inst_unimplemented,  // TODO
+    /* 0xC9 */ z80_inst_unimplemented,  // TODO
+    /* 0xCA */ z80_inst_unimplemented,  // TODO
+    /* 0xCB */ z80_inst_unimplemented,  // TODO
+    /* 0xCC */ z80_inst_unimplemented,  // TODO
+    /* 0xCD */ z80_inst_unimplemented,  // TODO
+    /* 0xCE */ z80_inst_unimplemented,  // TODO
+    /* 0xCF */ z80_inst_unimplemented,  // TODO
+    /* 0xD0 */ z80_inst_unimplemented,  // TODO
+    /* 0xD1 */ z80_inst_unimplemented,  // TODO
+    /* 0xD2 */ z80_inst_unimplemented,  // TODO
+    /* 0xD3 */ z80_inst_unimplemented,  // TODO
+    /* 0xD4 */ z80_inst_unimplemented,  // TODO
+    /* 0xD5 */ z80_inst_unimplemented,  // TODO
+    /* 0xD6 */ z80_inst_unimplemented,  // TODO
+    /* 0xD7 */ z80_inst_unimplemented,  // TODO
+    /* 0xD8 */ z80_inst_unimplemented,  // TODO
+    /* 0xD9 */ z80_inst_unimplemented,  // TODO
+    /* 0xDA */ z80_inst_unimplemented,  // TODO
+    /* 0xDB */ z80_inst_unimplemented,  // TODO
+    /* 0xDC */ z80_inst_unimplemented,  // TODO
+    /* 0xDD */ z80_inst_unimplemented,  // TODO
+    /* 0xDE */ z80_inst_unimplemented,  // TODO
+    /* 0xDF */ z80_inst_unimplemented,  // TODO
+    /* 0xE0 */ z80_inst_unimplemented,  // TODO
+    /* 0xE1 */ z80_inst_unimplemented,  // TODO
+    /* 0xE2 */ z80_inst_unimplemented,  // TODO
+    /* 0xE3 */ z80_inst_unimplemented,  // TODO
+    /* 0xE4 */ z80_inst_unimplemented,  // TODO
+    /* 0xE5 */ z80_inst_unimplemented,  // TODO
+    /* 0xE6 */ z80_inst_unimplemented,  // TODO
+    /* 0xE7 */ z80_inst_unimplemented,  // TODO
+    /* 0xE8 */ z80_inst_unimplemented,  // TODO
+    /* 0xE9 */ z80_inst_unimplemented,  // TODO
+    /* 0xEA */ z80_inst_unimplemented,  // TODO
+    /* 0xEB */ z80_inst_unimplemented,  // TODO
+    /* 0xEC */ z80_inst_unimplemented,  // TODO
+    /* 0xED */ z80_inst_unimplemented,  // TODO
+    /* 0xEE */ z80_inst_unimplemented,  // TODO
+    /* 0xEF */ z80_inst_unimplemented,  // TODO
+    /* 0xF0 */ z80_inst_unimplemented,  // TODO
+    /* 0xF1 */ z80_inst_unimplemented,  // TODO
+    /* 0xF2 */ z80_inst_unimplemented,  // TODO
+    /* 0xF3 */ z80_inst_unimplemented,  // TODO
+    /* 0xF4 */ z80_inst_unimplemented,  // TODO
+    /* 0xF5 */ z80_inst_unimplemented,  // TODO
+    /* 0xF6 */ z80_inst_unimplemented,  // TODO
+    /* 0xF7 */ z80_inst_unimplemented,  // TODO
+    /* 0xF8 */ z80_inst_unimplemented,  // TODO
+    /* 0xF9 */ z80_inst_unimplemented,  // TODO
+    /* 0xFA */ z80_inst_unimplemented,  // TODO
+    /* 0xFB */ z80_inst_unimplemented,  // TODO
+    /* 0xFC */ z80_inst_unimplemented,  // TODO
+    /* 0xFD */ z80_inst_unimplemented,  // TODO
+    /* 0xFE */ z80_inst_unimplemented,  // TODO
+    /* 0xFF */ z80_inst_unimplemented   // TODO
 };

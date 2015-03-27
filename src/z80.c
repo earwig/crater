@@ -8,7 +8,9 @@
 #define FLAG_SUBTRACT  1
 #define FLAG_PARITY    2
 #define FLAG_OVERFLOW  2
+#define FLAG_UNDOC_3   3
 #define FLAG_HALFCARRY 4
+#define FLAG_UNDOC_5   5
 #define FLAG_ZERO      6
 #define FLAG_SIGN      7
 
@@ -74,6 +76,23 @@ static inline bool get_flag(const Z80 *z80, uint8_t flag)
 static inline bool get_shadow_flag(const Z80 *z80, uint8_t flag)
 {
     return z80->regfile.f_ & (1 << flag);
+}
+
+/*
+    Update the F register flags according to the set bits in the mask.
+*/
+static inline void update_flags(Z80 *z80, bool c, bool n, bool pv, bool f3,
+                                bool h, bool f5, bool z, bool s, uint8_t mask)
+{
+    z80->regfile.f = (~mask & z80->regfile.f) | (mask & (
+        c  << FLAG_CARRY     |
+        n  << FLAG_SUBTRACT  |
+        pv << FLAG_PARITY    |
+        f3 << FLAG_UNDOC_3   |
+        h  << FLAG_HALFCARRY |
+        f5 << FLAG_UNDOC_5   |
+        z  << FLAG_ZERO      |
+        s  << FLAG_SIGN));
 }
 
 /*
