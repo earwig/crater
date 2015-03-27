@@ -72,13 +72,11 @@ void z80_power(Z80 *z80)
 */
 static inline uint16_t get_pair(Z80 *z80, uint8_t pair)
 {
-    Z80RegFile *regfile = &z80->regfile;
-
     switch (pair) {
-        case REG_AF: return (((uint16_t) regfile->a) << 8) + regfile->f;
-        case REG_BC: return (((uint16_t) regfile->b) << 8) + regfile->c;
-        case REG_DE: return (((uint16_t) regfile->d) << 8) + regfile->e;
-        case REG_HL: return (((uint16_t) regfile->h) << 8) + regfile->l;
+        case REG_AF: return (z80->regfile.a << 8) + z80->regfile.f;
+        case REG_BC: return (z80->regfile.b << 8) + z80->regfile.c;
+        case REG_DE: return (z80->regfile.d << 8) + z80->regfile.e;
+        case REG_HL: return (z80->regfile.h << 8) + z80->regfile.l;
         default: FATAL("Invalid call: get_pair(z80, %u)", pair)
     }
 }
@@ -88,13 +86,11 @@ static inline uint16_t get_pair(Z80 *z80, uint8_t pair)
 */
 static inline void set_pair(Z80 *z80, uint8_t pair, uint16_t value)
 {
-    Z80RegFile *regfile = &z80->regfile;
-
     switch (pair) {
-        case REG_AF: regfile->a = value >> 8; regfile->f = value; break;
-        case REG_BC: regfile->b = value >> 8; regfile->c = value; break;
-        case REG_DE: regfile->d = value >> 8; regfile->e = value; break;
-        case REG_HL: regfile->h = value >> 8; regfile->l = value; break;
+        case REG_AF: z80->regfile.a = value >> 8; z80->regfile.f = value; break;
+        case REG_BC: z80->regfile.b = value >> 8; z80->regfile.c = value; break;
+        case REG_DE: z80->regfile.d = value >> 8; z80->regfile.e = value; break;
+        case REG_HL: z80->regfile.h = value >> 8; z80->regfile.l = value; break;
         default: FATAL("Invalid call: set_pair(z80, %u, 0x%04X)", pair, value)
     }
 }
@@ -152,7 +148,7 @@ static inline void increment_refresh_counter(Z80 *z80)
     z80->regfile.r = (z80->regfile.r & 0x80) | ((z80->regfile.r + 1) & 0x7F);
 }
 
-#include "z80_instructions.inc"
+#include "z80_instructions.inc.c"
 
 /*
     Emulate the given number of cycles of the Z80, or until an exception.

@@ -15,7 +15,7 @@ RM     = rm -rf
 
 MODE = release
 BNRY = $(PROGRAM)
-SRCS = $(foreach d,.,$(wildcard *.c)) $(foreach d,$(SOURCES),$(wildcard $(addprefix $(d)/*,.c)))
+SRCS = $(filter-out %.inc.c,$(foreach d,. $(SOURCES),$(wildcard $(addprefix $(d)/*,.c))))
 OBJS = $(patsubst %.c,%.o,$(addprefix $(BUILD)/$(MODE)/,$(SRCS)))
 DEPS = $(OBJS:%.o=%.d)
 DIRS = $(sort $(dir $(OBJS)))
