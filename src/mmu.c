@@ -84,16 +84,37 @@ void mmu_power(MMU *mmu)
         map_slot(mmu, slot, slot);
 
     memset(mmu->system_ram, 0xFF, MMU_SYSTEM_RAM_SIZE);
-    // TODO: set system_ram to correct values at 0xFFFC-0xFFFF
+}
+
+/*
+    Read a byte from a memory bank, or return 0xFF if the bank is not mapped.
+*/
+static inline uint8_t bank_byte_read(const uint8_t* bank, uint16_t addr)
+{
+    return bank ? bank[addr] : 0xFF;
 }
 
 /*
     Read a byte of memory from the given address.
+
+    Memory region information is based on:
+    - http://www.smspower.org/Development/MemoryMap
+    - http://www.smspower.org/Development/Mappers
 */
 uint8_t mmu_read_byte(MMU *mmu, uint16_t addr)
 {
-    // TODO
-    return 0x00;
+    if (addr < 0x0400)  // First kilobyte is unpaged, for interrupt handlers
+        return bank_byte_read(mmu->rom_banks[0], addr);
+    else if (addr < 0x4000)  // Slot 0 (0x0400 - 0x3FFF)
+        return bank_byte_read(mmu->map_slots[0], addr);
+    else if (addr < 0x8000)  // Slot 1 (0x4000 - 0x7FFF)
+        return bank_byte_read(mmu->map_slots[1], addr - 0x4000);
+    else if (addr < 0xC000)  // Slot 2 (0x8000 - 0xBFFF)
+        return bank_byte_read(mmu->map_slots[2], addr - 0x8000);
+    else if (addr < 0xE000) // System RAM (0xC000 - 0xDFFF)
+        return mmu->system_ram[addr - 0xC000];
+    else  // System RAM, mirrored (0xE000 - 0xFFFF)
+        return mmu->system_ram[addr - 0xE000];
 }
 
 /*
@@ -104,6 +125,21 @@ uint8_t mmu_read_byte(MMU *mmu, uint16_t addr)
 */
 bool mmu_write_byte(MMU *mmu, uint16_t addr, uint8_t value)
 {
-    // TODO
-    return true;
+    if (addr < 0xC000) {  // TODO: implement writes to on-cartridge RAM
+        return false;
+    } else if (addr < 0xE000) {  // System RAM (0xC000 - 0xDFFF)
+        mmu->system_ram[addr - 0xC000] = value;
+        return true;
+    } else {  // System RAM, mirrored (0xE000 - 0xFFFF)
+        if (addr == 0xFFFC) {
+            // TODO: handle cartridge RAM mapping control
+        } else if (addr == 0xFFFD)
+            map_slot(mmu, 0, value & 0x3F);
+        else if (addr == 0xFFFE)
+            map_slot(mmu, 1, value & 0x3F);
+        else if (addr == 0xFFFF)
+            map_slot(mmu, 2, value & 0x3F);
+        mmu->system_ram[addr - 0xE000] = value;
+        return true;
+    }
 }
