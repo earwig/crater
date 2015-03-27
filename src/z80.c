@@ -88,6 +88,14 @@ static inline uint8_t get_interrupt_mode(const Z80 *z80)
     return 2;
 }
 
+/*
+    Increment the refresh counter register, R.
+*/
+static inline void increment_refresh_counter(Z80 *z80)
+{
+    z80->regfile.r = (z80->regfile.r & 0x80) | ((z80->regfile.r + 1) & 0x7F);
+}
+
 #include "z80_instructions.inc"
 
 /*
@@ -102,6 +110,7 @@ bool z80_do_cycles(Z80 *z80, double cycles)
     cycles -= z80->pending_cycles;
     while (cycles > 0 && !z80->except) {
         uint8_t opcode = mmu_read_byte(z80->mmu, z80->regfile.pc);
+        increment_refresh_counter(z80);
         cycles -= (*instruction_lookup_table[opcode])(z80, opcode) - 2;
     }
 
