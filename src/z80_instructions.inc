@@ -62,11 +62,33 @@ static uint8_t z80_inst_inc_r(Z80 *z80, uint8_t opcode)
     return 4;
 }
 
+/*
+    INC ss (0x03, 0x13, 0x23, 0x33):
+    Increment the 16-bit register encoded in the opcode.
+*/
+static uint8_t z80_inst_inc_ss(Z80 *z80, uint8_t opcode)
+{
+    if (opcode == 0x33) {
+        z80->regfile.sp++;
+    } else {
+        uint8_t pair;
+        switch(opcode) {
+            case 0x03: pair = REG_BC; break;
+            case 0x13: pair = REG_DE; break;
+            case 0x23: pair = REG_HL; break;
+        }
+        set_pair(z80, pair, get_pair(z80, pair) + 1);
+    }
+
+    z80->regfile.pc++;
+    return 6;
+}
+
 static uint8_t (*instruction_lookup_table[256])(Z80*, uint8_t) = {
     /* 0x00 */ z80_inst_nop,
     /* 0x01 */ z80_inst_unimplemented,  // TODO
     /* 0x02 */ z80_inst_unimplemented,  // TODO
-    /* 0x03 */ z80_inst_unimplemented,  // TODO
+    /* 0x03 */ z80_inst_inc_ss,
     /* 0x04 */ z80_inst_inc_r,
     /* 0x05 */ z80_inst_unimplemented,  // TODO
     /* 0x06 */ z80_inst_unimplemented,  // TODO
@@ -82,7 +104,7 @@ static uint8_t (*instruction_lookup_table[256])(Z80*, uint8_t) = {
     /* 0x10 */ z80_inst_unimplemented,  // TODO
     /* 0x11 */ z80_inst_unimplemented,  // TODO
     /* 0x12 */ z80_inst_unimplemented,  // TODO
-    /* 0x13 */ z80_inst_unimplemented,  // TODO
+    /* 0x13 */ z80_inst_inc_ss,
     /* 0x14 */ z80_inst_inc_r,
     /* 0x15 */ z80_inst_unimplemented,  // TODO
     /* 0x16 */ z80_inst_unimplemented,  // TODO
@@ -98,7 +120,7 @@ static uint8_t (*instruction_lookup_table[256])(Z80*, uint8_t) = {
     /* 0x20 */ z80_inst_unimplemented,  // TODO
     /* 0x21 */ z80_inst_unimplemented,  // TODO
     /* 0x22 */ z80_inst_unimplemented,  // TODO
-    /* 0x23 */ z80_inst_unimplemented,  // TODO
+    /* 0x23 */ z80_inst_inc_ss,
     /* 0x24 */ z80_inst_inc_r,
     /* 0x25 */ z80_inst_unimplemented,  // TODO
     /* 0x26 */ z80_inst_unimplemented,  // TODO
@@ -114,7 +136,7 @@ static uint8_t (*instruction_lookup_table[256])(Z80*, uint8_t) = {
     /* 0x30 */ z80_inst_unimplemented,  // TODO
     /* 0x31 */ z80_inst_unimplemented,  // TODO
     /* 0x32 */ z80_inst_unimplemented,  // TODO
-    /* 0x33 */ z80_inst_unimplemented,  // TODO
+    /* 0x33 */ z80_inst_inc_ss,
     /* 0x34 */ z80_inst_unimplemented,  // TODO
     /* 0x35 */ z80_inst_unimplemented,  // TODO
     /* 0x36 */ z80_inst_unimplemented,  // TODO

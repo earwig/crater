@@ -4,6 +4,11 @@
 #include "logging.h"
 #include "z80.h"
 
+#define REG_AF 0
+#define REG_BC 1
+#define REG_DE 2
+#define REG_HL 3
+
 #define FLAG_CARRY     0
 #define FLAG_SUBTRACT  1
 #define FLAG_PARITY    2
@@ -60,6 +65,38 @@ void z80_power(Z80 *z80)
 
     z80->except = false;
     z80->pending_cycles = 0;
+}
+
+/*
+    Get the value of a register pair.
+*/
+static inline uint16_t get_pair(Z80 *z80, uint8_t pair)
+{
+    Z80RegFile *regfile = &z80->regfile;
+
+    switch (pair) {
+        case REG_AF: return (((uint16_t) regfile->a) << 8) + regfile->f;
+        case REG_BC: return (((uint16_t) regfile->b) << 8) + regfile->c;
+        case REG_DE: return (((uint16_t) regfile->d) << 8) + regfile->e;
+        case REG_HL: return (((uint16_t) regfile->h) << 8) + regfile->l;
+        default: FATAL("Invalid call: get_pair(z80, %u)", pair)
+    }
+}
+
+/*
+    Set the value of a register pair.
+*/
+static inline void set_pair(Z80 *z80, uint8_t pair, uint16_t value)
+{
+    Z80RegFile *regfile = &z80->regfile;
+
+    switch (pair) {
+        case REG_AF: regfile->a = value >> 8; regfile->f = value; break;
+        case REG_BC: regfile->b = value >> 8; regfile->c = value; break;
+        case REG_DE: regfile->d = value >> 8; regfile->e = value; break;
+        case REG_HL: regfile->h = value >> 8; regfile->l = value; break;
+        default: FATAL("Invalid call: set_pair(z80, %u, 0x%04X)", pair, value)
+    }
 }
 
 /*
