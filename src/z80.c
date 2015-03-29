@@ -148,7 +148,7 @@ static inline void increment_refresh_counter(Z80 *z80)
     z80->regfile.r = (z80->regfile.r & 0x80) | ((z80->regfile.r + 1) & 0x7F);
 }
 
-#include "z80_instructions.inc.c"
+#include "z80_ops.inc.c"
 
 /*
     Emulate the given number of cycles of the Z80, or until an exception.
