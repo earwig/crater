@@ -163,7 +163,7 @@ bool z80_do_cycles(Z80 *z80, double cycles)
     while (cycles > 0 && !z80->except) {
         uint8_t opcode = mmu_read_byte(z80->mmu, z80->regfile.pc);
         increment_refresh_counter(z80);
-        cycles -= (*instruction_lookup_table[opcode])(z80, opcode) - 2;
+        cycles -= (*instruction_lookup_table[opcode])(z80, opcode);
     }
 
     z80->pending_cycles = -cycles;
