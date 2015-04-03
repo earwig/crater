@@ -26,15 +26,12 @@ ifdef DEBUG
 	MODE   = debug
 endif
 
-.PHONY: all clean test
+.PHONY: all clean test test-all test-z80 test-asm test-dasm
 
 all: $(BNRY)
 
 clean:
 	$(RM) $(BUILD) $(PROGRAM) $(PROGRAM)$(DEVEXT)
-
-test:
-	@echo "not implemented yet"
 
 $(DIRS):
 	$(MKDIR) $@
@@ -48,3 +45,17 @@ $(BUILD)/$(MODE)/%.o: %.c
 	$(CC) $(FLAGS) $(CFLAGS) -MMD -MP -c $< -o $@
 
 -include $(DEPS)
+
+test: test-all test-z80 test-asm test-dasm
+
+test-all:
+	@echo "running all tests"
+
+test-z80:
+	@echo "running Z80 CPU tests"
+
+test-asm:
+	@echo "running assembler tests"
+
+test-dasm:
+	@echo "running disassembler tests"
