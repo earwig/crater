@@ -45,3 +45,42 @@ test:
 	inc	l
 	emu	rassert(a=$01, b=$01, c=$01, d=$01, e=$01, h=$01, l=$01)
 	emu	fassert(s=0, z=0, f5=0, h=0, f3=0, pv=0, n=0)
+
+	inc	a
+	inc	a
+	inc	a
+	emu	rassert(a=$04, b=$01, c=$01, d=$01, e=$01, h=$01, l=$01)
+
+	ld	a, $0F
+	emu	rassert(a=$0F, b=$01, c=$01, d=$01, e=$01, h=$01, l=$01)
+
+	inc	a
+	emu	rassert(a=$10, b=$01, c=$01, d=$01, e=$01, h=$01, l=$01)
+	emu	fassert(s=0, z=0, f5=0, h=1, f3=0, pv=0, n=0)
+
+	ld	a, $FE
+	inc	a
+	emu	rassert(a=$FF, b=$01, c=$01, d=$01, e=$01, h=$01, l=$01)
+	emu	fassert(s=1, z=0, f5=1, h=1, f3=1, pv=0, n=0)
+
+	inc	a
+	emu	rassert(a=$00, b=$01, c=$01, d=$01, e=$01, h=$01, l=$01)
+	emu	fassert(s=0, z=1, f5=0, h=1, f3=0, pv=1, n=0)
+
+	inc	bc
+	inc	de
+	inc	hl
+	emu	rassert(a=$00, b=$01, c=$02, d=$01, e=$02, h=$01, l=$02)
+	emu	fassert(s=0, z=1, f5=0, h=1, f3=0, pv=1, n=0)
+
+	ld	c, $FF
+	inc	bc
+	emu	rassert(a=$00, b=$02, c=$00, d=$01, e=$02, h=$01, l=$02)
+
+	ld	b, $FF
+	ld	c, $FE
+	inc	bc
+	emu	rassert(a=$00, b=$FF, c=$FF, d=$01, e=$02, h=$01, l=$02)
+
+	inc	bc
+	emu	rassert(a=$00, b=$00, c=$00, d=$01, e=$02, h=$01, l=$02)
