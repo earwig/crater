@@ -51,6 +51,13 @@ test:
 	inc	a
 	emu	rassert(a=$04, b=$01, c=$01, d=$01, e=$01, h=$01, l=$01)
 
+	ld	a, 42
+	emu	rassert(a=$2A, b=$01, c=$01, d=$01, e=$01, h=$01, l=$01)
+
+	inc	a
+	emu	rassert(a=$2B, b=$01, c=$01, d=$01, e=$01, h=$01, l=$01)
+	emu	fassert(s=0, z=0, f5=1, h=0, f3=0, pv=0, n=0)
+
 	ld	a, $0F
 	emu	rassert(a=$0F, b=$01, c=$01, d=$01, e=$01, h=$01, l=$01)
 

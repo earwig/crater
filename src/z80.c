@@ -19,6 +19,19 @@
 #define FLAG_ZERO      6
 #define FLAG_SIGN      7
 
+#ifdef DEBUG_MODE
+#define BINARY_FMT "0b%u%u%u%u%u%u%u%u"  // Used by z80_dump_registers()
+#define BINARY_VAL(data)       \
+    (data & (1 << 7) ? 1 : 0), \
+    (data & (1 << 6) ? 1 : 0), \
+    (data & (1 << 5) ? 1 : 0), \
+    (data & (1 << 4) ? 1 : 0), \
+    (data & (1 << 3) ? 1 : 0), \
+    (data & (1 << 2) ? 1 : 0), \
+    (data & (1 << 1) ? 1 : 0), \
+    (data & (1 << 0) ? 1 : 0)
+#endif
+
 /*
     Initialize a Z80 object.
 
@@ -176,11 +189,29 @@ bool z80_do_cycles(Z80 *z80, double cycles)
 */
 void z80_dump_registers(const Z80 *z80)
 {
-    const Z80RegFile *regfile = &z80->regfile;
+    const Z80RegFile *rf = &z80->regfile;
     DEBUG("Dumping Z80 register values:")
 
-    DEBUG("- AF:   0x%02X%02X (C: %u, N: %u, P/V: %u, H: %u, Z: %u, S: %u)",
-          regfile->a, regfile->f,
+    DEBUG("- AF:   0x%02X%02X (%03d, %03d)", rf->a, rf->f, rf->a, rf->f)
+    DEBUG("- BC:   0x%02X%02X (%03d, %03d)", rf->b, rf->c, rf->b, rf->c)
+    DEBUG("- DE:   0x%02X%02X (%03d, %03d)", rf->d, rf->e, rf->d, rf->e)
+    DEBUG("- HL:   0x%02X%02X (%03d, %03d)", rf->h, rf->l, rf->h, rf->l)
+
+    DEBUG("- AF':  0x%02X%02X (%03d, %03d)", rf->a_, rf->f_, rf->a_, rf->f_)
+    DEBUG("- BC':  0x%02X%02X (%03d, %03d)", rf->b_, rf->c_, rf->b_, rf->c_)
+    DEBUG("- DE':  0x%02X%02X (%03d, %03d)", rf->d_, rf->e_, rf->d_, rf->e_)
+    DEBUG("- HL':  0x%02X%02X (%03d, %03d)", rf->h_, rf->l_, rf->h_, rf->l_)
+
+    DEBUG("- IX:   0x%04X (%05d)", rf->ix, rf->ix)
+    DEBUG("- IY:   0x%04X (%05d)", rf->iy, rf->iy)
+    DEBUG("- SP:   0x%04X (%05d)", rf->sp, rf->sp)
+    DEBUG("- PC:   0x%04X (%05d)", rf->pc, rf->pc)
+
+    DEBUG("- I:    0x%2X (%03d)", rf->i, rf->i)
+    DEBUG("- R:    0x%2X (%03d)", rf->r, rf->r)
+
+    DEBUG("- F:    "BINARY_FMT" (C: %u, N: %u, P/V: %u, H: %u, Z: %u, S: %u)",
+          BINARY_VAL(rf->f),
           get_flag(z80, FLAG_CARRY),
           get_flag(z80, FLAG_SUBTRACT),
           get_flag(z80, FLAG_PARITY),
@@ -188,12 +219,8 @@ void z80_dump_registers(const Z80 *z80)
           get_flag(z80, FLAG_ZERO),
           get_flag(z80, FLAG_SIGN))
 
-    DEBUG("- BC:   0x%02X%02X", regfile->b, regfile->c)
-    DEBUG("- DE:   0x%02X%02X", regfile->d, regfile->e)
-    DEBUG("- HL:   0x%02X%02X", regfile->h, regfile->l)
-
-    DEBUG("- AF':  0x%02X%02X (C: %u, N: %u, P/V: %u, H: %u, Z: %u, S: %u)",
-          regfile->a_, regfile->f_,
+    DEBUG("- F':   "BINARY_FMT" (C: %u, N: %u, P/V: %u, H: %u, Z: %u, S: %u)",
+          BINARY_VAL(rf->f_),
           get_shadow_flag(z80, FLAG_CARRY),
           get_shadow_flag(z80, FLAG_SUBTRACT),
           get_shadow_flag(z80, FLAG_PARITY),
@@ -201,21 +228,9 @@ void z80_dump_registers(const Z80 *z80)
           get_shadow_flag(z80, FLAG_ZERO),
           get_shadow_flag(z80, FLAG_SIGN))
 
-    DEBUG("- BC':  0x%02X%02X", regfile->b_, regfile->c_)
-    DEBUG("- DE':  0x%02X%02X", regfile->d_, regfile->e_)
-    DEBUG("- HL':  0x%02X%02X", regfile->h_, regfile->l_)
-
-    DEBUG("- IX:   0x%04X", regfile->ix)
-    DEBUG("- IY:   0x%04X", regfile->iy)
-    DEBUG("- SP:   0x%04X", regfile->sp)
-    DEBUG("- PC:   0x%04X", regfile->pc)
-
-    DEBUG("- I:    0x%2X", regfile->i)
-    DEBUG("- R:    0x%2X", regfile->r)
-
-    DEBUG("- IM:   0b%u%u (mode: %u)", regfile->im_a, regfile->im_b,
+    DEBUG("- IM:   0b%u%u (mode: %u)", rf->im_a, rf->im_b,
           get_interrupt_mode(z80))
-    DEBUG("- IFF1: %u", regfile->iff1)
-    DEBUG("- IFF2: %u", regfile->iff2)
+    DEBUG("- IFF1: %u", rf->iff1)
+    DEBUG("- IFF2: %u", rf->iff2)
 }
 #endif
