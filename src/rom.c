@@ -3,7 +3,6 @@
 
 #include <ctype.h>
 #include <errno.h>
-#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -17,7 +16,7 @@
 #define MAGIC_LEN 8
 #define HEADER_SIZE 16
 
-static size_t header_locations[NUM_LOCATIONS] = {0x7FF0, 0x1FF0, 0x3FF0};
+static size_t header_locations[NUM_LOCATIONS] = {0x7FF0, 0x3FF0, 0x1FF0};
 static const char header_magic[MAGIC_LEN + 1] = "TMR SEGA";
 
 /*
@@ -57,23 +56,54 @@ static void print_header(const uint8_t *header)
 #endif
 
 /*
-    Return a string indicating the ROM's size, according to its header.
+    Determine whether the checksum indicated in the ROM file is valid.
+*/
+static bool validate_checksum(const uint8_t *data, uint16_t checksum, uint8_t size)
+{
+    size_t low_region, high_region;
+    switch (size) {
+        case 0xA: low_region = 0x1FEF; high_region = 0;       break;
+        case 0xB: low_region = 0x3FEF; high_region = 0;       break;
+        case 0xC: low_region = 0x7FEF; high_region = 0;       break;
+        case 0xD: low_region = 0xBFEF; high_region = 0;       break;
+        case 0xE: low_region = 0x7FEF; high_region = 0x0FFFF; break;
+        case 0xF: low_region = 0x7FEF; high_region = 0x1FFFF; break;
+        case 0x0: low_region = 0x7FEF; high_region = 0x3FFFF; break;
+        case 0x1: low_region = 0x7FEF; high_region = 0x7FFFF; break;
+        case 0x2: low_region = 0x7FEF; high_region = 0xFFFFF; break;
+        default:  return false;
+    }
+
+    uint16_t sum = 0;
+    for (size_t index = 0; index <= low_region; index++)
+        sum += data[index];
+    if (high_region) {
+        for (size_t index = 0x08000; index <= high_region; index++)
+            sum += data[index];
+    }
+    return sum == checksum;
+}
+
+#ifdef DEBUG_MODE
+/*
+    DEBUG FUNCTION: Return the ROM's size as a string, according to its header.
 */
 static const char* parse_reported_size(uint8_t value)
 {
     switch (value) {
-        case 0x0: return "256 KB";
-        case 0x1: return "512 KB";
-        case 0x2: return "1 MB";
         case 0xA: return "8 KB";
         case 0xB: return "16 KB";
         case 0xC: return "32 KB";
         case 0xD: return "48 KB";
         case 0xE: return "64 KB";
         case 0xF: return "128 KB";
+        case 0x0: return "256 KB";
+        case 0x1: return "512 KB";
+        case 0x2: return "1 MB";
         default:  return "Unknown";
     }
 }
+#endif
 
 /*
     Parse a ROM image's header, and return whether or not it is valid.
@@ -106,7 +136,9 @@ static bool parse_header(ROM *rom, const uint8_t *header)
     print_header(header);
 #endif
 
+    uint8_t size = header[0xF] & 0xF;
     rom->checksum = header[0xA] + (header[0xB] << 8);
+    rom->valid_checksum = validate_checksum(rom->data, rom->checksum, size);
     rom->product_code = bcd_decode(header[0xC]) +
         (bcd_decode(header[0xD]) * 100) + ((header[0xE] >> 4) * 10000);
     rom->version = header[0xE] & 0x0F;
@@ -114,11 +146,12 @@ static bool parse_header(ROM *rom, const uint8_t *header)
     const char* region = rom_region(rom);
 
     DEBUG("- header info:")
-    DEBUG("  - checksum:      0x%04X", rom->checksum)
+    DEBUG("  - checksum:      0x%04X (%s)", rom->checksum,
+          rom->valid_checksum ? "valid" : "invalid")
     DEBUG("  - product code:  %u", rom->product_code)
     DEBUG("  - version:       %u", rom->version)
     DEBUG("  - region code:   %u (%s)", rom->region_code, region ? region : "unknown")
-    DEBUG("  - reported size: %s", parse_reported_size(header[0xF] & 0xF))
+    DEBUG("  - reported size: %s", parse_reported_size(size))
     return true;
 }
 
@@ -184,6 +217,7 @@ const char* rom_open(ROM **rom_ptr, const char *path)
     rom->data = NULL;
     rom->size = 0;
     rom->checksum = 0;
+    rom->valid_checksum = false;
     rom->product_code = 0;
     rom->version = 0;
     rom->region_code = 0;
