@@ -10,7 +10,7 @@
     Errors are printed to STDOUT; if the operation was successful then nothing
     is printed.
 */
-bool disassemble(const char* src_path, const char* dst_path)
+bool disassemble_file(const char *src_path, const char *dst_path)
 {
     return true;
 }

@@ -4,11 +4,27 @@
 #pragma once
 
 #include <stdbool.h>
+#include <stdint.h>
 
 /* Structs */
 
-// ...
+typedef struct {
+    char *data;
+    size_t length;
+} Line;
+
+typedef struct {
+    Line *lines;
+    size_t length;
+} LineBuffer;
+
+typedef struct {
+    //
+} ErrorInfo;
 
 /* Functions */
 
-bool assemble(const char*, const char*);
+void error_info_print(const ErrorInfo*, FILE*, const LineBuffer*);
+void error_info_destroy(ErrorInfo*);
+size_t assemble(const LineBuffer*, uint8_t**, ErrorInfo**);
+bool assemble_file(const char*, const char*);

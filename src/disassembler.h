@@ -11,4 +11,4 @@
 
 /* Functions */
 
-bool disassemble(const char*, const char*);
+bool disassemble_file(const char*, const char*);

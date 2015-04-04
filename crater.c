@@ -33,9 +33,9 @@ int main(int argc, char *argv[])
                config->assemble ? "assembler" : "disassembler",
                config->src_path, config->dst_path);
         if (config->assemble)
-            retval = assemble(config->src_path, config->dst_path);
+            retval = assemble_file(config->src_path, config->dst_path);
         else
-            retval = disassemble(config->src_path, config->dst_path);
+            retval = disassemble_file(config->src_path, config->dst_path);
         retval = retval ? EXIT_SUCCESS : EXIT_FAILURE;
     } else {
         ROM *rom;
