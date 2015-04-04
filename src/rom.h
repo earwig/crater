@@ -3,7 +3,6 @@
 
 #pragma once
 
-#include <stdbool.h>
 #include <stdint.h>
 #include <stdlib.h>
 
@@ -21,8 +20,8 @@ typedef struct {
     char *name;
     uint8_t *data;
     size_t size;
-    uint16_t checksum;
-    bool valid_checksum;
+    uint16_t reported_checksum;
+    uint16_t expected_checksum;
     uint32_t product_code;
     uint8_t version;
     uint8_t region_code;

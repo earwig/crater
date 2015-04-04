@@ -4,6 +4,7 @@
 #include <ctype.h>
 #include <errno.h>
 #include <stdio.h>
+#include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
@@ -56,12 +57,16 @@ static void print_header(const uint8_t *header)
 #endif
 
 /*
-    Determine whether the checksum indicated in the ROM file is valid.
+    Compute the correct ROM data checksum.
+
+    If the summable region (as specified by the range parameter) is too large,
+    we'll compute the checksum over the default range (0x0000-0x7FF0), or the
+    largest possible range.
 */
-static bool validate_checksum(const uint8_t *data, uint16_t checksum, uint8_t size)
+static uint16_t compute_checksum(const uint8_t *data, size_t size, uint8_t range)
 {
     size_t low_region, high_region;
-    switch (size) {
+    switch (range & 0xF) {
         case 0xA: low_region = 0x1FEF; high_region = 0;       break;
         case 0xB: low_region = 0x3FEF; high_region = 0;       break;
         case 0xC: low_region = 0x7FEF; high_region = 0;       break;
@@ -71,8 +76,13 @@ static bool validate_checksum(const uint8_t *data, uint16_t checksum, uint8_t si
         case 0x0: low_region = 0x7FEF; high_region = 0x3FFFF; break;
         case 0x1: low_region = 0x7FEF; high_region = 0x7FFFF; break;
         case 0x2: low_region = 0x7FEF; high_region = 0xFFFFF; break;
-        default:  return false;
+        default:  low_region = 0x7FEF; high_region = 0;       break;
     }
+
+    if (low_region >= size)
+        low_region = (size >= 0x4000) ? 0x3FEF : 0x1FEF;
+    if (high_region >= size)
+        high_region = 0;
 
     uint16_t sum = 0;
     for (size_t index = 0; index <= low_region; index++)
@@ -81,7 +91,7 @@ static bool validate_checksum(const uint8_t *data, uint16_t checksum, uint8_t si
         for (size_t index = 0x08000; index <= high_region; index++)
             sum += data[index];
     }
-    return sum == checksum;
+    return sum;
 }
 
 #ifdef DEBUG_MODE
@@ -136,22 +146,24 @@ static bool parse_header(ROM *rom, const uint8_t *header)
     print_header(header);
 #endif
 
-    uint8_t size = header[0xF] & 0xF;
-    rom->checksum = header[0xA] + (header[0xB] << 8);
-    rom->valid_checksum = validate_checksum(rom->data, rom->checksum, size);
+    rom->reported_checksum = header[0xA] + (header[0xB] << 8);
+    rom->expected_checksum = compute_checksum(rom->data, rom->size, header[0xF]);
     rom->product_code = bcd_decode(header[0xC]) +
         (bcd_decode(header[0xD]) * 100) + ((header[0xE] >> 4) * 10000);
     rom->version = header[0xE] & 0x0F;
     rom->region_code = header[0xF] >> 4;
-    const char* region = rom_region(rom);
 
     DEBUG("- header info:")
-    DEBUG("  - checksum:      0x%04X (%s)", rom->checksum,
-          rom->valid_checksum ? "valid" : "invalid")
+    if (rom->reported_checksum == rom->expected_checksum)
+        DEBUG("  - checksum:      0x%04X (valid)", rom->reported_checksum)
+    else
+        DEBUG("  - checksum:      0x%04X (invalid, expected 0x%04X)",
+              rom->reported_checksum, rom->expected_checksum)
     DEBUG("  - product code:  %u", rom->product_code)
     DEBUG("  - version:       %u", rom->version)
-    DEBUG("  - region code:   %u (%s)", rom->region_code, region ? region : "unknown")
-    DEBUG("  - reported size: %s", parse_reported_size(size))
+    DEBUG("  - region code:   %u (%s)", rom->region_code,
+          rom_region(rom) ? rom_region(rom) : "unknown")
+    DEBUG("  - reported size: %s", parse_reported_size(header[0xF] & 0xF))
     return true;
 }
 
@@ -216,8 +228,8 @@ const char* rom_open(ROM **rom_ptr, const char *path)
     rom->name = NULL;
     rom->data = NULL;
     rom->size = 0;
-    rom->checksum = 0;
-    rom->valid_checksum = false;
+    rom->reported_checksum = 0;
+    rom->expected_checksum = 0;
     rom->product_code = 0;
     rom->version = 0;
     rom->region_code = 0;
