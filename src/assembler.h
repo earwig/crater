@@ -5,17 +5,21 @@
 
 #include <stdbool.h>
 #include <stdint.h>
+#include <stdlib.h>
 
 /* Structs */
 
-typedef struct {
+struct Line {
     char *data;
     size_t length;
-} Line;
+    size_t lineno;
+    struct Line *next;
+};
+typedef struct Line Line;
 
 typedef struct {
     Line *lines;
-    size_t length;
+    char *filename;
 } LineBuffer;
 
 typedef struct {
@@ -24,7 +28,7 @@ typedef struct {
 
 /* Functions */
 
-void error_info_print(const ErrorInfo*, FILE*, const LineBuffer*);
+void error_info_print(const ErrorInfo*, FILE*);
 void error_info_destroy(ErrorInfo*);
 size_t assemble(const LineBuffer*, uint8_t**, ErrorInfo**);
 bool assemble_file(const char*, const char*);

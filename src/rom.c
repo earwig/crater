@@ -206,10 +206,10 @@ static bool find_and_read_header(ROM *rom)
 const char* rom_open(ROM **rom_ptr, const char *path)
 {
     ROM *rom;
-    FILE* fp;
+    FILE *fp;
     struct stat st;
 
-    if (!(fp = fopen(path, "r")))
+    if (!(fp = fopen(path, "rb")))
         return strerror(errno);
 
     if (fstat(fileno(fp), &st)) {
@@ -285,18 +285,8 @@ void rom_close(ROM *rom)
     Return the region this ROM was intended for, based on header information.
 
     NULL is returned if the region code is invalid.
-
-    Region code information is taken from:
-    http://www.smspower.org/Development/ROMHeader
 */
 const char* rom_region(const ROM *rom)
 {
-    switch (rom->region_code) {
-        case 3:  return "SMS Japan";
-        case 4:  return "SMS Export";
-        case 5:  return "GG Japan";
-        case 6:  return "GG Export";
-        case 7:  return "GG International";
-        default: return NULL;
-    }
+    return region_code_to_string(rom->region_code);
 }

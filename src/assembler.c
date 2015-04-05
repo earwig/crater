@@ -3,21 +3,90 @@
 
 #include <errno.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
 
 #include "assembler.h"
 #include "logging.h"
+#include "util.h"
+
+#define DEFAULT_HEADER_OFFSET 0x7FF0
+#define DEFAULT_REGION "GG Export"
+
+#define SYMBOL_TABLE_BUCKETS 128
+
+/* Internal structs */
+
+struct ASMLine {
+    char *data;
+    size_t length;
+    const Line *original;
+    const char *filename;
+    struct ASMLine *next;
+    struct ASMLine *include;
+};
+typedef struct ASMLine ASMLine;
+
+struct ASMInclude {
+    LineBuffer *lines;
+    struct ASMInclude *next;
+};
+typedef struct ASMInclude ASMInclude;
+
+struct ASMInstruction {
+    size_t offset;
+    uint8_t length;
+    uint8_t b1, b2, b3, b4;
+    uint8_t virtual_byte;
+    char *symbol;
+    struct ASMInstruction *next;
+};
+typedef struct ASMInstruction ASMInstruction;
+
+struct ASMSymbol {
+    size_t offset;
+    char *symbol;
+    struct ASMSymbol *next;
+};
+typedef struct ASMSymbol ASMSymbol;
+
+typedef struct {
+    ASMSymbol *buckets[SYMBOL_TABLE_BUCKETS];
+} ASMSymbolTable;
+
+typedef struct {
+    size_t offset;
+    bool checksum;
+    uint32_t product_code;
+    uint8_t version;
+    uint8_t region;
+    uint8_t rom_size;
+} ASMHeaderInfo;
+
+typedef struct {
+    ASMHeaderInfo header;
+    bool optimizer;
+    size_t rom_size;
+    ASMLine *lines;
+    ASMInclude *includes;
+    ASMInstruction *instructions;
+    ASMSymbolTable *symtable;
+} AssemblerState;
 
 /*
     Deallocate a LineBuffer previously created with read_source_file().
 */
 static void free_line_buffer(LineBuffer *buffer)
 {
-    for (size_t i = 0; i < buffer->length; i++)
-        free(buffer->lines[i].data);
-    free(buffer->lines);
+    Line *line = buffer->lines, *temp;
+    while (line) {
+        temp = line->next;
+        free(line->data);
+        free(line);
+        line = temp;
+    }
+
+    free(buffer->filename);
     free(buffer);
 }
 
@@ -30,7 +99,7 @@ static void free_line_buffer(LineBuffer *buffer)
 */
 static LineBuffer* read_source_file(const char *path)
 {
-    FILE* fp;
+    FILE *fp;
     struct stat st;
 
     if (!(fp = fopen(path, "r"))) {
@@ -50,47 +119,52 @@ static LineBuffer* read_source_file(const char *path)
         return NULL;
     }
 
-    size_t capacity = 16;
     LineBuffer *source = malloc(sizeof(LineBuffer));
     if (!source)
         OUT_OF_MEMORY()
 
-    source->length = 0;
-    source->lines = malloc(sizeof(Line) * capacity);
-    if (!source->lines)
+    source->lines = NULL;
+    source->filename = malloc(sizeof(char) * (strlen(path) + 1));
+    if (!source->filename)
         OUT_OF_MEMORY()
+    strcpy(source->filename, path);
+
+    Line dummy = {.next = NULL};
+    Line *line, *prev = &dummy;
+    size_t lineno = 1;
 
     while (1) {
-        char *line = NULL;
-        size_t lcap = 0;
+        char *data = NULL;
+        size_t cap = 0;
         ssize_t len;
 
-        if ((len = getline(&line, &lcap, fp)) < 0) {
+        if ((len = getline(&data, &cap, fp)) < 0) {
             if (feof(fp))
                 break;
             if (errno == ENOMEM)
                 OUT_OF_MEMORY()
             ERROR_ERRNO("couldn't read source file")
+            fclose(fp);
+            source->lines = dummy.next;
             free_line_buffer(source);
-            source = NULL;
-            break;
+            return NULL;
         }
 
-        if (capacity <= source->length + 1) {
-            capacity <<= 2;
-            source->lines = realloc(source->lines, sizeof(Line) * capacity);
-            if (!source->lines)
-                OUT_OF_MEMORY()
-        }
+        line = malloc(sizeof(Line));
+        if (!line)
+            OUT_OF_MEMORY()
 
-        source->lines[source->length++] = (Line) {line, len};
-        if (feof(fp)) {
-            source->lines[source->length].length--;
-            break;
-        }
+        line->data = data;
+        line->length = feof(fp) ? len : (len - 1);
+        line->lineno = lineno++;
+        line->next = NULL;
+
+        prev->next = line;
+        prev = line;
     }
 
     fclose(fp);
+    source->lines = dummy.next;
     return source;
 }
 
@@ -102,20 +176,29 @@ static LineBuffer* read_source_file(const char *path)
 */
 static bool write_binary_file(const char *path, const uint8_t *data, size_t size)
 {
-    // TODO
-    return false;
+    FILE *fp;
+    if (!(fp = fopen(path, "wb"))) {
+        ERROR_ERRNO("couldn't open destination file")
+        return false;
+    }
+
+    if (!fwrite(data, size, 1, fp)) {
+        fclose(fp);
+        ERROR_ERRNO("couldn't write to destination file")
+        return false;
+    }
+
+    fclose(fp);
+    return true;
 }
 
 /*
-    Print an ErrorInfo object returned by assemble() to the given file.
-
-    The same LineBuffer passed to assemble() should be passed to this function.
-    Passing NULL if it is unavailable will still work, but source code snippets
-    where errors were noted will not be printed.
+    Print an ErrorInfo object returned by assemble() to the given stream.
 */
-void error_info_print(const ErrorInfo *error_info, FILE *file, const LineBuffer *source)
+void error_info_print(const ErrorInfo *error_info, FILE *file)
 {
     // TODO
+    fprintf(file, "Error: Unknown error");
 }
 
 /*
@@ -128,6 +211,182 @@ void error_info_destroy(ErrorInfo *error_info)
 
     // TODO
     free(error_info);
+}
+
+/*
+    Initialize default values in an AssemblerState object.
+*/
+static void init_state(AssemblerState *state)
+{
+    state->header.offset = DEFAULT_HEADER_OFFSET;
+    state->header.checksum = true;
+    state->header.product_code = 0;
+    state->header.version = 0;
+    state->header.region = region_string_to_code(DEFAULT_REGION);
+    state->header.rom_size = 0;
+    state->optimizer = false;
+    state->rom_size = 0;
+
+    state->lines = NULL;
+    state->includes = NULL;
+    state->instructions = NULL;
+    state->symtable = NULL;
+}
+
+/*
+    Deallocate an ASMLine list.
+*/
+static void free_asm_lines(ASMLine *line)
+{
+    while (line) {
+        ASMLine *temp = line->next;
+        free(line->data);
+        free_asm_lines(line->include);
+        free(line);
+        line = temp;
+    }
+}
+
+/*
+    Deallocate an ASMInclude list.
+*/
+static void free_asm_includes(ASMInclude *include)
+{
+    while (include) {
+        ASMInclude *temp = include->next;
+        free_line_buffer(include->lines);
+        free(include);
+        include = temp;
+    }
+}
+
+/*
+    Deallocate an ASMInstruction list.
+*/
+static void free_asm_instructions(ASMInstruction *inst)
+{
+    while (inst) {
+        ASMInstruction *temp = inst->next;
+        if (inst->symbol)
+            free(inst->symbol);
+        free(inst);
+        inst = temp;
+    }
+}
+
+/*
+    Deallocate an ASMSymbolTable.
+*/
+static void free_asm_symtable(ASMSymbolTable *symtable)
+{
+    if (!symtable)
+        return;
+
+    for (size_t bucket = 0; bucket < SYMBOL_TABLE_BUCKETS; bucket++) {
+        ASMSymbol *sym = symtable->buckets[bucket], *temp;
+        while (sym) {
+            temp = sym->next;
+            free(sym->symbol);
+            free(sym);
+            sym = temp;
+        }
+    }
+    free(symtable);
+}
+
+/*
+    Preprocess the LineBuffer into ASMLines. Change some state along the way.
+
+    This function processes include directives, so read_source_file() may be
+    called multiple times (along with the implications that has), and
+    state->includes may be modified.
+
+    On success, state->lines is modified and NULL is returned. On error, an
+    ErrorInfo object is returned, and state->lines and state->includes are not
+    modified.
+*/
+static ErrorInfo* preprocess(AssemblerState *state, const LineBuffer *source)
+{
+    // TODO
+
+    // state->header.offset             <-- check in list of acceptable values
+    // state->header.checksum           <-- boolean check
+    // state->header.product_code       <-- range check
+    // state->header.version            <-- range check
+    // state->header.region             <-- string conversion, check
+    // state->header.rom_size           <-- value/range check
+    // state->optimizer                 <-- boolean check
+    // state->rom_size                  <-- value check
+
+    // if giving rom size, check header offset is in rom size range
+    // if giving reported and actual rom size, check reported is <= actual
+    // ensure no duplicate explicit assignments
+
+    return NULL;
+}
+
+/*
+    Tokenize ASMLines into ASMInstructions.
+
+    On success, state->instructions is modified and NULL is returned. On error,
+    an ErrorInfo object is returned and state->instructions is not modified.
+    state->symtable may or may not be modified regardless of success.
+*/
+static ErrorInfo* tokenize(AssemblerState *state)
+{
+    // TODO
+
+    // verify no instructions clash with header offset
+    // if rom size is set, verify nothing overflows
+
+    return NULL;
+}
+
+/*
+    Resolve default placeholder values in assembler state, such as ROM size.
+
+    On success, no new heap objects are allocated. On error, an ErrorInfo
+    object is returned.
+*/
+static ErrorInfo* resolve_defaults(AssemblerState *state)
+{
+    // TODO
+
+    // if (!state.rom_size)
+            // set to max possible >= 32 KB, or error if too many instructions
+            // if (state.header.rom_size)
+                    // check reported rom size is <= actual rom size
+
+    // if (!state.header.rom_size)
+            // set to actual rom size
+
+    return NULL;
+}
+
+/*
+    Resolve symbol placeholders in instructions such as jumps and branches.
+
+    On success, no new heap objects are allocated. On error, an ErrorInfo
+    object is returned.
+*/
+static ErrorInfo* resolve_symbols(AssemblerState *state)
+{
+    // TODO
+
+    return NULL;
+}
+
+/*
+    Convert finalized ASMInstructions into a binary data block.
+
+    This function should never fail.
+*/
+static void serialize_binary(AssemblerState *state, uint8_t *binary)
+{
+    // TODO
+
+    for (size_t i = 0; i < state->rom_size; i++)
+        binary[i] = 'X';
 }
 
 /*
@@ -145,8 +404,47 @@ void error_info_destroy(ErrorInfo *error_info)
 */
 size_t assemble(const LineBuffer *source, uint8_t **binary_ptr, ErrorInfo **ei_ptr)
 {
-    // TODO
-    return 0;
+    AssemblerState state;
+    ErrorInfo *error_info;
+    size_t retval = 0;
+
+    init_state(&state);
+
+    if ((error_info = preprocess(&state, source)))
+        goto error;
+
+    if (!(state.symtable = malloc(sizeof(ASMSymbolTable))))
+        OUT_OF_MEMORY()
+    for (size_t bucket = 0; bucket < SYMBOL_TABLE_BUCKETS; bucket++)
+        state.symtable->buckets[bucket] = NULL;
+
+    if ((error_info = tokenize(&state)))
+        goto error;
+
+    if ((error_info = resolve_defaults(&state)))
+        goto error;
+
+    if ((error_info = resolve_symbols(&state)))
+        goto error;
+
+    uint8_t *binary = malloc(sizeof(uint8_t) * state.rom_size);
+    if (!binary)
+        OUT_OF_MEMORY()
+
+    serialize_binary(&state, binary);
+    *binary_ptr = binary;
+    retval = state.rom_size;
+    goto cleanup;
+
+    error:
+    *ei_ptr = error_info;
+
+    cleanup:
+    free_asm_lines(state.lines);
+    free_asm_includes(state.includes);
+    free_asm_instructions(state.instructions);
+    free_asm_symtable(state.symtable);
+    return retval;
 }
 
 /*
@@ -165,16 +463,15 @@ bool assemble_file(const char *src_path, const char *dst_path)
     uint8_t *binary;
     ErrorInfo *error_info;
     size_t size = assemble(source, &binary, &error_info);
+    free_line_buffer(source);
 
     if (!size) {
-        error_info_print(error_info, stderr, source);
+        error_info_print(error_info, stderr);
         error_info_destroy(error_info);
-        free_line_buffer(source);
         return false;
     }
 
     bool success = write_binary_file(dst_path, binary, size);
     free(binary);
-    free_line_buffer(source);
     return success;
 }
