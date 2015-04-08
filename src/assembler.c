@@ -23,7 +23,6 @@ struct ASMLine {
     const Line *original;
     const char *filename;
     struct ASMLine *next;
-    struct ASMLine *include;
 };
 typedef struct ASMLine ASMLine;
 
@@ -198,7 +197,7 @@ static bool write_binary_file(const char *path, const uint8_t *data, size_t size
 void error_info_print(const ErrorInfo *error_info, FILE *file)
 {
     // TODO
-    fprintf(file, "Error: Unknown error");
+    fprintf(file, "Error: Unknown error\n");
 }
 
 /*
@@ -241,7 +240,6 @@ static void free_asm_lines(ASMLine *line)
     while (line) {
         ASMLine *temp = line->next;
         free(line->data);
-        free_asm_lines(line->include);
         free(line);
         line = temp;
     }
@@ -295,6 +293,75 @@ static void free_asm_symtable(ASMSymbolTable *symtable)
 }
 
 /*
+    Preprocess a single source line (source, length) into a normalized ASMLine.
+
+    *Only* the data and length fields in the ASMLine object are populated. The
+    normalization process converts tabs to spaces, removes runs of multiple
+    spaces (outside of string literals), strips comments, and other things.
+
+    Return NULL if an ASM line was not generated from the source, i.e. if it is
+    blank after being stripped.
+*/
+static ASMLine* normalize_line(const char *source, size_t length)
+{
+    char *data = malloc(sizeof(char) * length);
+    if (!data)
+        OUT_OF_MEMORY()
+
+    size_t si, di, slashes = 0;
+    bool has_content = false, space_pending = false, in_string = false;
+    for (si = di = 0; si < length; si++) {
+        char c = source[si];
+
+        if (c == '\\')
+            slashes++;
+        else
+            slashes = 0;
+
+        if (in_string) {
+            if (c == '"' && (slashes % 2) == 0)
+                in_string = false;
+
+            data[di++] = c;
+        } else {
+            if (c == ';')
+                break;
+            if (c == '"' && (slashes % 2) == 0)
+                in_string = true;
+
+            if (c == '\t' || c == ' ')
+                space_pending = true;
+            else {
+                if (space_pending) {
+                    if (has_content)
+                        data[di++] = ' ';
+                    space_pending = false;
+                }
+                has_content = true;
+                data[di++] = c;
+            }
+        }
+    }
+
+    if (!has_content) {
+        free(data);
+        return NULL;
+    }
+
+    ASMLine *line = malloc(sizeof(ASMLine));
+    if (!line)
+        OUT_OF_MEMORY()
+
+    data = realloc(data, sizeof(char) * di);
+    if (!data)
+        OUT_OF_MEMORY()
+
+    line->data = data;
+    line->length = di;
+    return line;
+}
+
+/*
     Preprocess the LineBuffer into ASMLines. Change some state along the way.
 
     This function processes include directives, so read_source_file() may be
@@ -321,6 +388,34 @@ static ErrorInfo* preprocess(AssemblerState *state, const LineBuffer *source)
     // if giving rom size, check header offset is in rom size range
     // if giving reported and actual rom size, check reported is <= actual
     // ensure no duplicate explicit assignments
+
+    ASMLine dummy = {.next = NULL};
+    ASMLine *line, *prev = &dummy;
+    const Line *orig = source->lines;
+
+    while (orig) {
+        if ((line = normalize_line(orig->data, orig->length))) {
+            line->original = orig;
+            line->filename = source->filename;
+            line->next = NULL;
+
+            prev->next = line;
+            prev = line;
+        }
+        orig = orig->next;
+    }
+
+    state->lines = dummy.next;
+
+#ifdef DEBUG_MODE
+    DEBUG("Dumping ASMLines:")
+    const ASMLine *temp = state->lines;
+    while (temp) {
+        DEBUG("- %-40.*s [%s:%02zu]", (int) temp->length, temp->data,
+              temp->filename, temp->original->lineno)
+        temp = temp->next;
+    }
+#endif
 
     return NULL;
 }
