@@ -22,7 +22,7 @@ DIRS = $(sort $(dir $(OBJS)))
 
 ifdef DEBUG
 	BNRY  := $(BNRY)$(DEVEXT)
-	FLAGS += -g -DDEBUG_MODE
+	FLAGS += -g -fsanitize=address -DDEBUG_MODE
 	MODE   = debug
 endif
 
