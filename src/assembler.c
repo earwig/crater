@@ -2,6 +2,8 @@
    Released under the terms of the MIT License. See LICENSE for details. */
 
 #include <errno.h>
+#include <libgen.h>
+#include <limits.h>
 #include <stdio.h>
 #include <string.h>
 #include <sys/stat.h>
@@ -12,6 +14,17 @@
 
 #define DEFAULT_HEADER_OFFSET 0x7FF0
 #define DEFAULT_REGION "GG Export"
+
+#define DIRECTIVE(d) ("." d)
+#define DIR_INCLUDE  "include"
+#define DIR_ORIGIN   "org"
+
+#define IS_DIRECTIVE(line, d)                                                 \
+    ((line->length >= strlen(DIRECTIVE(d))) &&                                \
+    !strncmp(line->data, DIRECTIVE(d), strlen(DIRECTIVE(d))))
+
+#define DIRECTIVE_OFFSET(line, d)                                             \
+    (line->length > strlen(DIRECTIVE(d)) ? strlen(DIRECTIVE(d)) : 0)
 
 #define SYMBOL_TABLE_BUCKETS 128
 
@@ -296,8 +309,9 @@ static void free_asm_symtable(ASMSymbolTable *symtable)
     Preprocess a single source line (source, length) into a normalized ASMLine.
 
     *Only* the data and length fields in the ASMLine object are populated. The
-    normalization process converts tabs to spaces, removes runs of multiple
-    spaces (outside of string literals), strips comments, and other things.
+    normalization process converts tabs to spaces, lowercases all alphabetical
+    characters, and removes runs of multiple spaces (outside of string
+    literals), strips comments, and other things.
 
     Return NULL if an ASM line was not generated from the source, i.e. if it is
     blank after being stripped.
@@ -328,6 +342,8 @@ static ASMLine* normalize_line(const char *source, size_t length)
                 break;
             if (c == '"' && (slashes % 2) == 0)
                 in_string = true;
+            if (c >= 'A' && c <= 'Z')
+                c += 'a' - 'A';
 
             if (c == '\t' || c == ' ')
                 space_pending = true;
@@ -362,15 +378,148 @@ static ASMLine* normalize_line(const char *source, size_t length)
 }
 
 /*
+    Read and return the target path from an include directive.
+
+    This function allocates a buffer to store the filename; it must be free()'d
+    after calling read_source_file(). If a syntax error occurs while trying to
+    read the path, it returns NULL.
+*/
+char* read_include_path(const ASMLine *line)
+{
+    size_t maxlen = strlen(line->filename) + line->length, i, start, slashes;
+    if (maxlen >= INT_MAX)  // Allows us to safely downcast to int later
+        return NULL;
+
+    char *path = malloc(sizeof(char) * maxlen);
+    if (!path)
+        OUT_OF_MEMORY()
+
+    if (!(i = DIRECTIVE_OFFSET(line, DIR_INCLUDE)))
+        goto error;
+    if (line->length - i <= 4)  // Not long enough to hold a non-zero argument
+        goto error;
+    if (line->data[i++] != ' ' || line->data[i++] != '"')
+        goto error;
+
+    // TODO: parse escaped characters properly
+    for (start = i, slashes = 0; i < line->length; i++) {
+        if (line->data[i] == '"' && (slashes % 2) == 0)
+            break;
+        if (line->data[i] == '\\')
+            slashes++;
+        else
+            slashes = 0;
+    }
+
+    if (i != line->length - 1)  // Junk present after closing quote
+        goto error;
+
+    char *dup = strdup(line->filename);
+    if (!dup)
+        OUT_OF_MEMORY()
+
+    snprintf(path, maxlen, "%s/%.*s", dirname(dup), (int) (i - start),
+             line->data + start);
+    free(dup);
+    return path;
+
+    error:
+    free(path);
+    return NULL;
+}
+
+/*
+    Build a LineBuffer into a ASMLines, normalizing them along the way.
+
+    This function operates recursively to handle includes, but handles no other
+    preprocessor directives.
+
+    On success, NULL is returned; *head points to the head of the new ASMLine
+    list, and *tail to its tail (assuming it is non-NULL). On error, an
+    ErrorInfo object is returned, and *head and *tail are not modified.
+    *includes may be updated in either case.
+*/
+static ErrorInfo* build_asm_lines(
+    const LineBuffer *source, ASMLine **head, ASMLine **tail,
+    ASMInclude **includes)
+{
+    ASMLine dummy = {.next = NULL};
+    ASMLine *line, *prev = &dummy;
+    const Line *orig, *next_orig = source->lines;
+
+    while ((orig = next_orig)) {
+        line = normalize_line(orig->data, orig->length);
+        next_orig = orig->next;
+        if (!line)
+            continue;
+
+        // Populate ASMLine fields not set by normalize_line():
+        line->original = orig;
+        line->filename = source->filename;
+        line->next = NULL;
+
+        if (IS_DIRECTIVE(line, DIR_INCLUDE)) {
+            ErrorInfo *ei;
+            char *path = read_include_path(line);
+            free_asm_lines(line);  // Destroy only the .include line
+            if (!path) {
+                // TODO: syntax error
+                // ei = create_error(orig);
+                free_asm_lines(dummy.next);
+                return ei;
+            }
+
+            // TODO: update read_source_file() to change error behavior...
+            // TODO: handle recursive includes properly
+            LineBuffer *incbuffer = read_source_file(path);
+            free(path);
+            if (!incbuffer) {
+                // TODO: return read error...
+                // ei = create_error(orig);
+                free_asm_lines(dummy.next);
+                return ei;
+            }
+
+            ASMInclude *include = malloc(sizeof(ASMInclude));
+            if (!include)
+                OUT_OF_MEMORY()
+
+            include->lines = incbuffer;
+            include->next = *includes;
+            *includes = include;
+
+            ASMLine *inctail;
+            if ((ei = build_asm_lines(incbuffer, &line, &inctail, includes))) {
+                // TODO: nest EI
+                // append_include_to_error(ei, orig);
+                free_asm_lines(dummy.next);
+                return ei;
+            }
+
+            prev->next = line;
+            prev = inctail;
+        }
+        else {
+            prev->next = line;
+            prev = line;
+        }
+    }
+
+    *head = dummy.next;
+    if (tail)
+        *tail = prev;
+    return NULL;
+}
+
+/*
     Preprocess the LineBuffer into ASMLines. Change some state along the way.
 
     This function processes include directives, so read_source_file() may be
     called multiple times (along with the implications that has), and
     state->includes may be modified.
 
-    On success, state->lines is modified and NULL is returned. On error, an
-    ErrorInfo object is returned, and state->lines and state->includes are not
-    modified.
+    On success, NULL is returned. On error, an ErrorInfo object is returned.
+    state->lines and state->includes may still be modified.
 */
 static ErrorInfo* preprocess(AssemblerState *state, const LineBuffer *source)
 {
@@ -389,23 +538,12 @@ static ErrorInfo* preprocess(AssemblerState *state, const LineBuffer *source)
     // if giving reported and actual rom size, check reported is <= actual
     // ensure no duplicate explicit assignments
 
-    ASMLine dummy = {.next = NULL};
-    ASMLine *line, *prev = &dummy;
-    const Line *orig = source->lines;
+    ErrorInfo* ei;
 
-    while (orig) {
-        if ((line = normalize_line(orig->data, orig->length))) {
-            line->original = orig;
-            line->filename = source->filename;
-            line->next = NULL;
+    if ((ei = build_asm_lines(source, &state->lines, NULL, &state->includes)))
+        return ei;
 
-            prev->next = line;
-            prev = line;
-        }
-        orig = orig->next;
-    }
-
-    state->lines = dummy.next;
+    // TODO: iterate here for all global preprocessor directives
 
 #ifdef DEBUG_MODE
     DEBUG("Dumping ASMLines:")
