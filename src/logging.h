@@ -20,12 +20,12 @@
 
 /* Public logging macros */
 
-#define FATAL(...)       LOG_MSG(stderr, "Error",   {},            exit(EXIT_FAILURE), __VA_ARGS__)
-#define FATAL_ERRNO(...) LOG_MSG(stderr, "Error",   PRINT_ERRNO(), exit(EXIT_FAILURE), __VA_ARGS__)
-#define ERROR(...)       LOG_MSG(stderr, "Error",   {},            {},                 __VA_ARGS__)
-#define ERROR_ERRNO(...) LOG_MSG(stderr, "Error",   PRINT_ERRNO(), {},                 __VA_ARGS__)
-#define WARN(...)        LOG_MSG(stderr, "Warning", {},            {},                 __VA_ARGS__)
-#define WARN_ERRNO(...)  LOG_MSG(stderr, "Warning", PRINT_ERRNO(), {},                 __VA_ARGS__)
+#define FATAL(...)       LOG_MSG(stderr, "fatal",   {},            exit(EXIT_FAILURE), __VA_ARGS__)
+#define FATAL_ERRNO(...) LOG_MSG(stderr, "fatal",   PRINT_ERRNO(), exit(EXIT_FAILURE), __VA_ARGS__)
+#define ERROR(...)       LOG_MSG(stderr, "error",   {},            {},                 __VA_ARGS__)
+#define ERROR_ERRNO(...) LOG_MSG(stderr, "error",   PRINT_ERRNO(), {},                 __VA_ARGS__)
+#define WARN(...)        LOG_MSG(stderr, "warning", {},            {},                 __VA_ARGS__)
+#define WARN_ERRNO(...)  LOG_MSG(stderr, "warning", PRINT_ERRNO(), {},                 __VA_ARGS__)
 
 #ifdef DEBUG_MODE
 #define DEBUG(...)       LOG_MSG(stdout, "[DEBUG]", {},            {},                 __VA_ARGS__)

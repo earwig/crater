@@ -136,10 +136,9 @@ static LineBuffer* read_source_file(const char *path)
         OUT_OF_MEMORY()
 
     source->lines = NULL;
-    source->filename = malloc(sizeof(char) * (strlen(path) + 1));
+    source->filename = strdup(path);
     if (!source->filename)
         OUT_OF_MEMORY()
-    strcpy(source->filename, path);
 
     Line dummy = {.next = NULL};
     Line *line, *prev = &dummy;
@@ -205,12 +204,77 @@ static bool write_binary_file(const char *path, const uint8_t *data, size_t size
 }
 
 /*
+    Create an ErrorLine object from an ASMLine.
+*/
+static ErrorLine* create_error_line(const ASMLine *line)
+{
+    ErrorLine *el = malloc(sizeof(ErrorLine));
+    if (!el)
+        OUT_OF_MEMORY()
+
+    if (!(el->data = malloc(sizeof(char) * line->original->length)))
+        OUT_OF_MEMORY()
+    memcpy(el->data, line->original->data, line->original->length);
+
+    el->length = line->original->length;
+    el->lineno = line->original->lineno;
+
+    el->filename = strdup(line->filename);
+    if (!el->filename)
+        OUT_OF_MEMORY()
+
+    el->index = -1;
+    el->next = NULL;
+    return el;
+}
+
+/*
+    Create an ErrorInfo object describing a particular error.
+
+    The ErrorInfo object can be printed with error_info_print(), and must be
+    freed when done with error_info_destroy().
+
+    This function never fails (OOM triggers an exit()); the caller can be
+    confident the returned object is valid.
+*/
+static ErrorInfo* create_error(const ASMLine *line, ErrorType et, ErrorDesc ed)
+{
+    ErrorInfo *ei = malloc(sizeof(ErrorInfo));
+    if (!ei)
+        OUT_OF_MEMORY()
+
+    ei->type = et;
+    ei->desc = ed;
+    ei->line = create_error_line(line);
+    return ei;
+}
+
+/*
+    Add an ASMLine to an ErrorInfo object, as part of a file trace.
+*/
+static void append_to_error(ErrorInfo *ei, const ASMLine *line)
+{
+    ErrorLine* el = create_error_line(line);
+    el->next = ei->line;
+    ei->line = el;
+}
+
+/*
     Print an ErrorInfo object returned by assemble() to the given stream.
 */
 void error_info_print(const ErrorInfo *error_info, FILE *file)
 {
-    // TODO
-    fprintf(file, "Error: Unknown error\n");
+    ErrorLine *line = error_info->line;
+
+    fprintf(file, "error: %d: %d\n", error_info->type, error_info->desc);
+    while (line) {
+        fprintf(file, "\t%s:%zu: %.*s\n", line->filename, line->lineno,
+                (int) line->length, line->data);
+        if (line->index >= 0)
+            fprintf(file, "\t%*s^\n", strlen(line->filename) + 3 + line->index, " ");
+
+        line = line->next;
+    }
 }
 
 /*
@@ -221,7 +285,14 @@ void error_info_destroy(ErrorInfo *error_info)
     if (!error_info)
         return;
 
-    // TODO
+    ErrorLine *line = error_info->line, *temp;
+    while (line) {
+        temp = line->next;
+        free(line->data);
+        free(line->filename);
+        free(line);
+        line = temp;
+    }
     free(error_info);
 }
 
@@ -461,10 +532,9 @@ static ErrorInfo* build_asm_lines(
         if (IS_DIRECTIVE(line, DIR_INCLUDE)) {
             ErrorInfo *ei;
             char *path = read_include_path(line);
-            free_asm_lines(line);  // Destroy only the .include line
             if (!path) {
-                // TODO: syntax error
-                // ei = create_error(orig);
+                ei = create_error(line, ET_SYNTAX, ED_INCLUDE_BAD_ARG);
+                free_asm_lines(line);
                 free_asm_lines(dummy.next);
                 return ei;
             }
@@ -474,8 +544,8 @@ static ErrorInfo* build_asm_lines(
             LineBuffer *incbuffer = read_source_file(path);
             free(path);
             if (!incbuffer) {
-                // TODO: return read error...
-                // ei = create_error(orig);
+                ei = create_error(line, ET_FILEIO, ED_FILE_READ_ERR);
+                free_asm_lines(line);
                 free_asm_lines(dummy.next);
                 return ei;
             }
@@ -488,16 +558,17 @@ static ErrorInfo* build_asm_lines(
             include->next = *includes;
             *includes = include;
 
-            ASMLine *inctail;
-            if ((ei = build_asm_lines(incbuffer, &line, &inctail, includes))) {
-                // TODO: nest EI
-                // append_include_to_error(ei, orig);
+            ASMLine *ihead, *itail;
+            if ((ei = build_asm_lines(incbuffer, &ihead, &itail, includes))) {
+                append_to_error(ei, line);
+                free_asm_lines(line);
                 free_asm_lines(dummy.next);
                 return ei;
             }
 
-            prev->next = line;
-            prev = inctail;
+            prev->next = ihead;
+            prev = itail;
+            free_asm_lines(line);  // Destroy only the .include line
         }
         else {
             prev->next = line;
@@ -523,8 +594,6 @@ static ErrorInfo* build_asm_lines(
 */
 static ErrorInfo* preprocess(AssemblerState *state, const LineBuffer *source)
 {
-    // TODO
-
     // state->header.offset             <-- check in list of acceptable values
     // state->header.checksum           <-- boolean check
     // state->header.product_code       <-- range check
@@ -544,6 +613,7 @@ static ErrorInfo* preprocess(AssemblerState *state, const LineBuffer *source)
         return ei;
 
     // TODO: iterate here for all global preprocessor directives
+    state->rom_size = 8;
 
 #ifdef DEBUG_MODE
     DEBUG("Dumping ASMLines:")
