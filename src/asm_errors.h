@@ -6,23 +6,27 @@
 /* Enums */
 
 typedef enum {
-    ET_INCLUDE
+    ET_INCLUDE,
+    ET_PREPROCESSOR
 } ASMErrorType;
 
 typedef enum {
     ED_BAD_ARG,
     ED_RECURSION,
-    ED_FILE_READ_ERR
+    ED_FILE_READ_ERR,
+    ED_UNKNOWN_DIRECTIVE
 } ASMErrorDesc;
 
 /* Strings */
 
 static const char *asm_error_types[] = {
-    "include directive"
+    "include directive",
+    "preprocessor"
 };
 
 static const char *asm_error_descs[] = {
     "missing or invalid argument",
     "infinite recursion detected",
-    "couldn't read included file"
+    "couldn't read included file",
+    "unknown directive"
 };

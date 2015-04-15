@@ -16,16 +16,28 @@
 #define DEFAULT_HEADER_OFFSET 0x7FF0
 #define DEFAULT_REGION "GG Export"
 
+#define DIRECTIVE_MARKER    '.'
+#define DIR_INCLUDE         "include"
+#define DIR_ORIGIN          "org"
+#define DIR_OPTIMIZER       "optimizer"
+#define DIR_ROM_SIZE        "rom_size"
+#define DIR_ROM_HEADER      "rom_header"
+#define DIR_ROM_CHECKSUM    "rom_checksum"
+#define DIR_ROM_PRODUCT     "rom_product"
+#define DIR_ROM_VERSION     "rom_version"
+#define DIR_ROM_REGION      "rom_region"
+#define DIR_ROM_DECLSIZE    "rom_declsize"
+
 #define DIRECTIVE(d) ("." d)
-#define DIR_INCLUDE  "include"
-#define DIR_ORIGIN   "org"
+#define DIREC_LEN(d) (strlen(DIRECTIVE(d)))
 
 #define IS_DIRECTIVE(line, d)                                                 \
-    ((line->length >= strlen(DIRECTIVE(d))) &&                                \
-    !strncmp(line->data, DIRECTIVE(d), strlen(DIRECTIVE(d))))
+    (((line)->length >= DIREC_LEN(d)) &&                                      \
+    !strncmp((line)->data, DIRECTIVE(d), DIREC_LEN(d)) &&                     \
+    ((line)->length == DIREC_LEN(d) || (line)->data[DIREC_LEN(d)] == ' '))
 
 #define DIRECTIVE_OFFSET(line, d)                                             \
-    (line->length > strlen(DIRECTIVE(d)) ? strlen(DIRECTIVE(d)) : 0)
+    ((line)->length > strlen(DIRECTIVE(d)) ? strlen(DIRECTIVE(d)) : 0)
 
 #define ERROR_TYPE(err_info) (asm_error_types[err_info->type])
 #define ERROR_DESC(err_info) (asm_error_descs[err_info->desc])
@@ -664,8 +676,37 @@ static ErrorInfo* preprocess(AssemblerState *state, const LineBuffer *source)
                               &state->includes)))
         return ei;
 
-    // TODO: iterate here for all global preprocessor directives
-    state->rom_size = 8;
+    const ASMLine *line = state->lines;
+    while (line) {
+        if (line->data[0] == DIRECTIVE_MARKER) {
+            DEBUG("got marker on line: %.*s", (int) line->length, line->data)
+            if (IS_DIRECTIVE(line, DIR_ORIGIN)) {
+                // Do nothing; origins are handled by tokenizer
+            } else if (IS_DIRECTIVE(line, DIR_OPTIMIZER)) {
+                // TODO
+            } else if (IS_DIRECTIVE(line, DIR_ROM_SIZE)) {
+                // TODO
+            } else if (IS_DIRECTIVE(line, DIR_ROM_HEADER)) {
+                // TODO
+            } else if (IS_DIRECTIVE(line, DIR_ROM_CHECKSUM)) {
+                // TODO
+            } else if (IS_DIRECTIVE(line, DIR_ROM_PRODUCT)) {
+                // TODO
+            } else if (IS_DIRECTIVE(line, DIR_ROM_VERSION)) {
+                // TODO
+            } else if (IS_DIRECTIVE(line, DIR_ROM_REGION)) {
+                // TODO
+            } else if (IS_DIRECTIVE(line, DIR_ROM_DECLSIZE)) {
+                // TODO
+            } else {
+                ei = create_error(line, ET_PREPROCESSOR, ED_UNKNOWN_DIRECTIVE);
+                return ei;
+            }
+        }
+        line = line->next;
+    }
+
+    state->rom_size = 8;  // TODO
 
 #ifdef DEBUG_MODE
     DEBUG("Dumping ASMLines:")
