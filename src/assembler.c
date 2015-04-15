@@ -9,6 +9,7 @@
 #include <sys/stat.h>
 
 #include "assembler.h"
+#include "asm_errors.h"
 #include "logging.h"
 #include "util.h"
 
@@ -25,6 +26,9 @@
 
 #define DIRECTIVE_OFFSET(line, d)                                             \
     (line->length > strlen(DIRECTIVE(d)) ? strlen(DIRECTIVE(d)) : 0)
+
+#define ERROR_TYPE(err_info) (asm_error_types[err_info->type])
+#define ERROR_DESC(err_info) (asm_error_descs[err_info->desc])
 
 #define SYMBOL_TABLE_BUCKETS 128
 
@@ -85,6 +89,21 @@ typedef struct {
     ASMSymbolTable *symtable;
 } AssemblerState;
 
+struct ASMErrorLine {
+    char *data;
+    size_t length;
+    size_t lineno;
+    char *filename;
+    struct ASMErrorLine *next;
+};
+typedef struct ASMErrorLine ASMErrorLine;
+
+struct ErrorInfo {
+    ASMErrorType type;
+    ASMErrorDesc desc;
+    ASMErrorLine *line;
+};
+
 /*
     Deallocate a LineBuffer previously created with read_source_file().
 */
@@ -107,27 +126,30 @@ static void free_line_buffer(LineBuffer *buffer)
 
     Return the buffer if reading was successful; it must be freed with
     free_line_buffer() when done. Return NULL if an error occurred while
-    reading. A message will be printed to stderr in this case.
+    reading. If print_errors is true, a message will also be printed to stderr.
 */
-static LineBuffer* read_source_file(const char *path)
+static LineBuffer* read_source_file(const char *path, bool print_errors)
 {
     FILE *fp;
     struct stat st;
 
     if (!(fp = fopen(path, "r"))) {
-        ERROR_ERRNO("couldn't open source file")
+        if (print_errors)
+            ERROR_ERRNO("couldn't open source file")
         return NULL;
     }
 
     if (fstat(fileno(fp), &st)) {
         fclose(fp);
-        ERROR_ERRNO("couldn't open source file")
+        if (print_errors)
+            ERROR_ERRNO("couldn't open source file")
         return NULL;
     }
     if (!(st.st_mode & S_IFREG)) {
         fclose(fp);
-        ERROR("couldn't open source file: %s", st.st_mode & S_IFDIR ?
-              "Is a directory" : "Is not a regular file")
+        if (print_errors)
+            ERROR("couldn't open source file: %s", st.st_mode & S_IFDIR ?
+                  "Is a directory" : "Is not a regular file")
         return NULL;
     }
 
@@ -154,7 +176,8 @@ static LineBuffer* read_source_file(const char *path)
                 break;
             if (errno == ENOMEM)
                 OUT_OF_MEMORY()
-            ERROR_ERRNO("couldn't read source file")
+            if (print_errors)
+                ERROR_ERRNO("couldn't read source file")
             fclose(fp);
             source->lines = dummy.next;
             free_line_buffer(source);
@@ -204,26 +227,31 @@ static bool write_binary_file(const char *path, const uint8_t *data, size_t size
 }
 
 /*
-    Create an ErrorLine object from an ASMLine.
+    Create an ASMErrorLine object from an ASMLine.
 */
-static ErrorLine* create_error_line(const ASMLine *line)
+static ASMErrorLine* create_error_line(const ASMLine *line)
 {
-    ErrorLine *el = malloc(sizeof(ErrorLine));
+    ASMErrorLine *el = malloc(sizeof(ASMErrorLine));
     if (!el)
         OUT_OF_MEMORY()
 
-    if (!(el->data = malloc(sizeof(char) * line->original->length)))
+    const char *source = line->original->data;
+    size_t length = line->original->length;
+    if (!(el->data = malloc(sizeof(char) * length)))
         OUT_OF_MEMORY()
-    memcpy(el->data, line->original->data, line->original->length);
 
-    el->length = line->original->length;
+    // Ignore spaces at beginning:
+    while (length > 0 && (*source == ' ' || *source == '\t'))
+        source++, length--;
+    memcpy(el->data, source, length);
+
+    el->length = length;
     el->lineno = line->original->lineno;
 
     el->filename = strdup(line->filename);
     if (!el->filename)
         OUT_OF_MEMORY()
 
-    el->index = -1;
     el->next = NULL;
     return el;
 }
@@ -237,42 +265,40 @@ static ErrorLine* create_error_line(const ASMLine *line)
     This function never fails (OOM triggers an exit()); the caller can be
     confident the returned object is valid.
 */
-static ErrorInfo* create_error(const ASMLine *line, ErrorType et, ErrorDesc ed)
+static ErrorInfo* create_error(
+    const ASMLine *line, ASMErrorType err_type, ASMErrorDesc err_desc)
 {
-    ErrorInfo *ei = malloc(sizeof(ErrorInfo));
-    if (!ei)
+    ErrorInfo *einfo = malloc(sizeof(ErrorInfo));
+    if (!einfo)
         OUT_OF_MEMORY()
 
-    ei->type = et;
-    ei->desc = ed;
-    ei->line = create_error_line(line);
-    return ei;
+    einfo->type = err_type;
+    einfo->desc = err_desc;
+    einfo->line = create_error_line(line);
+    return einfo;
 }
 
 /*
     Add an ASMLine to an ErrorInfo object, as part of a file trace.
 */
-static void append_to_error(ErrorInfo *ei, const ASMLine *line)
+static void append_to_error(ErrorInfo *einfo, const ASMLine *line)
 {
-    ErrorLine* el = create_error_line(line);
-    el->next = ei->line;
-    ei->line = el;
+    ASMErrorLine* el = create_error_line(line);
+    el->next = einfo->line;
+    einfo->line = el;
 }
 
 /*
     Print an ErrorInfo object returned by assemble() to the given stream.
 */
-void error_info_print(const ErrorInfo *error_info, FILE *file)
+void error_info_print(const ErrorInfo *einfo, FILE *file)
 {
-    ErrorLine *line = error_info->line;
+    ASMErrorLine *line = einfo->line;
 
-    fprintf(file, "error: %d: %d\n", error_info->type, error_info->desc);
+    fprintf(file, "error: %s: %s\n", ERROR_TYPE(einfo), ERROR_DESC(einfo));
     while (line) {
-        fprintf(file, "\t%s:%zu: %.*s\n", line->filename, line->lineno,
-                (int) line->length, line->data);
-        if (line->index >= 0)
-            fprintf(file, "\t%*s^\n", strlen(line->filename) + 3 + line->index, " ");
-
+        fprintf(file, "%s:%zu:\n", line->filename, line->lineno);
+        fprintf(file, "    %.*s\n", (int) line->length, line->data);
         line = line->next;
     }
 }
@@ -285,7 +311,7 @@ void error_info_destroy(ErrorInfo *error_info)
     if (!error_info)
         return;
 
-    ErrorLine *line = error_info->line, *temp;
+    ASMErrorLine *line = error_info->line, *temp;
     while (line) {
         temp = line->next;
         free(line->data);
@@ -416,7 +442,7 @@ static ASMLine* normalize_line(const char *source, size_t length)
             if (c >= 'A' && c <= 'Z')
                 c += 'a' - 'A';
 
-            if (c == '\t' || c == ' ')
+            if (c == ' ' || c == '\t')
                 space_pending = true;
             else {
                 if (space_pending) {
@@ -539,9 +565,8 @@ static ErrorInfo* build_asm_lines(
                 return ei;
             }
 
-            // TODO: update read_source_file() to change error behavior...
             // TODO: handle recursive includes properly
-            LineBuffer *incbuffer = read_source_file(path);
+            LineBuffer *incbuffer = read_source_file(path, false);
             free(path);
             if (!incbuffer) {
                 ei = create_error(line, ET_FILEIO, ED_FILE_READ_ERR);
@@ -759,7 +784,7 @@ size_t assemble(const LineBuffer *source, uint8_t **binary_ptr, ErrorInfo **ei_p
 */
 bool assemble_file(const char *src_path, const char *dst_path)
 {
-    LineBuffer *source = read_source_file(src_path);
+    LineBuffer *source = read_source_file(src_path, true);
     if (!source)
         return false;
 

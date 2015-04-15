@@ -23,31 +23,7 @@ typedef struct {
     char *filename;
 } LineBuffer;
 
-typedef enum {
-    ET_SYNTAX,
-    ET_FILEIO
-} ErrorType;
-
-typedef enum {
-    ED_INCLUDE_BAD_ARG,
-    ED_FILE_READ_ERR
-} ErrorDesc;
-
-struct ErrorLine {
-    char *data;
-    size_t length;
-    size_t lineno;
-    char *filename;
-    ssize_t index;
-    struct ErrorLine *next;
-};
-typedef struct ErrorLine ErrorLine;
-
-typedef struct {
-    ErrorType type;
-    ErrorDesc desc;
-    ErrorLine *line;
-} ErrorInfo;
+typedef struct ErrorInfo ErrorInfo;
 
 /* Functions */
 
