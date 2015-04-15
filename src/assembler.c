@@ -515,6 +515,7 @@ char* read_include_path(const ASMLine *line)
     if (!dup)
         OUT_OF_MEMORY()
 
+    // TODO: should normalize filenames in some way to prevent accidental dupes
     snprintf(path, maxlen, "%s/%.*s", dirname(dup), (int) (i - start),
              line->data + start);
     free(dup);
@@ -523,6 +524,23 @@ char* read_include_path(const ASMLine *line)
     error:
     free(path);
     return NULL;
+}
+
+/*
+    Return whether the given path has already been loaded.
+*/
+static bool path_has_been_loaded(
+    const char *path, const LineBuffer *root, const ASMInclude *include)
+{
+    if (!strcmp(path, root->filename))
+        return true;
+
+    while (include) {
+        if (!strcmp(path, include->lines->filename))
+            return true;
+        include = include->next;
+    }
+    return false;
 }
 
 /*
@@ -537,8 +555,8 @@ char* read_include_path(const ASMLine *line)
     *includes may be updated in either case.
 */
 static ErrorInfo* build_asm_lines(
-    const LineBuffer *source, ASMLine **head, ASMLine **tail,
-    ASMInclude **includes)
+    const LineBuffer *root, const LineBuffer *source, ASMLine **head,
+    ASMLine **tail, ASMInclude **includes)
 {
     ASMLine dummy = {.next = NULL};
     ASMLine *line, *prev = &dummy;
@@ -559,17 +577,24 @@ static ErrorInfo* build_asm_lines(
             ErrorInfo *ei;
             char *path = read_include_path(line);
             if (!path) {
-                ei = create_error(line, ET_SYNTAX, ED_INCLUDE_BAD_ARG);
+                ei = create_error(line, ET_INCLUDE, ED_BAD_ARG);
                 free_asm_lines(line);
                 free_asm_lines(dummy.next);
                 return ei;
             }
 
-            // TODO: handle recursive includes properly
+            if (path_has_been_loaded(path, root, *includes)) {
+                ei = create_error(line, ET_INCLUDE, ED_RECURSION);
+                free_asm_lines(line);
+                free_asm_lines(dummy.next);
+                free(path);
+                return ei;
+            }
+
             LineBuffer *incbuffer = read_source_file(path, false);
             free(path);
             if (!incbuffer) {
-                ei = create_error(line, ET_FILEIO, ED_FILE_READ_ERR);
+                ei = create_error(line, ET_INCLUDE, ED_FILE_READ_ERR);
                 free_asm_lines(line);
                 free_asm_lines(dummy.next);
                 return ei;
@@ -583,16 +608,17 @@ static ErrorInfo* build_asm_lines(
             include->next = *includes;
             *includes = include;
 
-            ASMLine *ihead, *itail;
-            if ((ei = build_asm_lines(incbuffer, &ihead, &itail, includes))) {
+            ASMLine *inchead, *inctail;
+            if ((ei = build_asm_lines(root, incbuffer, &inchead, &inctail,
+                                      includes))) {
                 append_to_error(ei, line);
                 free_asm_lines(line);
                 free_asm_lines(dummy.next);
                 return ei;
             }
 
-            prev->next = ihead;
-            prev = itail;
+            prev->next = inchead;
+            prev = inctail;
             free_asm_lines(line);  // Destroy only the .include line
         }
         else {
@@ -634,7 +660,8 @@ static ErrorInfo* preprocess(AssemblerState *state, const LineBuffer *source)
 
     ErrorInfo* ei;
 
-    if ((ei = build_asm_lines(source, &state->lines, NULL, &state->includes)))
+    if ((ei = build_asm_lines(source, source, &state->lines, NULL,
+                              &state->includes)))
         return ei;
 
     // TODO: iterate here for all global preprocessor directives
