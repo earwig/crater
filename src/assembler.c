@@ -603,6 +603,7 @@ static ErrorInfo* build_asm_lines(
                 return ei;
             }
 
+            DEBUG("- reading included file: %s", path)
             LineBuffer *incbuffer = read_source_file(path, false);
             free(path);
             if (!incbuffer) {
@@ -670,20 +671,33 @@ static ErrorInfo* preprocess(AssemblerState *state, const LineBuffer *source)
     // if giving reported and actual rom size, check reported is <= actual
     // ensure no duplicate explicit assignments
 
-    ErrorInfo* ei;
+#define CATCH_DUPLICATES(line, first)                                         \
+    if (first) {                                                              \
+        ei = create_error(line, ET_PREPROC, ED_MULTI_DIRECTIVE);              \
+        append_to_error(ei, first);                                           \
+        return ei;                                                            \
+    }                               // TODO: actually check values for dupes
 
+    DEBUG("Running preprocessor:")
+
+    ErrorInfo* ei;
     if ((ei = build_asm_lines(source, source, &state->lines, NULL,
                               &state->includes)))
         return ei;
 
-    const ASMLine *line = state->lines;
-    while (line) {
+    const ASMLine *first_optimizer = NULL;
+
+    const ASMLine *line, *next = state->lines;
+    while ((line = next)) {
+        next = line->next;
         if (line->data[0] == DIRECTIVE_MARKER) {
-            DEBUG("got marker on line: %.*s", (int) line->length, line->data)
-            if (IS_DIRECTIVE(line, DIR_ORIGIN)) {
-                // Do nothing; origins are handled by tokenizer
-            } else if (IS_DIRECTIVE(line, DIR_OPTIMIZER)) {
-                // TODO
+            if (IS_DIRECTIVE(line, DIR_ORIGIN))
+                continue;  // Origins are handled by tokenizer
+
+            DEBUG("- handling directive: %.*s", (int) line->length, line->data)
+            if (IS_DIRECTIVE(line, DIR_OPTIMIZER)) {
+                CATCH_DUPLICATES(line, first_optimizer)
+                first_optimizer = line;
             } else if (IS_DIRECTIVE(line, DIR_ROM_SIZE)) {
                 // TODO
             } else if (IS_DIRECTIVE(line, DIR_ROM_HEADER)) {
@@ -699,11 +713,9 @@ static ErrorInfo* preprocess(AssemblerState *state, const LineBuffer *source)
             } else if (IS_DIRECTIVE(line, DIR_ROM_DECLSIZE)) {
                 // TODO
             } else {
-                ei = create_error(line, ET_PREPROCESSOR, ED_UNKNOWN_DIRECTIVE);
-                return ei;
+                return create_error(line, ET_PREPROC, ED_UNKNOWN_DIRECTIVE);
             }
         }
-        line = line->next;
     }
 
     state->rom_size = 8;  // TODO
@@ -719,6 +731,8 @@ static ErrorInfo* preprocess(AssemblerState *state, const LineBuffer *source)
 #endif
 
     return NULL;
+
+#undef CATCH_DUPLICATES
 }
 
 /*
