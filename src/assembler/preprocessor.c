@@ -3,6 +3,7 @@
 
 #include <libgen.h>
 #include <limits.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -309,6 +310,68 @@ static inline bool read_bool_argument(
 }
 
 /*
+    Read in an integer starting at str and ending the character before end.
+
+    Store the value in *result and return true on success; else return false.
+*/
+static inline bool read_integer(
+    uint32_t *result, const char *str, const char *end)
+{
+    if (end - str <= 0)
+        return false;
+
+    uint64_t value = 0;
+    if (*str == '$') {
+        str++;
+        if (str == end)
+            return false;
+
+        while (str < end) {
+            if (*str >= '0' && *str <= '9')
+                value = value * 16 + (*str - '0');
+            else if (*str >= 'a' && *str <= 'f')
+                value = (value * 0x10) + 0xA + (*str - 'a');
+            else
+                return false;
+            if (value >= UINT32_MAX)
+                return false;
+            str++;
+        }
+    }
+    else {
+        while (str < end) {
+            if (*str < '0' || *str > '9')
+                return false;
+            value = (value * 10) + (*str - '0');
+            if (value >= UINT32_MAX)
+                return false;
+            str++;
+        }
+    }
+
+    *result = value;
+    return true;
+}
+
+/*
+    Read in a 32-bit int argument from the given line and store it in *result.
+
+    Return true on success and false on failure; in the latter case, *result is
+    not modified.
+*/
+static inline bool read_uint32_argument(
+    uint32_t *result, const ASMLine *line, const char *directive)
+{
+    const char *arg = line->data + (DIRECTIVE_OFFSET(line, directive) + 1);
+    ssize_t len = line->length - (DIRECTIVE_OFFSET(line, directive) + 1);
+
+    uint32_t value;
+    if (read_integer(&value, arg, arg + len))
+        return (*result = value), true;
+    return false;
+}
+
+/*
     Preprocess the LineBuffer into ASMLines. Change some state along the way.
 
     This function processes include directives, so read_source_file() may be
@@ -320,15 +383,8 @@ static inline bool read_bool_argument(
 */
 ErrorInfo* preprocess(AssemblerState *state, const LineBuffer *source)
 {
-    // state->header.offset             <-- check in list of acceptable values
-    // state->header.product_code       <-- range check
-    // state->header.version            <-- range check
-    // state->header.region             <-- string conversion, check
-    // state->header.rom_size           <-- value/range check
-    // state->rom_size                  <-- value check
-
-    // if giving rom size, check header offset is in rom size range
-    // if giving reported and actual rom size, check reported is <= actual
+    // TODO: if giving rom size, check header offset is in rom size range
+    // TODO: if giving reported and actual rom size, check reported is <= actual
 
 #define CATCH_DUPES(line, first, oldval, newval)                              \
     if (first && oldval != newval) {                                          \
@@ -352,6 +408,12 @@ ErrorInfo* preprocess(AssemblerState *state, const LineBuffer *source)
         return error_info_create(line, ET_PREPROC, ED_PP_BAD_ARG);            \
     }
 
+#define RANGE_CHECK(arg, bound)                                               \
+    if (arg > bound) {                                                        \
+        asm_lines_free(condemned);                                            \
+        return error_info_create(line, ET_PREPROC, ED_PP_ARG_RANGE);          \
+    }
+
     DEBUG("Running preprocessor:")
 
     ErrorInfo* ei;
@@ -361,7 +423,8 @@ ErrorInfo* preprocess(AssemblerState *state, const LineBuffer *source)
 
     ASMLine dummy = {.next = state->lines};
     ASMLine *prev, *line = &dummy, *next = state->lines, *condemned = NULL;
-    const ASMLine *first_optimizer = NULL, *first_checksum = NULL;
+    const ASMLine *first_optimizer = NULL, *first_checksum = NULL,
+                  *first_product = NULL;
 
     while ((prev = line, line = next)) {
         next = line->next;
@@ -379,9 +442,11 @@ ErrorInfo* preprocess(AssemblerState *state, const LineBuffer *source)
             }
             else if (IS_DIRECTIVE(line, DIR_ROM_SIZE)) {
                 // TODO
+                // state->rom_size                  <-- value check
             }
             else if (IS_DIRECTIVE(line, DIR_ROM_HEADER)) {
                 // TODO
+                // state->header.offset             <-- check in list of acceptable values
             }
             else if (IS_DIRECTIVE(line, DIR_ROM_CHECKSUM)) {
                 REQUIRE_ARG(line, DIR_ROM_CHECKSUM)
@@ -390,16 +455,23 @@ ErrorInfo* preprocess(AssemblerState *state, const LineBuffer *source)
                 CATCH_DUPES(line, first_checksum, state->header.checksum, arg)
             }
             else if (IS_DIRECTIVE(line, DIR_ROM_PRODUCT)) {
-                // TODO
+                REQUIRE_ARG(line, DIR_ROM_PRODUCT)
+                uint32_t arg;
+                VALIDATE(read_uint32_argument(&arg, line, DIR_ROM_PRODUCT))
+                RANGE_CHECK(arg, 160000)
+                CATCH_DUPES(line, first_product, state->header.product_code, arg)
             }
             else if (IS_DIRECTIVE(line, DIR_ROM_VERSION)) {
                 // TODO
+                // state->header.version            <-- range check
             }
             else if (IS_DIRECTIVE(line, DIR_ROM_REGION)) {
                 // TODO
+                // state->header.region             <-- string conversion, check
             }
             else if (IS_DIRECTIVE(line, DIR_ROM_DECLSIZE)) {
                 // TODO
+                // state->header.rom_size           <-- value/range check
             }
             else {
                 asm_lines_free(condemned);

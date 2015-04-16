@@ -22,7 +22,8 @@ typedef enum {
     ED_PP_UNKNOWN,
     ED_PP_DUPLICATE,
     ED_PP_NO_ARG,
-    ED_PP_BAD_ARG
+    ED_PP_BAD_ARG,
+    ED_PP_ARG_RANGE
 } ASMErrorDesc;
 
 /* Strings */
@@ -40,7 +41,8 @@ static const char *asm_error_descs[] = {
     "unknown directive",
     "multiple values for directive",
     "missing argument for directive",
-    "invalid argument for directive"
+    "invalid argument for directive",
+    "directive argument out of range"
 };
 
 /* Structs */
