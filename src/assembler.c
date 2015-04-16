@@ -17,27 +17,26 @@
 #define DEFAULT_REGION "GG Export"
 
 #define DIRECTIVE_MARKER    '.'
-#define DIR_INCLUDE         "include"
-#define DIR_ORIGIN          "org"
-#define DIR_OPTIMIZER       "optimizer"
-#define DIR_ROM_SIZE        "rom_size"
-#define DIR_ROM_HEADER      "rom_header"
-#define DIR_ROM_CHECKSUM    "rom_checksum"
-#define DIR_ROM_PRODUCT     "rom_product"
-#define DIR_ROM_VERSION     "rom_version"
-#define DIR_ROM_REGION      "rom_region"
-#define DIR_ROM_DECLSIZE    "rom_declsize"
+#define DIR_INCLUDE         ".include"
+#define DIR_ORIGIN          ".org"
+#define DIR_OPTIMIZER       ".optimizer"
+#define DIR_ROM_SIZE        ".rom_size"
+#define DIR_ROM_HEADER      ".rom_header"
+#define DIR_ROM_CHECKSUM    ".rom_checksum"
+#define DIR_ROM_PRODUCT     ".rom_product"
+#define DIR_ROM_VERSION     ".rom_version"
+#define DIR_ROM_REGION      ".rom_region"
+#define DIR_ROM_DECLSIZE    ".rom_declsize"
 
-#define DIRECTIVE(d) ("." d)
-#define DIREC_LEN(d) (strlen(DIRECTIVE(d)))
+#define DIRECTIVE_HAS_ARG(line, d) ((line)->length > strlen(d))
 
 #define IS_DIRECTIVE(line, d)                                                 \
-    (((line)->length >= DIREC_LEN(d)) &&                                      \
-    !strncmp((line)->data, DIRECTIVE(d), DIREC_LEN(d)) &&                     \
-    ((line)->length == DIREC_LEN(d) || (line)->data[DIREC_LEN(d)] == ' '))
+    (((line)->length >= strlen(d)) &&                                         \
+    !strncmp((line)->data, d, strlen(d)) &&                                   \
+    (!DIRECTIVE_HAS_ARG(line, d) || (line)->data[strlen(d)] == ' '))
 
 #define DIRECTIVE_OFFSET(line, d)                                             \
-    ((line)->length > strlen(DIRECTIVE(d)) ? strlen(DIRECTIVE(d)) : 0)
+    (DIRECTIVE_HAS_ARG(line, d) ? strlen(d) : 0)
 
 #define ERROR_TYPE(err_info) (asm_error_types[err_info->type])
 #define ERROR_DESC(err_info) (asm_error_descs[err_info->desc])
@@ -589,14 +588,14 @@ static ErrorInfo* build_asm_lines(
             ErrorInfo *ei;
             char *path = read_include_path(line);
             if (!path) {
-                ei = create_error(line, ET_INCLUDE, ED_BAD_ARG);
+                ei = create_error(line, ET_INCLUDE, ED_INC_BAD_ARG);
                 free_asm_lines(line);
                 free_asm_lines(dummy.next);
                 return ei;
             }
 
             if (path_has_been_loaded(path, root, *includes)) {
-                ei = create_error(line, ET_INCLUDE, ED_RECURSION);
+                ei = create_error(line, ET_INCLUDE, ED_INC_RECURSION);
                 free_asm_lines(line);
                 free_asm_lines(dummy.next);
                 free(path);
@@ -607,7 +606,7 @@ static ErrorInfo* build_asm_lines(
             LineBuffer *incbuffer = read_source_file(path, false);
             free(path);
             if (!incbuffer) {
-                ei = create_error(line, ET_INCLUDE, ED_FILE_READ_ERR);
+                ei = create_error(line, ET_INCLUDE, ED_INC_FILE_READ);
                 free_asm_lines(line);
                 free_asm_lines(dummy.next);
                 return ei;
@@ -647,6 +646,48 @@ static ErrorInfo* build_asm_lines(
 }
 
 /*
+    Read in a boolean argument from the given line and store it in *result.
+
+    auto_val is used if the argument's value is "auto". Return true on success
+    and false on failure; in the latter case, *result is not modified.
+*/
+static inline bool read_bool_argument(
+    bool *result, const ASMLine *line, const char *directive, bool auto_val)
+{
+    const char *arg = line->data + (DIRECTIVE_OFFSET(line, directive) + 1);
+    ssize_t len = line->length - (DIRECTIVE_OFFSET(line, directive) + 1);
+
+    if (len <= 0 || len > 5)
+        return false;
+
+    switch (len) {
+        case 1:  // 0, 1
+            if (*arg == '0' || *arg == '1')
+                return (*result = *arg - '0'), true;
+            return false;
+        case 2:  // on
+            if (!strncmp(arg, "on", 2))
+                return (*result = true), true;
+            return false;
+        case 3:  // off
+            if (!strncmp(arg, "off", 3))
+                return (*result = false), true;
+            return false;
+        case 4:  // true, auto
+            if (!strncmp(arg, "true", 4))
+                return (*result = true), true;
+            if (!strncmp(arg, "auto", 4))
+                return (*result = auto_val), true;
+            return false;
+        case 5:  // false
+            if (!strncmp(arg, "false", 5))
+                return (*result = false), true;
+            return false;
+    }
+    return false;
+}
+
+/*
     Preprocess the LineBuffer into ASMLines. Change some state along the way.
 
     This function processes include directives, so read_source_file() may be
@@ -669,14 +710,21 @@ static ErrorInfo* preprocess(AssemblerState *state, const LineBuffer *source)
 
     // if giving rom size, check header offset is in rom size range
     // if giving reported and actual rom size, check reported is <= actual
-    // ensure no duplicate explicit assignments
 
-#define CATCH_DUPLICATES(line, first)                                         \
-    if (first) {                                                              \
-        ei = create_error(line, ET_PREPROC, ED_MULTI_DIRECTIVE);              \
+#define CATCH_DUPES(line, first, oldval, newval)                              \
+    if (first && oldval != newval) {                                          \
+        ei = create_error(line, ET_PREPROC, ED_PP_DUPLICATE);                 \
         append_to_error(ei, first);                                           \
         return ei;                                                            \
-    }                               // TODO: actually check values for dupes
+    }
+
+#define REQUIRE_ARG(line, d)                                                  \
+    if (!DIRECTIVE_HAS_ARG(line, d))                                          \
+        return create_error(line, ET_PREPROC, ED_PP_NO_ARG);
+
+#define VALIDATE(retval)                                                      \
+    if (!(retval))                                                            \
+        return create_error(line, ET_PREPROC, ED_PP_BAD_ARG);
 
     DEBUG("Running preprocessor:")
 
@@ -685,18 +733,24 @@ static ErrorInfo* preprocess(AssemblerState *state, const LineBuffer *source)
                               &state->includes)))
         return ei;
 
+    ASMLine dummy = {.next = state->lines};
+    ASMLine *prev, *line = &dummy, *next = state->lines;
     const ASMLine *first_optimizer = NULL;
 
-    const ASMLine *line, *next = state->lines;
-    while ((line = next)) {
+    while ((prev = line, line = next)) {
         next = line->next;
         if (line->data[0] == DIRECTIVE_MARKER) {
             if (IS_DIRECTIVE(line, DIR_ORIGIN))
                 continue;  // Origins are handled by tokenizer
 
             DEBUG("- handling directive: %.*s", (int) line->length, line->data)
+
             if (IS_DIRECTIVE(line, DIR_OPTIMIZER)) {
-                CATCH_DUPLICATES(line, first_optimizer)
+                REQUIRE_ARG(line, DIR_OPTIMIZER)
+                bool arg;
+                VALIDATE(read_bool_argument(&arg, line, DIR_OPTIMIZER, false))
+                CATCH_DUPES(line, first_optimizer, state->optimizer, arg)
+                state->optimizer = arg;
                 first_optimizer = line;
             } else if (IS_DIRECTIVE(line, DIR_ROM_SIZE)) {
                 // TODO
@@ -713,8 +767,14 @@ static ErrorInfo* preprocess(AssemblerState *state, const LineBuffer *source)
             } else if (IS_DIRECTIVE(line, DIR_ROM_DECLSIZE)) {
                 // TODO
             } else {
-                return create_error(line, ET_PREPROC, ED_UNKNOWN_DIRECTIVE);
+                return create_error(line, ET_PREPROC, ED_PP_UNKNOWN);
             }
+
+            // Remove the directive from the line list:
+            prev->next = next;
+            line->next = NULL;
+            free_asm_lines(line);
+            line = prev;
         }
     }
 
@@ -732,7 +792,9 @@ static ErrorInfo* preprocess(AssemblerState *state, const LineBuffer *source)
 
     return NULL;
 
-#undef CATCH_DUPLICATES
+#undef VALIDATE
+#undef REQUIRE_ARG
+#undef CATCH_DUPES
 }
 
 /*

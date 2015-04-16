@@ -11,11 +11,14 @@ typedef enum {
 } ASMErrorType;
 
 typedef enum {
-    ED_BAD_ARG,
-    ED_RECURSION,
-    ED_FILE_READ_ERR,
-    ED_UNKNOWN_DIRECTIVE,
-    ED_MULTI_DIRECTIVE
+    ED_INC_BAD_ARG,
+    ED_INC_RECURSION,
+    ED_INC_FILE_READ,
+
+    ED_PP_UNKNOWN,
+    ED_PP_DUPLICATE,
+    ED_PP_NO_ARG,
+    ED_PP_BAD_ARG
 } ASMErrorDesc;
 
 /* Strings */
@@ -29,6 +32,9 @@ static const char *asm_error_descs[] = {
     "missing or invalid argument",
     "infinite recursion detected",
     "couldn't read included file",
+
     "unknown directive",
-    "multiple values for directive"
+    "multiple values for directive",
+    "missing argument for directive",
+    "invalid argument for directive"
 };
