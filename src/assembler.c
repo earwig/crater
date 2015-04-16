@@ -24,6 +24,7 @@ static ErrorInfo* tokenize(AssemblerState *state)
     // verify no instructions clash with header offset
     // if rom size is set, verify nothing overflows
 
+    (void) state;
     return NULL;
 }
 
@@ -45,6 +46,7 @@ static ErrorInfo* resolve_defaults(AssemblerState *state)
     // if (!state.header.rom_size)
             // set to actual rom size
 
+    (void) state;
     return NULL;
 }
 
@@ -58,6 +60,7 @@ static ErrorInfo* resolve_symbols(AssemblerState *state)
 {
     // TODO
 
+    (void) state;
     return NULL;
 }
 
@@ -98,10 +101,7 @@ size_t assemble(const LineBuffer *source, uint8_t **binary_ptr, ErrorInfo **ei_p
     if ((error_info = preprocess(&state, source)))
         goto error;
 
-    if (!(state.symtable = malloc(sizeof(ASMSymbolTable))))
-        OUT_OF_MEMORY()
-    for (size_t bucket = 0; bucket < SYMBOL_TABLE_BUCKETS; bucket++)
-        state.symtable->buckets[bucket] = NULL;
+    asm_symtable_init(&state.symtable);
 
     if ((error_info = tokenize(&state)))
         goto error;

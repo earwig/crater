@@ -71,6 +71,7 @@ typedef struct {
 /* Functions */
 
 void state_init(AssemblerState*);
+void asm_symtable_init(ASMSymbolTable**);
 void asm_lines_free(ASMLine*);
 void asm_includes_free(ASMInclude*);
 void asm_instructions_free(ASMInstruction*);

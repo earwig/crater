@@ -5,6 +5,7 @@
 
 #include "state.h"
 #include "io.h"
+#include "../logging.h"
 #include "../util.h"
 
 #define DEFAULT_HEADER_OFFSET 0x7FF0
@@ -28,6 +29,21 @@ void state_init(AssemblerState *state)
     state->includes = NULL;
     state->instructions = NULL;
     state->symtable = NULL;
+}
+
+/*
+    Initialize an ASMSymbolTable and place it in *symtable_ptr.
+*/
+void asm_symtable_init(ASMSymbolTable **symtable_ptr)
+{
+    ASMSymbolTable *symtable;
+    if (!(symtable = malloc(sizeof(ASMSymbolTable))))
+        OUT_OF_MEMORY()
+
+    for (size_t bucket = 0; bucket < SYMBOL_TABLE_BUCKETS; bucket++)
+        symtable->buckets[bucket] = NULL;
+
+    *symtable_ptr = symtable;
 }
 
 /*
