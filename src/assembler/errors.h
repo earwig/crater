@@ -3,6 +3,10 @@
 
 #pragma once
 
+#include <stdlib.h>
+
+#include "state.h"
+
 /* Enums */
 
 typedef enum {
@@ -38,3 +42,14 @@ static const char *asm_error_descs[] = {
     "missing argument for directive",
     "invalid argument for directive"
 };
+
+/* Structs */
+
+typedef struct ErrorInfo ErrorInfo;
+
+/* Functions */
+
+ErrorInfo* error_info_create(const ASMLine*, ASMErrorType, ASMErrorDesc);
+void error_info_append(ErrorInfo*, const ASMLine*);
+void error_info_print(const ErrorInfo*, FILE*);
+void error_info_destroy(ErrorInfo*);

@@ -2,7 +2,7 @@
 # Released under the terms of the MIT License. See LICENSE for details.
 
 PROGRAM = crater
-SOURCES = src
+SOURCES = src src/assembler
 BUILD   = build
 DEVEXT  = -dev
 

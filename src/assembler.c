@@ -9,7 +9,8 @@
 #include <sys/stat.h>
 
 #include "assembler.h"
-#include "asm_errors.h"
+#include "assembler/errors.h"
+#include "assembler/state.h"
 #include "logging.h"
 #include "util.h"
 
@@ -37,83 +38,6 @@
 
 #define DIRECTIVE_OFFSET(line, d)                                             \
     (DIRECTIVE_HAS_ARG(line, d) ? strlen(d) : 0)
-
-#define ERROR_TYPE(err_info) (asm_error_types[err_info->type])
-#define ERROR_DESC(err_info) (asm_error_descs[err_info->desc])
-
-#define SYMBOL_TABLE_BUCKETS 128
-
-/* Internal structs */
-
-struct ASMLine {
-    char *data;
-    size_t length;
-    const Line *original;
-    const char *filename;
-    struct ASMLine *next;
-};
-typedef struct ASMLine ASMLine;
-
-struct ASMInclude {
-    LineBuffer *lines;
-    struct ASMInclude *next;
-};
-typedef struct ASMInclude ASMInclude;
-
-struct ASMInstruction {
-    size_t offset;
-    uint8_t length;
-    uint8_t b1, b2, b3, b4;
-    uint8_t virtual_byte;
-    char *symbol;
-    struct ASMInstruction *next;
-};
-typedef struct ASMInstruction ASMInstruction;
-
-struct ASMSymbol {
-    size_t offset;
-    char *symbol;
-    struct ASMSymbol *next;
-};
-typedef struct ASMSymbol ASMSymbol;
-
-typedef struct {
-    ASMSymbol *buckets[SYMBOL_TABLE_BUCKETS];
-} ASMSymbolTable;
-
-typedef struct {
-    size_t offset;
-    bool checksum;
-    uint32_t product_code;
-    uint8_t version;
-    uint8_t region;
-    uint8_t rom_size;
-} ASMHeaderInfo;
-
-typedef struct {
-    ASMHeaderInfo header;
-    bool optimizer;
-    size_t rom_size;
-    ASMLine *lines;
-    ASMInclude *includes;
-    ASMInstruction *instructions;
-    ASMSymbolTable *symtable;
-} AssemblerState;
-
-struct ASMErrorLine {
-    char *data;
-    size_t length;
-    size_t lineno;
-    char *filename;
-    struct ASMErrorLine *next;
-};
-typedef struct ASMErrorLine ASMErrorLine;
-
-struct ErrorInfo {
-    ASMErrorType type;
-    ASMErrorDesc desc;
-    ASMErrorLine *line;
-};
 
 /*
     Deallocate a LineBuffer previously created with read_source_file().
@@ -235,102 +159,6 @@ static bool write_binary_file(const char *path, const uint8_t *data, size_t size
 
     fclose(fp);
     return true;
-}
-
-/*
-    Create an ASMErrorLine object from an ASMLine.
-*/
-static ASMErrorLine* create_error_line(const ASMLine *line)
-{
-    ASMErrorLine *el = malloc(sizeof(ASMErrorLine));
-    if (!el)
-        OUT_OF_MEMORY()
-
-    const char *source = line->original->data;
-    size_t length = line->original->length;
-    if (!(el->data = malloc(sizeof(char) * length)))
-        OUT_OF_MEMORY()
-
-    // Ignore spaces at beginning:
-    while (length > 0 && (*source == ' ' || *source == '\t'))
-        source++, length--;
-    memcpy(el->data, source, length);
-
-    el->length = length;
-    el->lineno = line->original->lineno;
-
-    el->filename = strdup(line->filename);
-    if (!el->filename)
-        OUT_OF_MEMORY()
-
-    el->next = NULL;
-    return el;
-}
-
-/*
-    Create an ErrorInfo object describing a particular error.
-
-    The ErrorInfo object can be printed with error_info_print(), and must be
-    freed when done with error_info_destroy().
-
-    This function never fails (OOM triggers an exit()); the caller can be
-    confident the returned object is valid.
-*/
-static ErrorInfo* create_error(
-    const ASMLine *line, ASMErrorType err_type, ASMErrorDesc err_desc)
-{
-    ErrorInfo *einfo = malloc(sizeof(ErrorInfo));
-    if (!einfo)
-        OUT_OF_MEMORY()
-
-    einfo->type = err_type;
-    einfo->desc = err_desc;
-    einfo->line = create_error_line(line);
-    return einfo;
-}
-
-/*
-    Add an ASMLine to an ErrorInfo object, as part of a file trace.
-*/
-static void append_to_error(ErrorInfo *einfo, const ASMLine *line)
-{
-    ASMErrorLine* el = create_error_line(line);
-    el->next = einfo->line;
-    einfo->line = el;
-}
-
-/*
-    Print an ErrorInfo object returned by assemble() to the given stream.
-*/
-void error_info_print(const ErrorInfo *einfo, FILE *file)
-{
-    ASMErrorLine *line = einfo->line;
-
-    fprintf(file, "error: %s: %s\n", ERROR_TYPE(einfo), ERROR_DESC(einfo));
-    while (line) {
-        fprintf(file, "%s:%zu:\n", line->filename, line->lineno);
-        fprintf(file, "    %.*s\n", (int) line->length, line->data);
-        line = line->next;
-    }
-}
-
-/*
-    Destroy an ErrorInfo object created by assemble().
-*/
-void error_info_destroy(ErrorInfo *error_info)
-{
-    if (!error_info)
-        return;
-
-    ASMErrorLine *line = error_info->line, *temp;
-    while (line) {
-        temp = line->next;
-        free(line->data);
-        free(line->filename);
-        free(line);
-        line = temp;
-    }
-    free(error_info);
 }
 
 /*
@@ -588,14 +416,14 @@ static ErrorInfo* build_asm_lines(
             ErrorInfo *ei;
             char *path = read_include_path(line);
             if (!path) {
-                ei = create_error(line, ET_INCLUDE, ED_INC_BAD_ARG);
+                ei = error_info_create(line, ET_INCLUDE, ED_INC_BAD_ARG);
                 free_asm_lines(line);
                 free_asm_lines(dummy.next);
                 return ei;
             }
 
             if (path_has_been_loaded(path, root, *includes)) {
-                ei = create_error(line, ET_INCLUDE, ED_INC_RECURSION);
+                ei = error_info_create(line, ET_INCLUDE, ED_INC_RECURSION);
                 free_asm_lines(line);
                 free_asm_lines(dummy.next);
                 free(path);
@@ -606,7 +434,7 @@ static ErrorInfo* build_asm_lines(
             LineBuffer *incbuffer = read_source_file(path, false);
             free(path);
             if (!incbuffer) {
-                ei = create_error(line, ET_INCLUDE, ED_INC_FILE_READ);
+                ei = error_info_create(line, ET_INCLUDE, ED_INC_FILE_READ);
                 free_asm_lines(line);
                 free_asm_lines(dummy.next);
                 return ei;
@@ -623,7 +451,7 @@ static ErrorInfo* build_asm_lines(
             ASMLine *inchead, *inctail;
             if ((ei = build_asm_lines(root, incbuffer, &inchead, &inctail,
                                       includes))) {
-                append_to_error(ei, line);
+                error_info_append(ei, line);
                 free_asm_lines(line);
                 free_asm_lines(dummy.next);
                 return ei;
@@ -700,12 +528,10 @@ static inline bool read_bool_argument(
 static ErrorInfo* preprocess(AssemblerState *state, const LineBuffer *source)
 {
     // state->header.offset             <-- check in list of acceptable values
-    // state->header.checksum           <-- boolean check
     // state->header.product_code       <-- range check
     // state->header.version            <-- range check
     // state->header.region             <-- string conversion, check
     // state->header.rom_size           <-- value/range check
-    // state->optimizer                 <-- boolean check
     // state->rom_size                  <-- value check
 
     // if giving rom size, check header offset is in rom size range
@@ -713,18 +539,25 @@ static ErrorInfo* preprocess(AssemblerState *state, const LineBuffer *source)
 
 #define CATCH_DUPES(line, first, oldval, newval)                              \
     if (first && oldval != newval) {                                          \
-        ei = create_error(line, ET_PREPROC, ED_PP_DUPLICATE);                 \
-        append_to_error(ei, first);                                           \
+        ei = error_info_create(line, ET_PREPROC, ED_PP_DUPLICATE);            \
+        error_info_append(ei, first);                                         \
+        free_asm_lines(condemned);                                            \
         return ei;                                                            \
-    }
+    }                                                                         \
+    oldval = newval;                                                          \
+    first = line;
 
 #define REQUIRE_ARG(line, d)                                                  \
-    if (!DIRECTIVE_HAS_ARG(line, d))                                          \
-        return create_error(line, ET_PREPROC, ED_PP_NO_ARG);
+    if (!DIRECTIVE_HAS_ARG(line, d)) {                                        \
+        free_asm_lines(condemned);                                            \
+        return error_info_create(line, ET_PREPROC, ED_PP_NO_ARG);             \
+    }
 
 #define VALIDATE(retval)                                                      \
-    if (!(retval))                                                            \
-        return create_error(line, ET_PREPROC, ED_PP_BAD_ARG);
+    if (!(retval)) {                                                          \
+        free_asm_lines(condemned);                                            \
+        return error_info_create(line, ET_PREPROC, ED_PP_BAD_ARG);            \
+    }
 
     DEBUG("Running preprocessor:")
 
@@ -734,8 +567,8 @@ static ErrorInfo* preprocess(AssemblerState *state, const LineBuffer *source)
         return ei;
 
     ASMLine dummy = {.next = state->lines};
-    ASMLine *prev, *line = &dummy, *next = state->lines;
-    const ASMLine *first_optimizer = NULL;
+    ASMLine *prev, *line = &dummy, *next = state->lines, *condemned = NULL;
+    const ASMLine *first_optimizer = NULL, *first_checksum = NULL;
 
     while ((prev = line, line = next)) {
         next = line->next;
@@ -750,35 +583,48 @@ static ErrorInfo* preprocess(AssemblerState *state, const LineBuffer *source)
                 bool arg;
                 VALIDATE(read_bool_argument(&arg, line, DIR_OPTIMIZER, false))
                 CATCH_DUPES(line, first_optimizer, state->optimizer, arg)
-                state->optimizer = arg;
-                first_optimizer = line;
-            } else if (IS_DIRECTIVE(line, DIR_ROM_SIZE)) {
+            }
+            else if (IS_DIRECTIVE(line, DIR_ROM_SIZE)) {
                 // TODO
-            } else if (IS_DIRECTIVE(line, DIR_ROM_HEADER)) {
+            }
+            else if (IS_DIRECTIVE(line, DIR_ROM_HEADER)) {
                 // TODO
-            } else if (IS_DIRECTIVE(line, DIR_ROM_CHECKSUM)) {
+            }
+            else if (IS_DIRECTIVE(line, DIR_ROM_CHECKSUM)) {
+                REQUIRE_ARG(line, DIR_ROM_CHECKSUM)
+                bool arg;
+                VALIDATE(read_bool_argument(&arg, line, DIR_ROM_CHECKSUM, true))
+                CATCH_DUPES(line, first_checksum, state->header.checksum, arg)
+            }
+            else if (IS_DIRECTIVE(line, DIR_ROM_PRODUCT)) {
                 // TODO
-            } else if (IS_DIRECTIVE(line, DIR_ROM_PRODUCT)) {
+            }
+            else if (IS_DIRECTIVE(line, DIR_ROM_VERSION)) {
                 // TODO
-            } else if (IS_DIRECTIVE(line, DIR_ROM_VERSION)) {
+            }
+            else if (IS_DIRECTIVE(line, DIR_ROM_REGION)) {
                 // TODO
-            } else if (IS_DIRECTIVE(line, DIR_ROM_REGION)) {
+            }
+            else if (IS_DIRECTIVE(line, DIR_ROM_DECLSIZE)) {
                 // TODO
-            } else if (IS_DIRECTIVE(line, DIR_ROM_DECLSIZE)) {
-                // TODO
-            } else {
-                return create_error(line, ET_PREPROC, ED_PP_UNKNOWN);
+            }
+            else {
+                free_asm_lines(condemned);
+                return error_info_create(line, ET_PREPROC, ED_PP_UNKNOWN);
             }
 
-            // Remove the directive from the line list:
+            // Remove directive from lines, and schedule it for deletion:
+            line->next = condemned;
+            condemned = line;
             prev->next = next;
-            line->next = NULL;
-            free_asm_lines(line);
             line = prev;
         }
     }
 
     state->rom_size = 8;  // TODO
+
+    free_asm_lines(condemned);
+    state->lines = dummy.next;  // Fix list head if first line was a directive
 
 #ifdef DEBUG_MODE
     DEBUG("Dumping ASMLines:")
