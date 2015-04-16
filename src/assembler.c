@@ -1,21 +1,16 @@
 /* Copyright (C) 2014-2015 Ben Kurtovic <ben.kurtovic@gmail.com>
    Released under the terms of the MIT License. See LICENSE for details. */
 
-#include <errno.h>
 #include <libgen.h>
 #include <limits.h>
-#include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
-#include <sys/stat.h>
 
 #include "assembler.h"
 #include "assembler/errors.h"
+#include "assembler/io.h"
 #include "assembler/state.h"
 #include "logging.h"
-#include "util.h"
-
-#define DEFAULT_HEADER_OFFSET 0x7FF0
-#define DEFAULT_REGION "GG Export"
 
 #define DIRECTIVE_MARKER    '.'
 #define DIR_INCLUDE         ".include"
@@ -38,208 +33,6 @@
 
 #define DIRECTIVE_OFFSET(line, d)                                             \
     (DIRECTIVE_HAS_ARG(line, d) ? strlen(d) : 0)
-
-/*
-    Deallocate a LineBuffer previously created with read_source_file().
-*/
-static void free_line_buffer(LineBuffer *buffer)
-{
-    Line *line = buffer->lines, *temp;
-    while (line) {
-        temp = line->next;
-        free(line->data);
-        free(line);
-        line = temp;
-    }
-
-    free(buffer->filename);
-    free(buffer);
-}
-
-/*
-    Read the contents of the source file at the given path into a line buffer.
-
-    Return the buffer if reading was successful; it must be freed with
-    free_line_buffer() when done. Return NULL if an error occurred while
-    reading. If print_errors is true, a message will also be printed to stderr.
-*/
-static LineBuffer* read_source_file(const char *path, bool print_errors)
-{
-    FILE *fp;
-    struct stat st;
-
-    if (!(fp = fopen(path, "r"))) {
-        if (print_errors)
-            ERROR_ERRNO("couldn't open source file")
-        return NULL;
-    }
-
-    if (fstat(fileno(fp), &st)) {
-        fclose(fp);
-        if (print_errors)
-            ERROR_ERRNO("couldn't open source file")
-        return NULL;
-    }
-    if (!(st.st_mode & S_IFREG)) {
-        fclose(fp);
-        if (print_errors)
-            ERROR("couldn't open source file: %s", st.st_mode & S_IFDIR ?
-                  "Is a directory" : "Is not a regular file")
-        return NULL;
-    }
-
-    LineBuffer *source = malloc(sizeof(LineBuffer));
-    if (!source)
-        OUT_OF_MEMORY()
-
-    source->lines = NULL;
-    source->filename = strdup(path);
-    if (!source->filename)
-        OUT_OF_MEMORY()
-
-    Line dummy = {.next = NULL};
-    Line *line, *prev = &dummy;
-    size_t lineno = 1;
-
-    while (1) {
-        char *data = NULL;
-        size_t cap = 0;
-        ssize_t len;
-
-        if ((len = getline(&data, &cap, fp)) < 0) {
-            if (feof(fp))
-                break;
-            if (errno == ENOMEM)
-                OUT_OF_MEMORY()
-            if (print_errors)
-                ERROR_ERRNO("couldn't read source file")
-            fclose(fp);
-            source->lines = dummy.next;
-            free_line_buffer(source);
-            return NULL;
-        }
-
-        line = malloc(sizeof(Line));
-        if (!line)
-            OUT_OF_MEMORY()
-
-        line->data = data;
-        line->length = feof(fp) ? len : (len - 1);
-        line->lineno = lineno++;
-        line->next = NULL;
-
-        prev->next = line;
-        prev = line;
-    }
-
-    fclose(fp);
-    source->lines = dummy.next;
-    return source;
-}
-
-/*
-    Write an assembled binary file to the given path.
-
-    Return whether the file was written successfully. On error, a message is
-    printed to stderr.
-*/
-static bool write_binary_file(const char *path, const uint8_t *data, size_t size)
-{
-    FILE *fp;
-    if (!(fp = fopen(path, "wb"))) {
-        ERROR_ERRNO("couldn't open destination file")
-        return false;
-    }
-
-    if (!fwrite(data, size, 1, fp)) {
-        fclose(fp);
-        ERROR_ERRNO("couldn't write to destination file")
-        return false;
-    }
-
-    fclose(fp);
-    return true;
-}
-
-/*
-    Initialize default values in an AssemblerState object.
-*/
-static void init_state(AssemblerState *state)
-{
-    state->header.offset = DEFAULT_HEADER_OFFSET;
-    state->header.checksum = true;
-    state->header.product_code = 0;
-    state->header.version = 0;
-    state->header.region = region_string_to_code(DEFAULT_REGION);
-    state->header.rom_size = 0;
-    state->optimizer = false;
-    state->rom_size = 0;
-
-    state->lines = NULL;
-    state->includes = NULL;
-    state->instructions = NULL;
-    state->symtable = NULL;
-}
-
-/*
-    Deallocate an ASMLine list.
-*/
-static void free_asm_lines(ASMLine *line)
-{
-    while (line) {
-        ASMLine *temp = line->next;
-        free(line->data);
-        free(line);
-        line = temp;
-    }
-}
-
-/*
-    Deallocate an ASMInclude list.
-*/
-static void free_asm_includes(ASMInclude *include)
-{
-    while (include) {
-        ASMInclude *temp = include->next;
-        free_line_buffer(include->lines);
-        free(include);
-        include = temp;
-    }
-}
-
-/*
-    Deallocate an ASMInstruction list.
-*/
-static void free_asm_instructions(ASMInstruction *inst)
-{
-    while (inst) {
-        ASMInstruction *temp = inst->next;
-        if (inst->symbol)
-            free(inst->symbol);
-        free(inst);
-        inst = temp;
-    }
-}
-
-/*
-    Deallocate an ASMSymbolTable.
-*/
-static void free_asm_symtable(ASMSymbolTable *symtable)
-{
-    if (!symtable)
-        return;
-
-    for (size_t bucket = 0; bucket < SYMBOL_TABLE_BUCKETS; bucket++) {
-        ASMSymbol *sym = symtable->buckets[bucket], *temp;
-        while (sym) {
-            temp = sym->next;
-            free(sym->symbol);
-            free(sym);
-            sym = temp;
-        }
-    }
-    free(symtable);
-}
 
 /*
     Preprocess a single source line (source, length) into a normalized ASMLine.
@@ -417,15 +210,15 @@ static ErrorInfo* build_asm_lines(
             char *path = read_include_path(line);
             if (!path) {
                 ei = error_info_create(line, ET_INCLUDE, ED_INC_BAD_ARG);
-                free_asm_lines(line);
-                free_asm_lines(dummy.next);
+                asm_lines_free(line);
+                asm_lines_free(dummy.next);
                 return ei;
             }
 
             if (path_has_been_loaded(path, root, *includes)) {
                 ei = error_info_create(line, ET_INCLUDE, ED_INC_RECURSION);
-                free_asm_lines(line);
-                free_asm_lines(dummy.next);
+                asm_lines_free(line);
+                asm_lines_free(dummy.next);
                 free(path);
                 return ei;
             }
@@ -435,8 +228,8 @@ static ErrorInfo* build_asm_lines(
             free(path);
             if (!incbuffer) {
                 ei = error_info_create(line, ET_INCLUDE, ED_INC_FILE_READ);
-                free_asm_lines(line);
-                free_asm_lines(dummy.next);
+                asm_lines_free(line);
+                asm_lines_free(dummy.next);
                 return ei;
             }
 
@@ -452,14 +245,14 @@ static ErrorInfo* build_asm_lines(
             if ((ei = build_asm_lines(root, incbuffer, &inchead, &inctail,
                                       includes))) {
                 error_info_append(ei, line);
-                free_asm_lines(line);
-                free_asm_lines(dummy.next);
+                asm_lines_free(line);
+                asm_lines_free(dummy.next);
                 return ei;
             }
 
             prev->next = inchead;
             prev = inctail;
-            free_asm_lines(line);  // Destroy only the .include line
+            asm_lines_free(line);  // Destroy only the .include line
         }
         else {
             prev->next = line;
@@ -541,7 +334,7 @@ static ErrorInfo* preprocess(AssemblerState *state, const LineBuffer *source)
     if (first && oldval != newval) {                                          \
         ei = error_info_create(line, ET_PREPROC, ED_PP_DUPLICATE);            \
         error_info_append(ei, first);                                         \
-        free_asm_lines(condemned);                                            \
+        asm_lines_free(condemned);                                            \
         return ei;                                                            \
     }                                                                         \
     oldval = newval;                                                          \
@@ -549,13 +342,13 @@ static ErrorInfo* preprocess(AssemblerState *state, const LineBuffer *source)
 
 #define REQUIRE_ARG(line, d)                                                  \
     if (!DIRECTIVE_HAS_ARG(line, d)) {                                        \
-        free_asm_lines(condemned);                                            \
+        asm_lines_free(condemned);                                            \
         return error_info_create(line, ET_PREPROC, ED_PP_NO_ARG);             \
     }
 
 #define VALIDATE(retval)                                                      \
     if (!(retval)) {                                                          \
-        free_asm_lines(condemned);                                            \
+        asm_lines_free(condemned);                                            \
         return error_info_create(line, ET_PREPROC, ED_PP_BAD_ARG);            \
     }
 
@@ -609,7 +402,7 @@ static ErrorInfo* preprocess(AssemblerState *state, const LineBuffer *source)
                 // TODO
             }
             else {
-                free_asm_lines(condemned);
+                asm_lines_free(condemned);
                 return error_info_create(line, ET_PREPROC, ED_PP_UNKNOWN);
             }
 
@@ -623,7 +416,7 @@ static ErrorInfo* preprocess(AssemblerState *state, const LineBuffer *source)
 
     state->rom_size = 8;  // TODO
 
-    free_asm_lines(condemned);
+    asm_lines_free(condemned);
     state->lines = dummy.next;  // Fix list head if first line was a directive
 
 #ifdef DEBUG_MODE
@@ -726,7 +519,7 @@ size_t assemble(const LineBuffer *source, uint8_t **binary_ptr, ErrorInfo **ei_p
     ErrorInfo *error_info;
     size_t retval = 0;
 
-    init_state(&state);
+    state_init(&state);
 
     if ((error_info = preprocess(&state, source)))
         goto error;
@@ -758,10 +551,10 @@ size_t assemble(const LineBuffer *source, uint8_t **binary_ptr, ErrorInfo **ei_p
     *ei_ptr = error_info;
 
     cleanup:
-    free_asm_lines(state.lines);
-    free_asm_includes(state.includes);
-    free_asm_instructions(state.instructions);
-    free_asm_symtable(state.symtable);
+    asm_lines_free(state.lines);
+    asm_includes_free(state.includes);
+    asm_instructions_free(state.instructions);
+    asm_symtable_free(state.symtable);
     return retval;
 }
 
@@ -781,7 +574,7 @@ bool assemble_file(const char *src_path, const char *dst_path)
     uint8_t *binary;
     ErrorInfo *error_info;
     size_t size = assemble(source, &binary, &error_info);
-    free_line_buffer(source);
+    line_buffer_free(source);
 
     if (!size) {
         error_info_print(error_info, stderr);

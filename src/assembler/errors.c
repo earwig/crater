@@ -1,7 +1,7 @@
 /* Copyright (C) 2014-2015 Ben Kurtovic <ben.kurtovic@gmail.com>
    Released under the terms of the MIT License. See LICENSE for details. */
 
-#include <stdio.h>
+#include <stdlib.h>
 
 #include "errors.h"
 #include "state.h"
