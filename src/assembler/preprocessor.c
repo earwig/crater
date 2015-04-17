@@ -9,31 +9,11 @@
 #include <string.h>
 
 #include "preprocessor.h"
+#include "directives.h"
 #include "errors.h"
 #include "io.h"
+#include "parse_util.h"
 #include "../logging.h"
-
-#define DIRECTIVE_MARKER    '.'
-#define DIR_INCLUDE         ".include"
-#define DIR_ORIGIN          ".org"
-#define DIR_OPTIMIZER       ".optimizer"
-#define DIR_ROM_SIZE        ".rom_size"
-#define DIR_ROM_HEADER      ".rom_header"
-#define DIR_ROM_CHECKSUM    ".rom_checksum"
-#define DIR_ROM_PRODUCT     ".rom_product"
-#define DIR_ROM_VERSION     ".rom_version"
-#define DIR_ROM_REGION      ".rom_region"
-#define DIR_ROM_DECLSIZE    ".rom_declsize"
-
-#define DIRECTIVE_HAS_ARG(line, d) ((line)->length > strlen(d))
-
-#define IS_DIRECTIVE(line, d)                                                 \
-    (((line)->length >= strlen(d)) &&                                         \
-    !strncmp((line)->data, d, strlen(d)) &&                                   \
-    (!DIRECTIVE_HAS_ARG(line, d) || (line)->data[strlen(d)] == ' '))
-
-#define DIRECTIVE_OFFSET(line, d)                                             \
-    (DIRECTIVE_HAS_ARG(line, d) ? strlen(d) : 0)
 
 /*
     Preprocess a single source line (source, length) into a normalized ASMLine.
@@ -114,7 +94,7 @@ static ASMLine* normalize_line(const char *source, size_t length)
     after calling read_source_file(). If a syntax error occurs while trying to
     read the path, it returns NULL.
 */
-char* read_include_path(const ASMLine *line)
+static char* read_include_path(const ASMLine *line)
 {
     size_t maxlen = strlen(line->filename) + line->length, i, start, slashes;
     if (maxlen >= INT_MAX)  // Allows us to safely downcast to int later
@@ -268,110 +248,6 @@ static ErrorInfo* build_asm_lines(
 }
 
 /*
-    Read in a boolean argument from the given line and store it in *result.
-
-    auto_val is used if the argument's value is "auto". Return true on success
-    and false on failure; in the latter case, *result is not modified.
-*/
-static inline bool read_bool_argument(
-    bool *result, const ASMLine *line, const char *directive, bool auto_val)
-{
-    const char *arg = line->data + (DIRECTIVE_OFFSET(line, directive) + 1);
-    ssize_t len = line->length - (DIRECTIVE_OFFSET(line, directive) + 1);
-
-    if (len <= 0 || len > 5)
-        return false;
-
-    switch (len) {
-        case 1:  // 0, 1
-            if (*arg == '0' || *arg == '1')
-                return (*result = *arg - '0'), true;
-            return false;
-        case 2:  // on
-            if (!strncmp(arg, "on", 2))
-                return (*result = true), true;
-            return false;
-        case 3:  // off
-            if (!strncmp(arg, "off", 3))
-                return (*result = false), true;
-            return false;
-        case 4:  // true, auto
-            if (!strncmp(arg, "true", 4))
-                return (*result = true), true;
-            if (!strncmp(arg, "auto", 4))
-                return (*result = auto_val), true;
-            return false;
-        case 5:  // false
-            if (!strncmp(arg, "false", 5))
-                return (*result = false), true;
-            return false;
-    }
-    return false;
-}
-
-/*
-    Read in an integer starting at str and ending the character before end.
-
-    Store the value in *result and return true on success; else return false.
-*/
-static inline bool read_integer(
-    uint32_t *result, const char *str, const char *end)
-{
-    if (end - str <= 0)
-        return false;
-
-    uint64_t value = 0;
-    if (*str == '$') {
-        str++;
-        if (str == end)
-            return false;
-
-        while (str < end) {
-            if (*str >= '0' && *str <= '9')
-                value = value * 16 + (*str - '0');
-            else if (*str >= 'a' && *str <= 'f')
-                value = (value * 0x10) + 0xA + (*str - 'a');
-            else
-                return false;
-            if (value >= UINT32_MAX)
-                return false;
-            str++;
-        }
-    }
-    else {
-        while (str < end) {
-            if (*str < '0' || *str > '9')
-                return false;
-            value = (value * 10) + (*str - '0');
-            if (value >= UINT32_MAX)
-                return false;
-            str++;
-        }
-    }
-
-    *result = value;
-    return true;
-}
-
-/*
-    Read in a 32-bit int argument from the given line and store it in *result.
-
-    Return true on success and false on failure; in the latter case, *result is
-    not modified.
-*/
-static inline bool read_uint32_argument(
-    uint32_t *result, const ASMLine *line, const char *directive)
-{
-    const char *arg = line->data + (DIRECTIVE_OFFSET(line, directive) + 1);
-    ssize_t len = line->length - (DIRECTIVE_OFFSET(line, directive) + 1);
-
-    uint32_t value;
-    if (read_integer(&value, arg, arg + len))
-        return (*result = value), true;
-    return false;
-}
-
-/*
     Preprocess the LineBuffer into ASMLines. Change some state along the way.
 
     This function processes include directives, so read_source_file() may be
@@ -437,7 +313,7 @@ ErrorInfo* preprocess(AssemblerState *state, const LineBuffer *source)
             if (IS_DIRECTIVE(line, DIR_OPTIMIZER)) {
                 REQUIRE_ARG(line, DIR_OPTIMIZER)
                 bool arg;
-                VALIDATE(read_bool_argument(&arg, line, DIR_OPTIMIZER, false))
+                VALIDATE(parse_bool(&arg, line, DIR_OPTIMIZER, false))
                 CATCH_DUPES(line, first_optimizer, state->optimizer, arg)
             }
             else if (IS_DIRECTIVE(line, DIR_ROM_SIZE)) {
@@ -451,13 +327,13 @@ ErrorInfo* preprocess(AssemblerState *state, const LineBuffer *source)
             else if (IS_DIRECTIVE(line, DIR_ROM_CHECKSUM)) {
                 REQUIRE_ARG(line, DIR_ROM_CHECKSUM)
                 bool arg;
-                VALIDATE(read_bool_argument(&arg, line, DIR_ROM_CHECKSUM, true))
+                VALIDATE(parse_bool(&arg, line, DIR_ROM_CHECKSUM, true))
                 CATCH_DUPES(line, first_checksum, state->header.checksum, arg)
             }
             else if (IS_DIRECTIVE(line, DIR_ROM_PRODUCT)) {
                 REQUIRE_ARG(line, DIR_ROM_PRODUCT)
                 uint32_t arg;
-                VALIDATE(read_uint32_argument(&arg, line, DIR_ROM_PRODUCT))
+                VALIDATE(parse_uint32(&arg, line, DIR_ROM_PRODUCT))
                 RANGE_CHECK(arg, 160000)
                 CATCH_DUPES(line, first_product, state->header.product_code, arg)
             }
