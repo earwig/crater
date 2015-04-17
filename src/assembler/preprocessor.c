@@ -14,6 +14,34 @@
 #include "io.h"
 #include "parse_util.h"
 #include "../logging.h"
+#include "../util.h"
+
+/* Helper defines for preprocess() */
+
+#define SAVE_ARG(line, first, oldval, newval)                                 \
+    if (first && oldval != newval) {                                          \
+        ei = error_info_create(line, ET_PREPROC, ED_PP_DUPLICATE);            \
+        error_info_append(ei, first);                                         \
+        asm_lines_free(condemned);                                            \
+        return ei;                                                            \
+    }                                                                         \
+    oldval = newval;                                                          \
+    first = line;
+
+#define FAIL_ON_COND(cond, err_desc)                                          \
+    if ((cond)) {                                                             \
+        asm_lines_free(condemned);                                            \
+        return error_info_create(line, ET_PREPROC, err_desc);                 \
+    }
+
+#define REQUIRE_ARG(line, d)                                                  \
+    FAIL_ON_COND(!DIRECTIVE_HAS_ARG(line, d), ED_PP_NO_ARG)
+
+#define VALIDATE(retval)                                                      \
+    FAIL_ON_COND(!(retval), ED_PP_BAD_ARG)
+
+#define RANGE_CHECK(arg, bound)                                               \
+    FAIL_ON_COND(arg > bound, ED_PP_ARG_RANGE)
 
 /*
     Preprocess a single source line (source, length) into a normalized ASMLine.
@@ -248,6 +276,19 @@ static ErrorInfo* build_asm_lines(
 }
 
 /*
+    Parse the region code string in an ASMLine and store it in *result.
+
+    Return true on success and false on failure; in the latter case, *result is
+    not modified.
+*/
+static bool parse_region_string(uint8_t *result, const ASMLine *line)
+{
+    char buffer[32];  // Longest region ("GG International") is 17 bytes
+
+    return false;
+}
+
+/*
     Preprocess the LineBuffer into ASMLines. Change some state along the way.
 
     This function processes include directives, so read_source_file() may be
@@ -259,37 +300,6 @@ static ErrorInfo* build_asm_lines(
 */
 ErrorInfo* preprocess(AssemblerState *state, const LineBuffer *source)
 {
-    // TODO: if giving rom size, check header offset is in rom size range
-    // TODO: if giving reported and actual rom size, check reported is <= actual
-
-#define CATCH_DUPES(line, first, oldval, newval)                              \
-    if (first && oldval != newval) {                                          \
-        ei = error_info_create(line, ET_PREPROC, ED_PP_DUPLICATE);            \
-        error_info_append(ei, first);                                         \
-        asm_lines_free(condemned);                                            \
-        return ei;                                                            \
-    }                                                                         \
-    oldval = newval;                                                          \
-    first = line;
-
-#define REQUIRE_ARG(line, d)                                                  \
-    if (!DIRECTIVE_HAS_ARG(line, d)) {                                        \
-        asm_lines_free(condemned);                                            \
-        return error_info_create(line, ET_PREPROC, ED_PP_NO_ARG);             \
-    }
-
-#define VALIDATE(retval)                                                      \
-    if (!(retval)) {                                                          \
-        asm_lines_free(condemned);                                            \
-        return error_info_create(line, ET_PREPROC, ED_PP_BAD_ARG);            \
-    }
-
-#define RANGE_CHECK(arg, bound)                                               \
-    if (arg > bound) {                                                        \
-        asm_lines_free(condemned);                                            \
-        return error_info_create(line, ET_PREPROC, ED_PP_ARG_RANGE);          \
-    }
-
     DEBUG("Running preprocessor:")
 
     ErrorInfo* ei;
@@ -301,7 +311,8 @@ ErrorInfo* preprocess(AssemblerState *state, const LineBuffer *source)
     ASMLine *prev, *line = &dummy, *next = state->lines, *condemned = NULL;
 
     const ASMLine *first_optimizer = NULL, *first_checksum = NULL,
-                  *first_product = NULL, *first_version = NULL;
+                  *first_product = NULL, *first_version = NULL,
+                  *first_region = NULL;
 
     while ((prev = line, line = next)) {
         next = line->next;
@@ -315,7 +326,7 @@ ErrorInfo* preprocess(AssemblerState *state, const LineBuffer *source)
                 REQUIRE_ARG(line, DIR_OPTIMIZER)
                 bool arg;
                 VALIDATE(parse_bool(&arg, line, DIR_OPTIMIZER, false))
-                CATCH_DUPES(line, first_optimizer, state->optimizer, arg)
+                SAVE_ARG(line, first_optimizer, state->optimizer, arg)
             }
             else if (IS_DIRECTIVE(line, DIR_ROM_SIZE)) {
                 // TODO
@@ -329,25 +340,32 @@ ErrorInfo* preprocess(AssemblerState *state, const LineBuffer *source)
                 REQUIRE_ARG(line, DIR_ROM_CHECKSUM)
                 bool arg;
                 VALIDATE(parse_bool(&arg, line, DIR_ROM_CHECKSUM, true))
-                CATCH_DUPES(line, first_checksum, state->header.checksum, arg)
+                SAVE_ARG(line, first_checksum, state->header.checksum, arg)
             }
             else if (IS_DIRECTIVE(line, DIR_ROM_PRODUCT)) {
                 REQUIRE_ARG(line, DIR_ROM_PRODUCT)
                 uint32_t arg;
                 VALIDATE(parse_uint32(&arg, line, DIR_ROM_PRODUCT))
                 RANGE_CHECK(arg, 160000)
-                CATCH_DUPES(line, first_product, state->header.product_code, arg)
+                SAVE_ARG(line, first_product, state->header.product_code, arg)
             }
             else if (IS_DIRECTIVE(line, DIR_ROM_VERSION)) {
                 REQUIRE_ARG(line, DIR_ROM_VERSION)
                 uint8_t arg;
                 VALIDATE(parse_uint8(&arg, line, DIR_ROM_VERSION))
                 RANGE_CHECK(arg, 0x10)
-                CATCH_DUPES(line, first_version, state->header.version, arg)
+                SAVE_ARG(line, first_version, state->header.version, arg)
             }
             else if (IS_DIRECTIVE(line, DIR_ROM_REGION)) {
-                // TODO
-                // state->header.region             <-- string conversion, check
+                REQUIRE_ARG(line, DIR_ROM_REGION)
+                uint8_t arg;
+                if (parse_uint8(&arg, line, DIR_ROM_REGION)) {
+                    RANGE_CHECK(arg, 0x10)
+                    VALIDATE(region_code_to_string(arg))
+                } else {
+                    VALIDATE(parse_region_string(&arg, line))
+                }
+                SAVE_ARG(line, first_region, state->header.region, arg)
             }
             else if (IS_DIRECTIVE(line, DIR_ROM_DECLSIZE)) {
                 // TODO
@@ -366,6 +384,9 @@ ErrorInfo* preprocess(AssemblerState *state, const LineBuffer *source)
         }
     }
 
+    // TODO: if giving rom size, check header offset is in rom size range
+    // TODO: if giving reported and actual rom size, check reported is <= actual
+
     state->rom_size = 8;  // TODO
 
     asm_lines_free(condemned);
@@ -382,8 +403,4 @@ ErrorInfo* preprocess(AssemblerState *state, const LineBuffer *source)
 #endif
 
     return NULL;
-
-#undef VALIDATE
-#undef REQUIRE_ARG
-#undef CATCH_DUPES
 }

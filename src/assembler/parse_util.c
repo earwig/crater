@@ -56,8 +56,9 @@ bool parse_bool(bool *result, const ASMLine *line, const char *directive, bool a
 */
 bool parse_uint32(uint32_t *result, const ASMLine *line, const char *directive)
 {
-    const char *str = line->data + (DIRECTIVE_OFFSET(line, directive) + 1);
-    const char *end = str + (line->length - (DIRECTIVE_OFFSET(line, directive) + 1));
+    size_t offset = DIRECTIVE_OFFSET(line, directive) + 1;
+    const char *str = line->data + offset;
+    const char *end = str + line->length - offset;
 
     if (end - str <= 0)
         return false;
