@@ -299,8 +299,9 @@ ErrorInfo* preprocess(AssemblerState *state, const LineBuffer *source)
 
     ASMLine dummy = {.next = state->lines};
     ASMLine *prev, *line = &dummy, *next = state->lines, *condemned = NULL;
+
     const ASMLine *first_optimizer = NULL, *first_checksum = NULL,
-                  *first_product = NULL;
+                  *first_product = NULL, *first_version = NULL;
 
     while ((prev = line, line = next)) {
         next = line->next;
@@ -338,8 +339,11 @@ ErrorInfo* preprocess(AssemblerState *state, const LineBuffer *source)
                 CATCH_DUPES(line, first_product, state->header.product_code, arg)
             }
             else if (IS_DIRECTIVE(line, DIR_ROM_VERSION)) {
-                // TODO
-                // state->header.version            <-- range check
+                REQUIRE_ARG(line, DIR_ROM_VERSION)
+                uint8_t arg;
+                VALIDATE(parse_uint8(&arg, line, DIR_ROM_VERSION))
+                RANGE_CHECK(arg, 0x10)
+                CATCH_DUPES(line, first_version, state->header.version, arg)
             }
             else if (IS_DIRECTIVE(line, DIR_ROM_REGION)) {
                 // TODO

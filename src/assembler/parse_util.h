@@ -10,3 +10,5 @@
 
 bool parse_bool(bool*, const ASMLine*, const char*, bool);
 bool parse_uint32(uint32_t*, const ASMLine*, const char*);
+bool parse_uint16(uint16_t*, const ASMLine*, const char*);
+bool parse_uint8(uint8_t*, const ASMLine*, const char*);

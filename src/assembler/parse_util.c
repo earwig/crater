@@ -8,49 +8,6 @@
 #include "directives.h"
 
 /*
-    Read in an integer starting at str and ending the character before end.
-
-    Store the value in *result and return true on success; else return false.
-*/
-static inline bool read_integer(uint32_t *result, const char *str, const char *end)
-{
-    if (end - str <= 0)
-        return false;
-
-    uint64_t value = 0;
-    if (*str == '$') {
-        str++;
-        if (str == end)
-            return false;
-
-        while (str < end) {
-            if (*str >= '0' && *str <= '9')
-                value = value * 16 + (*str - '0');
-            else if (*str >= 'a' && *str <= 'f')
-                value = (value * 0x10) + 0xA + (*str - 'a');
-            else
-                return false;
-            if (value >= UINT32_MAX)
-                return false;
-            str++;
-        }
-    }
-    else {
-        while (str < end) {
-            if (*str < '0' || *str > '9')
-                return false;
-            value = (value * 10) + (*str - '0');
-            if (value >= UINT32_MAX)
-                return false;
-            str++;
-        }
-    }
-
-    *result = value;
-    return true;
-}
-
-/*
     Read in a boolean argument from the given line and store it in *result.
 
     auto_val is used if the argument's value is "auto". Return true on success
@@ -99,11 +56,69 @@ bool parse_bool(bool *result, const ASMLine *line, const char *directive, bool a
 */
 bool parse_uint32(uint32_t *result, const ASMLine *line, const char *directive)
 {
-    const char *arg = line->data + (DIRECTIVE_OFFSET(line, directive) + 1);
-    ssize_t len = line->length - (DIRECTIVE_OFFSET(line, directive) + 1);
+    const char *str = line->data + (DIRECTIVE_OFFSET(line, directive) + 1);
+    const char *end = str + (line->length - (DIRECTIVE_OFFSET(line, directive) + 1));
 
+    if (end - str <= 0)
+        return false;
+
+    uint64_t value = 0;
+    if (*str == '$') {
+        str++;
+        if (str == end)
+            return false;
+
+        while (str < end) {
+            if (*str >= '0' && *str <= '9')
+                value = value * 16 + (*str - '0');
+            else if (*str >= 'a' && *str <= 'f')
+                value = (value * 0x10) + 0xA + (*str - 'a');
+            else
+                return false;
+            if (value > UINT32_MAX)
+                return false;
+            str++;
+        }
+    }
+    else {
+        while (str < end) {
+            if (*str < '0' || *str > '9')
+                return false;
+            value = (value * 10) + (*str - '0');
+            if (value > UINT32_MAX)
+                return false;
+            str++;
+        }
+    }
+
+    *result = value;
+    return true;
+}
+
+/*
+    Read in a 16-bit int argument from the given line and store it in *result.
+
+    Return true on success and false on failure; in the latter case, *result is
+    not modified.
+*/
+bool parse_uint16(uint16_t *result, const ASMLine *line, const char *directive)
+{
     uint32_t value;
-    if (read_integer(&value, arg, arg + len))
+    if (parse_uint32(&value, line, directive) && value <= UINT16_MAX)
+        return (*result = value), true;
+    return false;
+}
+
+/*
+    Read in an 8-bit int argument from the given line and store it in *result.
+
+    Return true on success and false on failure; in the latter case, *result is
+    not modified.
+*/
+bool parse_uint8(uint8_t *result, const ASMLine *line, const char *directive)
+{
+    uint32_t value;
+    if (parse_uint32(&value, line, directive) && value <= UINT8_MAX)
         return (*result = value), true;
     return false;
 }
