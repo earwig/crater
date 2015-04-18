@@ -15,8 +15,9 @@
 */
 bool parse_bool(bool *result, const ASMLine *line, const char *directive, bool auto_val)
 {
-    const char *arg = line->data + (DIRECTIVE_OFFSET(line, directive) + 1);
-    ssize_t len = line->length - (DIRECTIVE_OFFSET(line, directive) + 1);
+    size_t offset = DIRECTIVE_OFFSET(line, directive) + 1;
+    const char *arg = line->data + offset;
+    ssize_t len = line->length - offset;
 
     if (len <= 0 || len > 5)
         return false;

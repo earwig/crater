@@ -73,19 +73,19 @@ const char* region_code_to_string(uint8_t code)
 */
 uint8_t region_string_to_code(const char *name)
 {
-    if (!strcmp(name, "SMS ")) {
+    if (!strncmp(name, "SMS ", 4)) {
         name += 4;
-        if (strcmp(name, "Japan"))
+        if (!strcmp(name, "Japan"))
             return 3;
-        if (strcmp(name, "Export"))
+        if (!strcmp(name, "Export"))
             return 4;
-    } else if (!strcmp(name, "GG ")) {
+    } else if (!strncmp(name, "GG ", 3)) {
         name += 3;
-        if (strcmp(name, "Japan"))
+        if (!strcmp(name, "Japan"))
             return 5;
-        if (strcmp(name, "Export"))
+        if (!strcmp(name, "Export"))
             return 6;
-        if (strcmp(name, "International"))
+        if (!strcmp(name, "International"))
             return 7;
     }
     return 0;

@@ -16,6 +16,8 @@
 #include "../logging.h"
 #include "../util.h"
 
+#define MAX_REGION_SIZE 32
+
 /* Helper defines for preprocess() */
 
 #define SAVE_ARG(line, first, oldval, newval)                                 \
@@ -283,8 +285,23 @@ static ErrorInfo* build_asm_lines(
 */
 static bool parse_region_string(uint8_t *result, const ASMLine *line)
 {
-    char buffer[32];  // Longest region ("GG International") is 17 bytes
+    char buffer[MAX_REGION_SIZE];
 
+    size_t offset = DIRECTIVE_OFFSET(line, DIR_ROM_REGION) + 1;
+    const char *arg = line->data + offset;
+    ssize_t len = line->length - offset;
+
+    if (len <= 2 || len >= MAX_REGION_SIZE + 2)  // Account for double quotes
+        return false;
+    if (arg[0] != '"' || arg[len - 1] != '"')
+        return false;
+
+    strncpy(buffer, arg + 1, len - 2);
+    buffer[len - 2] = '\0';
+
+    uint8_t code = region_string_to_code(buffer);
+    if (code)
+        return (*result = code), true;
     return false;
 }
 
