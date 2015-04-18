@@ -3,6 +3,7 @@
 
 #include <libgen.h>
 #include <limits.h>
+#include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -24,16 +25,15 @@
     if (first && oldval != newval) {                                          \
         ei = error_info_create(line, ET_PREPROC, ED_PP_DUPLICATE);            \
         error_info_append(ei, first);                                         \
-        asm_lines_free(condemned);                                            \
-        return ei;                                                            \
+        goto cleanup;                                                         \
     }                                                                         \
     oldval = newval;                                                          \
     first = line;
 
 #define FAIL_ON_COND(cond, err_desc)                                          \
     if ((cond)) {                                                             \
-        asm_lines_free(condemned);                                            \
-        return error_info_create(line, ET_PREPROC, err_desc);                 \
+        ei = error_info_create(line, ET_PREPROC, err_desc);                   \
+        goto cleanup;                                                         \
     }
 
 #define REQUIRE_ARG(line, d)                                                  \
@@ -306,6 +306,14 @@ static bool parse_region_string(uint8_t *result, const ASMLine *line)
 }
 
 /*
+    Return whether the given header offset is a valid location.
+*/
+static inline bool is_header_offset_valid(uint16_t offset)
+{
+    return offset == 0x7FF0 || offset == 0x3FF0 || offset == 0x1FF0;
+}
+
+/*
     Preprocess the LineBuffer into ASMLines. Change some state along the way.
 
     This function processes include directives, so read_source_file() may be
@@ -317,9 +325,9 @@ static bool parse_region_string(uint8_t *result, const ASMLine *line)
 */
 ErrorInfo* preprocess(AssemblerState *state, const LineBuffer *source)
 {
+    ErrorInfo* ei = NULL;
     DEBUG("Running preprocessor:")
 
-    ErrorInfo* ei;
     if ((ei = build_asm_lines(source, source, &state->lines, NULL,
                               &state->includes)))
         return ei;
@@ -327,9 +335,9 @@ ErrorInfo* preprocess(AssemblerState *state, const LineBuffer *source)
     ASMLine dummy = {.next = state->lines};
     ASMLine *prev, *line = &dummy, *next = state->lines, *condemned = NULL;
 
-    const ASMLine *first_optimizer = NULL, *first_checksum = NULL,
-                  *first_product = NULL, *first_version = NULL,
-                  *first_region = NULL;
+    const ASMLine *first_optimizer = NULL, *first_offset = NULL,
+                  *first_checksum = NULL, *first_product = NULL,
+                  *first_version = NULL, *first_region = NULL;
 
     while ((prev = line, line = next)) {
         next = line->next;
@@ -348,10 +356,14 @@ ErrorInfo* preprocess(AssemblerState *state, const LineBuffer *source)
             else if (IS_DIRECTIVE(line, DIR_ROM_SIZE)) {
                 // TODO
                 // state->rom_size                  <-- value check
+                // auto
             }
             else if (IS_DIRECTIVE(line, DIR_ROM_HEADER)) {
-                // TODO
-                // state->header.offset             <-- check in list of acceptable values
+                REQUIRE_ARG(line, DIR_ROM_HEADER)
+                uint16_t arg;
+                VALIDATE(parse_uint16(&arg, line, DIR_ROM_HEADER))                  // auto
+                VALIDATE(is_header_offset_valid(arg))
+                SAVE_ARG(line, first_offset, state->header.offset, arg)
             }
             else if (IS_DIRECTIVE(line, DIR_ROM_CHECKSUM)) {
                 REQUIRE_ARG(line, DIR_ROM_CHECKSUM)
@@ -362,21 +374,21 @@ ErrorInfo* preprocess(AssemblerState *state, const LineBuffer *source)
             else if (IS_DIRECTIVE(line, DIR_ROM_PRODUCT)) {
                 REQUIRE_ARG(line, DIR_ROM_PRODUCT)
                 uint32_t arg;
-                VALIDATE(parse_uint32(&arg, line, DIR_ROM_PRODUCT))
+                VALIDATE(parse_uint32(&arg, line, DIR_ROM_PRODUCT))                 // auto
                 RANGE_CHECK(arg, 160000)
                 SAVE_ARG(line, first_product, state->header.product_code, arg)
             }
             else if (IS_DIRECTIVE(line, DIR_ROM_VERSION)) {
                 REQUIRE_ARG(line, DIR_ROM_VERSION)
                 uint8_t arg;
-                VALIDATE(parse_uint8(&arg, line, DIR_ROM_VERSION))
+                VALIDATE(parse_uint8(&arg, line, DIR_ROM_VERSION))                  // auto
                 RANGE_CHECK(arg, 0x10)
                 SAVE_ARG(line, first_version, state->header.version, arg)
             }
             else if (IS_DIRECTIVE(line, DIR_ROM_REGION)) {
                 REQUIRE_ARG(line, DIR_ROM_REGION)
                 uint8_t arg;
-                if (parse_uint8(&arg, line, DIR_ROM_REGION)) {
+                if (parse_uint8(&arg, line, DIR_ROM_REGION)) {                      // auto
                     RANGE_CHECK(arg, 0x10)
                     VALIDATE(region_code_to_string(arg))
                 } else {
@@ -387,10 +399,11 @@ ErrorInfo* preprocess(AssemblerState *state, const LineBuffer *source)
             else if (IS_DIRECTIVE(line, DIR_ROM_DECLSIZE)) {
                 // TODO
                 // state->header.rom_size           <-- value/range check
+                // auto
             }
             else {
-                asm_lines_free(condemned);
-                return error_info_create(line, ET_PREPROC, ED_PP_UNKNOWN);
+                ei = error_info_create(line, ET_PREPROC, ED_PP_UNKNOWN);
+                goto cleanup;
             }
 
             // Remove directive from lines, and schedule it for deletion:
@@ -406,9 +419,6 @@ ErrorInfo* preprocess(AssemblerState *state, const LineBuffer *source)
 
     state->rom_size = 8;  // TODO
 
-    asm_lines_free(condemned);
-    state->lines = dummy.next;  // Fix list head if first line was a directive
-
 #ifdef DEBUG_MODE
     DEBUG("Dumping ASMLines:")
     const ASMLine *temp = state->lines;
@@ -419,5 +429,8 @@ ErrorInfo* preprocess(AssemblerState *state, const LineBuffer *source)
     }
 #endif
 
-    return NULL;
+    cleanup:
+    asm_lines_free(condemned);
+    state->lines = dummy.next;  // Fix list head if first line was a directive
+    return ei;
 }
