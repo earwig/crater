@@ -6,10 +6,6 @@
 #include "state.h"
 #include "io.h"
 #include "../logging.h"
-#include "../util.h"
-
-#define DEFAULT_HEADER_OFFSET 0x7FF0
-#define DEFAULT_REGION "GG Export"
 
 /*
     Initialize default values in an AssemblerState object.
@@ -20,7 +16,7 @@ void state_init(AssemblerState *state)
     state->header.checksum = true;
     state->header.product_code = 0;
     state->header.version = 0;
-    state->header.region = region_string_to_code(DEFAULT_REGION);
+    state->header.region = DEFAULT_REGION;
     state->header.rom_size = 0;
     state->optimizer = false;
     state->rom_size = 0;

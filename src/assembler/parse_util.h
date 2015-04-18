@@ -8,7 +8,11 @@
 
 #include "state.h"
 
-bool parse_bool(bool*, const ASMLine*, const char*, bool);
-bool parse_uint32(uint32_t*, const ASMLine*, const char*);
-bool parse_uint16(uint16_t*, const ASMLine*, const char*);
-bool parse_uint8(uint8_t*, const ASMLine*, const char*);
+#define parse__Bool parse_bool
+
+/* Functions */
+
+bool parse_bool(bool*, const ASMLine*, const char*);
+bool parse_uint32_t(uint32_t*, const ASMLine*, const char*);
+bool parse_uint16_t(uint16_t*, const ASMLine*, const char*);
+bool parse_uint8_t(uint8_t*, const ASMLine*, const char*);

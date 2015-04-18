@@ -10,10 +10,10 @@
 /*
     Read in a boolean argument from the given line and store it in *result.
 
-    auto_val is used if the argument's value is "auto". Return true on success
-    and false on failure; in the latter case, *result is not modified.
+    Return true on success and false on failure; in the latter case, *result is
+    not modified.
 */
-bool parse_bool(bool *result, const ASMLine *line, const char *directive, bool auto_val)
+bool parse_bool(bool *result, const ASMLine *line, const char *directive)
 {
     size_t offset = DIRECTIVE_OFFSET(line, directive) + 1;
     const char *arg = line->data + offset;
@@ -35,11 +35,9 @@ bool parse_bool(bool *result, const ASMLine *line, const char *directive, bool a
             if (!strncmp(arg, "off", 3))
                 return (*result = false), true;
             return false;
-        case 4:  // true, auto
+        case 4:  // true
             if (!strncmp(arg, "true", 4))
                 return (*result = true), true;
-            if (!strncmp(arg, "auto", 4))
-                return (*result = auto_val), true;
             return false;
         case 5:  // false
             if (!strncmp(arg, "false", 5))
@@ -55,7 +53,7 @@ bool parse_bool(bool *result, const ASMLine *line, const char *directive, bool a
     Return true on success and false on failure; in the latter case, *result is
     not modified.
 */
-bool parse_uint32(uint32_t *result, const ASMLine *line, const char *directive)
+bool parse_uint32_t(uint32_t *result, const ASMLine *line, const char *directive)
 {
     size_t offset = DIRECTIVE_OFFSET(line, directive) + 1;
     const char *str = line->data + offset;
@@ -103,10 +101,10 @@ bool parse_uint32(uint32_t *result, const ASMLine *line, const char *directive)
     Return true on success and false on failure; in the latter case, *result is
     not modified.
 */
-bool parse_uint16(uint16_t *result, const ASMLine *line, const char *directive)
+bool parse_uint16_t(uint16_t *result, const ASMLine *line, const char *directive)
 {
     uint32_t value;
-    if (parse_uint32(&value, line, directive) && value <= UINT16_MAX)
+    if (parse_uint32_t(&value, line, directive) && value <= UINT16_MAX)
         return (*result = value), true;
     return false;
 }
@@ -117,10 +115,10 @@ bool parse_uint16(uint16_t *result, const ASMLine *line, const char *directive)
     Return true on success and false on failure; in the latter case, *result is
     not modified.
 */
-bool parse_uint8(uint8_t *result, const ASMLine *line, const char *directive)
+bool parse_uint8_t(uint8_t *result, const ASMLine *line, const char *directive)
 {
     uint32_t value;
-    if (parse_uint32(&value, line, directive) && value <= UINT8_MAX)
+    if (parse_uint32_t(&value, line, directive) && value <= UINT8_MAX)
         return (*result = value), true;
     return false;
 }

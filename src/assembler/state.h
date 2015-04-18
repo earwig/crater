@@ -9,6 +9,9 @@
 
 #include "../assembler.h"
 
+#define DEFAULT_HEADER_OFFSET 0x7FF0
+#define DEFAULT_REGION 6  // GG Export
+
 #define SYMBOL_TABLE_BUCKETS 128
 
 /* Structs */

@@ -19,31 +19,59 @@
 
 #define MAX_REGION_SIZE 32
 
-/* Helper defines for preprocess() */
+/* Helper macros for preprocess() */
 
-#define SAVE_ARG(line, first, oldval, newval)                                 \
-    if (first && oldval != newval) {                                          \
-        ei = error_info_create(line, ET_PREPROC, ED_PP_DUPLICATE);            \
-        error_info_append(ei, first);                                         \
-        goto cleanup;                                                         \
-    }                                                                         \
-    oldval = newval;                                                          \
-    first = line;
-
-#define FAIL_ON_COND(cond, err_desc)                                          \
-    if ((cond)) {                                                             \
+#define FAIL(err_desc)                                                        \
+    {                                                                         \
         ei = error_info_create(line, ET_PREPROC, err_desc);                   \
         goto cleanup;                                                         \
     }
 
-#define REQUIRE_ARG(line, d)                                                  \
-    FAIL_ON_COND(!DIRECTIVE_HAS_ARG(line, d), ED_PP_NO_ARG)
+#define FAIL_ON_COND(cond, err_desc)                                          \
+    if ((cond)) FAIL(err_desc)
 
 #define VALIDATE(retval)                                                      \
     FAIL_ON_COND(!(retval), ED_PP_BAD_ARG)
 
-#define RANGE_CHECK(arg, bound)                                               \
+#define CLAMP_RANGE(bound)                                                    \
     FAIL_ON_COND(arg > bound, ED_PP_ARG_RANGE)
+
+#define GEN_PARSER_CALL(arg_type)                                             \
+    parse_##arg_type((arg_type*) &arg, line, directive)
+
+#define USE_PARSER(arg_type)                                                  \
+    VALIDATE(GEN_PARSER_CALL(arg_type))
+
+#define PARSER_BRANCH(arg_type, true_part, false_part)                        \
+    if (GEN_PARSER_CALL(arg_type)) {true_part} else {false_part}
+
+#define BEGIN_DIRECTIVE_BLOCK                                                 \
+    ssize_t first_ctr = -1;                                                   \
+    if (0) {}
+
+#define BEGIN_DIRECTIVE(d, arg_type, dest_loc, auto_val)                      \
+    else if (first_ctr++, IS_DIRECTIVE(line, d)) {                            \
+        directive = d;                                                        \
+        FAIL_ON_COND(!DIRECTIVE_HAS_ARG(line, directive), ED_PP_NO_ARG)       \
+        arg_type arg;                                                         \
+        arg_type* dest = &(dest_loc);                                         \
+        if (DIRECTIVE_IS_AUTO(line, directive)) {                             \
+            arg = auto_val;                                                   \
+        } else {
+
+#define END_DIRECTIVE                                                         \
+        }                                                                     \
+        if (firsts[first_ctr] && *dest != arg) {                              \
+            ei = error_info_create(line, ET_PREPROC, ED_PP_DUPLICATE);        \
+            error_info_append(ei, firsts[first_ctr]);                         \
+            goto cleanup;                                                     \
+        }                                                                     \
+        *dest = arg;                                                          \
+        firsts[first_ctr] = line;                                             \
+    }
+
+#define END_DIRECTIVE_BLOCK                                                   \
+    else FAIL(ED_PP_UNKNOWN)
 
 /*
     Preprocess a single source line (source, length) into a normalized ASMLine.
@@ -332,92 +360,84 @@ ErrorInfo* preprocess(AssemblerState *state, const LineBuffer *source)
                               &state->includes)))
         return ei;
 
+    const ASMLine *firsts[NUM_DIRECTIVES];
+    for (size_t i = 0; i < NUM_DIRECTIVES; i++)
+        firsts[i] = NULL;
+
     ASMLine dummy = {.next = state->lines};
     ASMLine *prev, *line = &dummy, *next = state->lines, *condemned = NULL;
-
-    const ASMLine *first_optimizer = NULL, *first_offset = NULL,
-                  *first_checksum = NULL, *first_product = NULL,
-                  *first_version = NULL, *first_region = NULL;
+    const char *directive;
 
     while ((prev = line, line = next)) {
         next = line->next;
-        if (line->data[0] == DIRECTIVE_MARKER) {
-            if (IS_DIRECTIVE(line, DIR_ORIGIN))
-                continue;  // Origins are handled by tokenizer
+        if (line->data[0] != DIRECTIVE_MARKER)
+            continue;
+        if (IS_DIRECTIVE(line, DIR_ORIGIN))
+            continue;  // Origins are handled by tokenizer
 
-            DEBUG("- handling directive: %.*s", (int) line->length, line->data)
+        DEBUG("- handling directive: %.*s", (int) line->length, line->data)
 
-            if (IS_DIRECTIVE(line, DIR_OPTIMIZER)) {
-                REQUIRE_ARG(line, DIR_OPTIMIZER)
-                bool arg;
-                VALIDATE(parse_bool(&arg, line, DIR_OPTIMIZER, false))
-                SAVE_ARG(line, first_optimizer, state->optimizer, arg)
-            }
-            else if (IS_DIRECTIVE(line, DIR_ROM_SIZE)) {
-                // TODO
-                // state->rom_size                  <-- value check
-                // auto
-            }
-            else if (IS_DIRECTIVE(line, DIR_ROM_HEADER)) {
-                REQUIRE_ARG(line, DIR_ROM_HEADER)
-                uint16_t arg;
-                VALIDATE(parse_uint16(&arg, line, DIR_ROM_HEADER))                  // auto
-                VALIDATE(is_header_offset_valid(arg))
-                SAVE_ARG(line, first_offset, state->header.offset, arg)
-            }
-            else if (IS_DIRECTIVE(line, DIR_ROM_CHECKSUM)) {
-                REQUIRE_ARG(line, DIR_ROM_CHECKSUM)
-                bool arg;
-                VALIDATE(parse_bool(&arg, line, DIR_ROM_CHECKSUM, true))
-                SAVE_ARG(line, first_checksum, state->header.checksum, arg)
-            }
-            else if (IS_DIRECTIVE(line, DIR_ROM_PRODUCT)) {
-                REQUIRE_ARG(line, DIR_ROM_PRODUCT)
-                uint32_t arg;
-                VALIDATE(parse_uint32(&arg, line, DIR_ROM_PRODUCT))                 // auto
-                RANGE_CHECK(arg, 160000)
-                SAVE_ARG(line, first_product, state->header.product_code, arg)
-            }
-            else if (IS_DIRECTIVE(line, DIR_ROM_VERSION)) {
-                REQUIRE_ARG(line, DIR_ROM_VERSION)
-                uint8_t arg;
-                VALIDATE(parse_uint8(&arg, line, DIR_ROM_VERSION))                  // auto
-                RANGE_CHECK(arg, 0x10)
-                SAVE_ARG(line, first_version, state->header.version, arg)
-            }
-            else if (IS_DIRECTIVE(line, DIR_ROM_REGION)) {
-                REQUIRE_ARG(line, DIR_ROM_REGION)
-                uint8_t arg;
-                if (parse_uint8(&arg, line, DIR_ROM_REGION)) {                      // auto
-                    RANGE_CHECK(arg, 0x10)
-                    VALIDATE(region_code_to_string(arg))
-                } else {
-                    VALIDATE(parse_region_string(&arg, line))
-                }
-                SAVE_ARG(line, first_region, state->header.region, arg)
-            }
-            else if (IS_DIRECTIVE(line, DIR_ROM_DECLSIZE)) {
-                // TODO
-                // state->header.rom_size           <-- value/range check
-                // auto
-            }
-            else {
-                ei = error_info_create(line, ET_PREPROC, ED_PP_UNKNOWN);
-                goto cleanup;
-            }
+        BEGIN_DIRECTIVE_BLOCK
 
-            // Remove directive from lines, and schedule it for deletion:
-            line->next = condemned;
-            condemned = line;
-            prev->next = next;
-            line = prev;
-        }
+        BEGIN_DIRECTIVE(DIR_OPTIMIZER, bool, state->optimizer, false)
+            USE_PARSER(bool)
+        END_DIRECTIVE
+
+        BEGIN_DIRECTIVE(DIR_ROM_SIZE, size_t, state->rom_size, 0)
+            // TODO: fixme
+            FAIL(ED_PP_UNKNOWN)
+        END_DIRECTIVE
+
+        BEGIN_DIRECTIVE(DIR_ROM_HEADER, size_t, state->header.offset, DEFAULT_HEADER_OFFSET)
+            USE_PARSER(uint16_t)
+            VALIDATE(is_header_offset_valid(arg))
+        END_DIRECTIVE
+
+        BEGIN_DIRECTIVE(DIR_ROM_CHECKSUM, bool, state->header.checksum, true)
+            USE_PARSER(bool)
+        END_DIRECTIVE
+
+        BEGIN_DIRECTIVE(DIR_ROM_PRODUCT, uint32_t, state->header.product_code, 0)
+            USE_PARSER(uint32_t)
+            CLAMP_RANGE(160000)
+        END_DIRECTIVE
+
+        BEGIN_DIRECTIVE(DIR_ROM_VERSION, uint8_t, state->header.version, 0)
+            USE_PARSER(uint8_t)
+            CLAMP_RANGE(0x10)
+        END_DIRECTIVE
+
+        BEGIN_DIRECTIVE(DIR_ROM_REGION, uint8_t, state->header.region, DEFAULT_REGION)
+            PARSER_BRANCH(uint8_t, {
+                CLAMP_RANGE(0x10)
+                VALIDATE(region_code_to_string(arg))
+            }, {
+                VALIDATE(parse_region_string(&arg, line))
+            })
+        END_DIRECTIVE
+
+        BEGIN_DIRECTIVE(DIR_ROM_DECLSIZE, uint8_t, state->header.rom_size, 0)
+            // TODO: fixme
+            FAIL(ED_PP_UNKNOWN)
+        END_DIRECTIVE
+
+        END_DIRECTIVE_BLOCK
+
+        // Remove directive from lines, and schedule it for deletion:
+        line->next = condemned;
+        condemned = line;
+        prev->next = next;
+        line = prev;
     }
 
     // TODO: if giving rom size, check header offset is in rom size range
     // TODO: if giving reported and actual rom size, check reported is <= actual
 
     state->rom_size = 8;  // TODO
+
+    cleanup:
+    asm_lines_free(condemned);
+    state->lines = dummy.next;  // Fix list head if first line was a directive
 
 #ifdef DEBUG_MODE
     DEBUG("Dumping ASMLines:")
@@ -429,8 +449,5 @@ ErrorInfo* preprocess(AssemblerState *state, const LineBuffer *source)
     }
 #endif
 
-    cleanup:
-    asm_lines_free(condemned);
-    state->lines = dummy.next;  // Fix list head if first line was a directive
     return ei;
 }
