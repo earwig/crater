@@ -5,6 +5,8 @@
 
 #include <stdint.h>
 
+#define INVALID_SIZE_CODE 0x8
+
 /* Functions */
 
 uint8_t bcd_decode(uint8_t);

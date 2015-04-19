@@ -51,7 +51,7 @@
     if (CALL_PARSER_(arg_type)) {true_part} else {false_part}
 
 #define SAVE_LINE(target)                                                     \
-    target = line;
+    if (!dir_is_auto) target = line;
 
 #define BEGIN_DIRECTIVE_BLOCK                                                 \
     ssize_t first_ctr = -1;                                                   \
@@ -63,7 +63,8 @@
         FAIL_ON_COND_(!DIRECTIVE_HAS_ARG(line, directive), ED_PP_NO_ARG)      \
         arg_type arg = 0;                                                     \
         arg_type* dest = &(dest_loc);                                         \
-        if (DIRECTIVE_IS_AUTO(line, directive)) {                             \
+        bool dir_is_auto = DIRECTIVE_IS_AUTO(line, directive);                \
+        if (dir_is_auto) {                                                    \
             arg = auto_val;                                                   \
         } else {
 
@@ -311,6 +312,14 @@ static ErrorInfo* build_asm_lines(
 }
 
 /*
+    Return whether the given ROM size is valid.
+*/
+static inline bool is_rom_size_valid(size_t size)
+{
+    return size_bytes_to_code(size) != INVALID_SIZE_CODE;
+}
+
+/*
     Return whether the given header offset is a valid location.
 */
 static inline bool is_header_offset_valid(uint16_t offset)
@@ -365,7 +374,7 @@ ErrorInfo* preprocess(AssemblerState *state, const LineBuffer *source)
             PARSER_BRANCH(uint32_t, {}, {
                 USE_PARSER(uint32_t, rom_size)
             })
-            VALIDATE(size_bytes_to_code)
+            VALIDATE(is_rom_size_valid)
             SAVE_LINE(rom_size_line)
         END_DIRECTIVE
 
@@ -397,7 +406,7 @@ ErrorInfo* preprocess(AssemblerState *state, const LineBuffer *source)
             })
         END_DIRECTIVE
 
-        BEGIN_DIRECTIVE(DIR_ROM_DECLSIZE, uint8_t, state->header.rom_size, 0)
+        BEGIN_DIRECTIVE(DIR_ROM_DECLSIZE, uint8_t, state->header.rom_size, DEFAULT_DECLSIZE)
             PARSER_BRANCH(uint8_t, {
                 CHECK_RANGE(0x10)
                 VALIDATE(size_code_to_bytes)
@@ -416,17 +425,20 @@ ErrorInfo* preprocess(AssemblerState *state, const LineBuffer *source)
         line = prev;
     }
 
-    if (state->rom_size && state->header.offset + HEADER_SIZE > state->rom_size) {
+    if (rom_size_line && state->header.offset + HEADER_SIZE > state->rom_size) {
         ei = error_info_create(rom_size_line, ET_PREPROC, ED_PP_HEADER_RANGE);
         goto cleanup;
     }
 
-    if (state->rom_size && state->header.rom_size &&
+    if (rom_size_line && rom_declsize_line &&
             size_code_to_bytes(state->header.rom_size) > state->rom_size) {
         ei = error_info_create(rom_size_line, ET_PREPROC, ED_PP_DECLARE_RANGE);
         error_info_append(ei, rom_declsize_line);
         goto cleanup;
     }
+
+    if (!rom_declsize_line)  // Mark as undefined, for resolve_defaults()
+        state->header.rom_size = INVALID_SIZE_CODE;
 
     cleanup:
     asm_lines_free(condemned);

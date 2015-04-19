@@ -202,7 +202,7 @@ PARSE_FUNC_HEADER(size_code, uint8_t)
     }
 
     uint8_t code = size_bytes_to_code(bytes);
-    if (code)
+    if (code != INVALID_SIZE_CODE)
         return (*result = code), true;
     return false;
 }

@@ -121,7 +121,7 @@ size_t size_code_to_bytes(uint8_t code)
 /*
     Given the number of bytes in a ROM image, return the size code.
 
-    0 is returned if the size is invalid.
+    INVALID_SIZE_CODE is returned if the size is invalid.
 */
 uint8_t size_bytes_to_code(size_t bytes)
 {
@@ -138,6 +138,6 @@ uint8_t size_bytes_to_code(size_t bytes)
         case  256: return 0x0;
         case  512: return 0x1;
         case 1024: return 0x2;
-        default:   return   0;
+        default:   return INVALID_SIZE_CODE;
     }
 }

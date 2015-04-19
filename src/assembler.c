@@ -9,6 +9,8 @@
 #include "assembler/preprocessor.h"
 #include "assembler/state.h"
 #include "logging.h"
+#include "rom.h"
+#include "util.h"
 
 /*
     Tokenize ASMLines into ASMInstructions.
@@ -48,17 +50,21 @@ static ErrorInfo* tokenize(AssemblerState *state)
 */
 static ErrorInfo* resolve_defaults(AssemblerState *state)
 {
-    // TODO
+    if (!state->rom_size) {
+        state->rom_size = 32 << 10;
 
-    // if (!state.rom_size)
-            // set to max possible >= 32 KB (max of instructions, offset, and state.header.rom_size)
+        // TODO: use highest instruction too
 
-    // if (!state.header.rom_size)
-            // set to actual rom size using util's size_bytes_to_code()
+        if (state->header.rom_size != INVALID_SIZE_CODE) {
+            size_t decl_size = size_code_to_bytes(state->header.rom_size);
+            if (decl_size > state->rom_size)
+                state->rom_size = decl_size;
+        }
+    }
 
-    state->rom_size = 8;
+    if (state->header.rom_size == INVALID_SIZE_CODE)
+        state->header.rom_size = size_bytes_to_code(state->rom_size);
 
-    (void) state;
     return NULL;
 }
 
