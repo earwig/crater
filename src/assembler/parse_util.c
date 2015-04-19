@@ -10,13 +10,20 @@
 
 #define MAX_REGION_SIZE 32
 
+#define PARSE_FUNC_HEADER(name, type)                                         \
+    bool parse_##name(type *result, const ASMLine *line, const char *directive)
+
+/*
+    All public functions in this file follow the same return conventions:
+
+    - Return true on success and false on failure.
+    - *result is only modified on success.
+*/
+
 /*
     Read in a boolean argument from the given line and store it in *result.
-
-    Return true on success and false on failure; in the latter case, *result is
-    not modified.
 */
-bool parse_bool(bool *result, const ASMLine *line, const char *directive)
+PARSE_FUNC_HEADER(bool, bool)
 {
     size_t offset = DIRECTIVE_OFFSET(line, directive) + 1;
     const char *arg = line->data + offset;
@@ -52,15 +59,11 @@ bool parse_bool(bool *result, const ASMLine *line, const char *directive)
 
 /*
     Read in a 32-bit int argument from the given line and store it in *result.
-
-    Return true on success and false on failure; in the latter case, *result is
-    not modified.
 */
-bool parse_uint32_t(uint32_t *result, const ASMLine *line, const char *directive)
+PARSE_FUNC_HEADER(uint32_t, uint32_t)
 {
-    size_t offset = DIRECTIVE_OFFSET(line, directive) + 1;
-    const char *str = line->data + offset;
-    const char *end = str + line->length - offset;
+    const char *str = line->data + DIRECTIVE_OFFSET(line, directive) + 1;
+    const char *end = line->data + line->length;
 
     if (end - str <= 0)
         return false;
@@ -100,11 +103,8 @@ bool parse_uint32_t(uint32_t *result, const ASMLine *line, const char *directive
 
 /*
     Read in a 16-bit int argument from the given line and store it in *result.
-
-    Return true on success and false on failure; in the latter case, *result is
-    not modified.
 */
-bool parse_uint16_t(uint16_t *result, const ASMLine *line, const char *directive)
+PARSE_FUNC_HEADER(uint16_t, uint16_t)
 {
     uint32_t value;
     if (parse_uint32_t(&value, line, directive) && value <= UINT16_MAX)
@@ -114,11 +114,8 @@ bool parse_uint16_t(uint16_t *result, const ASMLine *line, const char *directive
 
 /*
     Read in an 8-bit int argument from the given line and store it in *result.
-
-    Return true on success and false on failure; in the latter case, *result is
-    not modified.
 */
-bool parse_uint8_t(uint8_t *result, const ASMLine *line, const char *directive)
+PARSE_FUNC_HEADER(uint8_t, uint8_t)
 {
     uint32_t value;
     if (parse_uint32_t(&value, line, directive) && value <= UINT8_MAX)
@@ -128,32 +125,54 @@ bool parse_uint8_t(uint8_t *result, const ASMLine *line, const char *directive)
 
 /*
     Parse a ROM size string in an ASMLine and store it in *result.
-
-    Return true on success and false on failure; in the latter case, *result is
-    not modified.
 */
-bool parse_rom_size(uint32_t *result, const ASMLine *line)
+PARSE_FUNC_HEADER(rom_size, uint32_t)
 {
-    uint32_t bytes;
-    if (!parse_uint32_t(&bytes, line, DIR_ROM_SIZE))
+    const char *arg = line->data + DIRECTIVE_OFFSET(line, directive) + 1;
+    const char *end = line->data + line->length - 1;
+
+    if (end - arg < 5)
+        return false;
+    if (*(arg++) != '"' || *(end--) != '"')
+        return false;
+    if (*end != 'B' && *end != 'b')
+        return false;
+    end--;
+
+    uint32_t factor;
+    if (*end == 'K' || *end == 'k')
+        factor = 1 << 10;
+    else if (*end == 'M' || *end == 'm')
+        factor = 1 << 20;
+    else
+        return false;
+    end--;
+
+    if (*end != ' ')
         return false;
 
-    if (size_bytes_to_code(bytes))
-        return (*result = bytes), true;
-    return false;
+    uint32_t value = 0;
+    while (arg < end) {
+        if (*arg < '0' || *arg > '9')
+            return false;
+        value = (value * 10) + (*arg - '0');
+        if (value > UINT16_MAX)
+            return false;
+        arg++;
+    }
+
+    *result = value * factor;
+    return true;
 }
 
 /*
     Parse a region code string in an ASMLine and store it in *result.
-
-    Return true on success and false on failure; in the latter case, *result is
-    not modified.
 */
-bool parse_region_string(uint8_t *result, const ASMLine *line)
+PARSE_FUNC_HEADER(region_string, uint8_t)
 {
     char buffer[MAX_REGION_SIZE];
 
-    size_t offset = DIRECTIVE_OFFSET(line, DIR_ROM_REGION) + 1;
+    size_t offset = DIRECTIVE_OFFSET(line, directive) + 1;
     const char *arg = line->data + offset;
     ssize_t len = line->length - offset;
 
@@ -173,15 +192,14 @@ bool parse_region_string(uint8_t *result, const ASMLine *line)
 
 /*
     Parse a size code in an ASMLine and store it in *result.
-
-    Return true on success and false on failure; in the latter case, *result is
-    not modified.
 */
-bool parse_size_code(uint8_t *result, const ASMLine *line)
+PARSE_FUNC_HEADER(size_code, uint8_t)
 {
     uint32_t bytes;
-    if (!parse_uint32_t(&bytes, line, DIR_ROM_DECLSIZE))
-        return false;
+    if (!parse_uint32_t(&bytes, line, directive)) {
+        if (!parse_rom_size(&bytes, line, directive))
+            return false;
+    }
 
     uint8_t code = size_bytes_to_code(bytes);
     if (code)

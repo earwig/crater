@@ -29,7 +29,7 @@
     parse_##arg_type((arg_type*) &arg, line, directive)
 
 #define CALL_SPECIFIC_PARSER_(arg_type, parser)                               \
-    parse_##parser((arg_type*) &arg, line)
+    parse_##parser((arg_type*) &arg, line, directive)
 
 #define DISPATCH_(first, second, target, ...) target
 
@@ -57,7 +57,7 @@
     else if (first_ctr++, IS_DIRECTIVE(line, d)) {                            \
         directive = d;                                                        \
         FAIL_ON_COND_(!DIRECTIVE_HAS_ARG(line, directive), ED_PP_NO_ARG)      \
-        arg_type arg;                                                         \
+        arg_type arg = 0;                                                     \
         arg_type* dest = &(dest_loc);                                         \
         if (DIRECTIVE_IS_AUTO(line, directive)) {                             \
             arg = auto_val;                                                   \
@@ -360,7 +360,10 @@ ErrorInfo* preprocess(AssemblerState *state, const LineBuffer *source)
         END_DIRECTIVE
 
         BEGIN_DIRECTIVE(DIR_ROM_SIZE, size_t, state->rom_size, 0)
-            USE_PARSER(uint32_t, rom_size)
+            PARSER_BRANCH(uint32_t, {}, {
+                USE_PARSER(uint32_t, rom_size)
+            })
+            VALIDATE(size_bytes_to_code)
         END_DIRECTIVE
 
         BEGIN_DIRECTIVE(DIR_ROM_HEADER, size_t, state->header.offset, DEFAULT_HEADER_OFFSET)
