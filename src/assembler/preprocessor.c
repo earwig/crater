@@ -360,8 +360,7 @@ ErrorInfo* preprocess(AssemblerState *state, const LineBuffer *source)
         END_DIRECTIVE
 
         BEGIN_DIRECTIVE(DIR_ROM_SIZE, size_t, state->rom_size, 0)
-            // TODO: fixme
-            FAIL_ON_COND_(1, ED_PP_UNKNOWN)
+            USE_PARSER(uint32_t, rom_size)
         END_DIRECTIVE
 
         BEGIN_DIRECTIVE(DIR_ROM_HEADER, size_t, state->header.offset, DEFAULT_HEADER_OFFSET)

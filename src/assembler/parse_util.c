@@ -127,7 +127,24 @@ bool parse_uint8_t(uint8_t *result, const ASMLine *line, const char *directive)
 }
 
 /*
-    Parse the region code string in an ASMLine and store it in *result.
+    Parse a ROM size string in an ASMLine and store it in *result.
+
+    Return true on success and false on failure; in the latter case, *result is
+    not modified.
+*/
+bool parse_rom_size(uint32_t *result, const ASMLine *line)
+{
+    uint32_t bytes;
+    if (!parse_uint32_t(&bytes, line, DIR_ROM_SIZE))
+        return false;
+
+    if (size_bytes_to_code(bytes))
+        return (*result = bytes), true;
+    return false;
+}
+
+/*
+    Parse a region code string in an ASMLine and store it in *result.
 
     Return true on success and false on failure; in the latter case, *result is
     not modified.
@@ -155,7 +172,7 @@ bool parse_region_string(uint8_t *result, const ASMLine *line)
 }
 
 /*
-    Parse the size code in an ASMLine and store it in *result.
+    Parse a size code in an ASMLine and store it in *result.
 
     Return true on success and false on failure; in the latter case, *result is
     not modified.
