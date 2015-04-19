@@ -15,7 +15,6 @@
 
 #define NUM_LOCATIONS 3
 #define MAGIC_LEN 8
-#define HEADER_SIZE 16
 #define SIZE_CODE_BUF 8
 
 static size_t header_locations[NUM_LOCATIONS] = {0x7FF0, 0x3FF0, 0x1FF0};

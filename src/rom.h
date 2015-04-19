@@ -6,6 +6,8 @@
 #include <stdint.h>
 #include <stdlib.h>
 
+#define HEADER_SIZE 16
+
 /* Error strings */
 
 static const char* rom_err_isdir     = "Is a directory";

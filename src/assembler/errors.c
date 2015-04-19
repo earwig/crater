@@ -76,7 +76,7 @@ ErrorInfo* error_info_create(
 
     einfo->type = err_type;
     einfo->desc = err_desc;
-    einfo->line = create_error_line(line);
+    einfo->line = line ? create_error_line(line) : NULL;
     return einfo;
 }
 

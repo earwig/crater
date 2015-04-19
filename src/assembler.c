@@ -23,8 +23,20 @@ static ErrorInfo* tokenize(AssemblerState *state)
 
     // verify no instructions clash with header offset
     // if rom size is set, verify nothing overflows
+    // otherwise, check nothing overflows max rom size (1 MB)
 
     (void) state;
+
+#ifdef DEBUG_MODE
+    DEBUG("Dumping ASMLines:")
+    const ASMLine *temp = state->lines;
+    while (temp) {
+        DEBUG("- %-40.*s [%s:%02zu]", (int) temp->length, temp->data,
+              temp->filename, temp->original->lineno)
+        temp = temp->next;
+    }
+#endif
+
     return NULL;
 }
 
@@ -39,12 +51,12 @@ static ErrorInfo* resolve_defaults(AssemblerState *state)
     // TODO
 
     // if (!state.rom_size)
-            // set to max possible >= 32 KB, or error if too many instructions
-            // if (state.header.rom_size)
-                    // check reported rom size is <= actual rom size
+            // set to max possible >= 32 KB (max of instructions, offset, and state.header.rom_size)
 
     // if (!state.header.rom_size)
             // set to actual rom size using util's size_bytes_to_code()
+
+    state->rom_size = 8;
 
     (void) state;
     return NULL;

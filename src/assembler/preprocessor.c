@@ -15,6 +15,7 @@
 #include "io.h"
 #include "parse_util.h"
 #include "../logging.h"
+#include "../rom.h"
 #include "../util.h"
 
 /* Helper macros for preprocess() */
@@ -48,6 +49,9 @@
 
 #define PARSER_BRANCH(arg_type, true_part, false_part)                        \
     if (CALL_PARSER_(arg_type)) {true_part} else {false_part}
+
+#define SAVE_LINE(target)                                                     \
+    target = line;
 
 #define BEGIN_DIRECTIVE_BLOCK                                                 \
     ssize_t first_ctr = -1;                                                   \
@@ -233,6 +237,7 @@ static ErrorInfo* build_asm_lines(
     const LineBuffer *root, const LineBuffer *source, ASMLine **head,
     ASMLine **tail, ASMInclude **includes)
 {
+    ErrorInfo *ei;
     ASMLine dummy = {.next = NULL};
     ASMLine *line, *prev = &dummy;
     const Line *orig, *next_orig = source->lines;
@@ -249,21 +254,16 @@ static ErrorInfo* build_asm_lines(
         line->next = NULL;
 
         if (IS_DIRECTIVE(line, DIR_INCLUDE)) {
-            ErrorInfo *ei;
             char *path = read_include_path(line);
             if (!path) {
                 ei = error_info_create(line, ET_INCLUDE, ED_INC_BAD_ARG);
-                asm_lines_free(line);
-                asm_lines_free(dummy.next);
-                return ei;
+                goto error;
             }
 
             if (path_has_been_loaded(path, root, *includes)) {
-                ei = error_info_create(line, ET_INCLUDE, ED_INC_RECURSION);
-                asm_lines_free(line);
-                asm_lines_free(dummy.next);
                 free(path);
-                return ei;
+                ei = error_info_create(line, ET_INCLUDE, ED_INC_RECURSION);
+                goto error;
             }
 
             DEBUG("- reading included file: %s", path)
@@ -271,9 +271,7 @@ static ErrorInfo* build_asm_lines(
             free(path);
             if (!incbuffer) {
                 ei = error_info_create(line, ET_INCLUDE, ED_INC_FILE_READ);
-                asm_lines_free(line);
-                asm_lines_free(dummy.next);
-                return ei;
+                goto error;
             }
 
             ASMInclude *include = malloc(sizeof(ASMInclude));
@@ -288,9 +286,7 @@ static ErrorInfo* build_asm_lines(
             if ((ei = build_asm_lines(root, incbuffer, &inchead, &inctail,
                                       includes))) {
                 error_info_append(ei, line);
-                asm_lines_free(line);
-                asm_lines_free(dummy.next);
-                return ei;
+                goto error;
             }
 
             prev->next = inchead;
@@ -307,6 +303,11 @@ static ErrorInfo* build_asm_lines(
     if (tail)
         *tail = prev;
     return NULL;
+
+    error:
+    asm_lines_free(line);
+    asm_lines_free(dummy.next);
+    return ei;
 }
 
 /*
@@ -342,6 +343,7 @@ ErrorInfo* preprocess(AssemblerState *state, const LineBuffer *source)
 
     ASMLine dummy = {.next = state->lines};
     ASMLine *prev, *line = &dummy, *next = state->lines, *condemned = NULL;
+    const ASMLine *rom_size_line = NULL, *rom_declsize_line = NULL;
     const char *directive;
 
     while ((prev = line, line = next)) {
@@ -364,6 +366,7 @@ ErrorInfo* preprocess(AssemblerState *state, const LineBuffer *source)
                 USE_PARSER(uint32_t, rom_size)
             })
             VALIDATE(size_bytes_to_code)
+            SAVE_LINE(rom_size_line)
         END_DIRECTIVE
 
         BEGIN_DIRECTIVE(DIR_ROM_HEADER, size_t, state->header.offset, DEFAULT_HEADER_OFFSET)
@@ -401,6 +404,7 @@ ErrorInfo* preprocess(AssemblerState *state, const LineBuffer *source)
             }, {
                 USE_PARSER(uint8_t, size_code)
             })
+            SAVE_LINE(rom_declsize_line)
         END_DIRECTIVE
 
         END_DIRECTIVE_BLOCK
@@ -412,24 +416,20 @@ ErrorInfo* preprocess(AssemblerState *state, const LineBuffer *source)
         line = prev;
     }
 
-    // TODO: if giving rom size, check header offset is in rom size range
-    // TODO: if giving reported and actual rom size, check reported is <= actual
+    if (state->rom_size && state->header.offset + HEADER_SIZE > state->rom_size) {
+        ei = error_info_create(rom_size_line, ET_PREPROC, ED_PP_HEADER_RANGE);
+        goto cleanup;
+    }
 
-    state->rom_size = 8;  // TODO
+    if (state->rom_size && state->header.rom_size &&
+            size_code_to_bytes(state->header.rom_size) > state->rom_size) {
+        ei = error_info_create(rom_size_line, ET_PREPROC, ED_PP_DECLARE_RANGE);
+        error_info_append(ei, rom_declsize_line);
+        goto cleanup;
+    }
 
     cleanup:
     asm_lines_free(condemned);
     state->lines = dummy.next;  // Fix list head if first line was a directive
-
-#ifdef DEBUG_MODE
-    DEBUG("Dumping ASMLines:")
-    const ASMLine *temp = state->lines;
-    while (temp) {
-        DEBUG("- %-40.*s [%s:%02zu]", (int) temp->length, temp->data,
-              temp->filename, temp->original->lineno)
-        temp = temp->next;
-    }
-#endif
-
     return ei;
 }
