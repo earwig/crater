@@ -17,33 +17,37 @@
 #include "../logging.h"
 #include "../util.h"
 
-#define MAX_REGION_SIZE 32
-
 /* Helper macros for preprocess() */
 
-#define FAIL(err_desc)                                                        \
-    {                                                                         \
+#define FAIL_ON_COND_(cond, err_desc)                                         \
+    if ((cond)) {                                                             \
         ei = error_info_create(line, ET_PREPROC, err_desc);                   \
         goto cleanup;                                                         \
     }
 
-#define FAIL_ON_COND(cond, err_desc)                                          \
-    if ((cond)) FAIL(err_desc)
-
-#define VALIDATE(retval)                                                      \
-    FAIL_ON_COND(!(retval), ED_PP_BAD_ARG)
-
-#define CLAMP_RANGE(bound)                                                    \
-    FAIL_ON_COND(arg > bound, ED_PP_ARG_RANGE)
-
-#define GEN_PARSER_CALL(arg_type)                                             \
+#define CALL_GENERIC_PARSER_(arg_type)                                        \
     parse_##arg_type((arg_type*) &arg, line, directive)
 
-#define USE_PARSER(arg_type)                                                  \
-    VALIDATE(GEN_PARSER_CALL(arg_type))
+#define CALL_SPECIFIC_PARSER_(arg_type, parser)                               \
+    parse_##parser((arg_type*) &arg, line)
+
+#define DISPATCH_(first, second, target, ...) target
+
+#define CALL_PARSER_(...)                                                     \
+    DISPATCH_(__VA_ARGS__, CALL_SPECIFIC_PARSER_, CALL_GENERIC_PARSER_,       \
+              __VA_ARGS__)(__VA_ARGS__)
+
+#define VALIDATE(func)                                                        \
+    FAIL_ON_COND_(!(func(arg)), ED_PP_BAD_ARG)
+
+#define CHECK_RANGE(bound)                                                    \
+    FAIL_ON_COND_(arg > bound, ED_PP_ARG_RANGE)
+
+#define USE_PARSER(...)                                                       \
+    FAIL_ON_COND_(!CALL_PARSER_(__VA_ARGS__), ED_PP_BAD_ARG)
 
 #define PARSER_BRANCH(arg_type, true_part, false_part)                        \
-    if (GEN_PARSER_CALL(arg_type)) {true_part} else {false_part}
+    if (CALL_PARSER_(arg_type)) {true_part} else {false_part}
 
 #define BEGIN_DIRECTIVE_BLOCK                                                 \
     ssize_t first_ctr = -1;                                                   \
@@ -52,7 +56,7 @@
 #define BEGIN_DIRECTIVE(d, arg_type, dest_loc, auto_val)                      \
     else if (first_ctr++, IS_DIRECTIVE(line, d)) {                            \
         directive = d;                                                        \
-        FAIL_ON_COND(!DIRECTIVE_HAS_ARG(line, directive), ED_PP_NO_ARG)       \
+        FAIL_ON_COND_(!DIRECTIVE_HAS_ARG(line, directive), ED_PP_NO_ARG)      \
         arg_type arg;                                                         \
         arg_type* dest = &(dest_loc);                                         \
         if (DIRECTIVE_IS_AUTO(line, directive)) {                             \
@@ -71,7 +75,7 @@
     }
 
 #define END_DIRECTIVE_BLOCK                                                   \
-    else FAIL(ED_PP_UNKNOWN)
+    else FAIL_ON_COND_(true, ED_PP_UNKNOWN)
 
 /*
     Preprocess a single source line (source, length) into a normalized ASMLine.
@@ -314,51 +318,6 @@ static inline bool is_header_offset_valid(uint16_t offset)
 }
 
 /*
-    Parse the region code string in an ASMLine and store it in *result.
-
-    Return true on success and false on failure; in the latter case, *result is
-    not modified.
-*/
-static bool parse_region_string(uint8_t *result, const ASMLine *line)
-{
-    char buffer[MAX_REGION_SIZE];
-
-    size_t offset = DIRECTIVE_OFFSET(line, DIR_ROM_REGION) + 1;
-    const char *arg = line->data + offset;
-    ssize_t len = line->length - offset;
-
-    if (len <= 2 || len >= MAX_REGION_SIZE + 2)  // Account for double quotes
-        return false;
-    if (arg[0] != '"' || arg[len - 1] != '"')
-        return false;
-
-    strncpy(buffer, arg + 1, len - 2);
-    buffer[len - 2] = '\0';
-
-    uint8_t code = region_string_to_code(buffer);
-    if (code)
-        return (*result = code), true;
-    return false;
-}
-
-/*
-    Parse the size code in an ASMLine and store it in *result.
-
-    Return true on success and false on failure.
-*/
-static bool parse_size_code(uint8_t *result, const ASMLine *line)
-{
-    uint32_t bytes;
-    if (!parse_uint32_t(&bytes, line, DIR_ROM_DECLSIZE))
-        return false;
-
-    uint8_t code = size_bytes_to_code(bytes);
-    if (code)
-        return (*result = code), true;
-    return false;
-}
-
-/*
     Preprocess the LineBuffer into ASMLines. Change some state along the way.
 
     This function processes include directives, so read_source_file() may be
@@ -402,12 +361,12 @@ ErrorInfo* preprocess(AssemblerState *state, const LineBuffer *source)
 
         BEGIN_DIRECTIVE(DIR_ROM_SIZE, size_t, state->rom_size, 0)
             // TODO: fixme
-            FAIL(ED_PP_UNKNOWN)
+            FAIL_ON_COND_(1, ED_PP_UNKNOWN)
         END_DIRECTIVE
 
         BEGIN_DIRECTIVE(DIR_ROM_HEADER, size_t, state->header.offset, DEFAULT_HEADER_OFFSET)
             USE_PARSER(uint16_t)
-            VALIDATE(is_header_offset_valid(arg))
+            VALIDATE(is_header_offset_valid)
         END_DIRECTIVE
 
         BEGIN_DIRECTIVE(DIR_ROM_CHECKSUM, bool, state->header.checksum, true)
@@ -416,29 +375,29 @@ ErrorInfo* preprocess(AssemblerState *state, const LineBuffer *source)
 
         BEGIN_DIRECTIVE(DIR_ROM_PRODUCT, uint32_t, state->header.product_code, 0)
             USE_PARSER(uint32_t)
-            CLAMP_RANGE(160000)
+            CHECK_RANGE(160000)
         END_DIRECTIVE
 
         BEGIN_DIRECTIVE(DIR_ROM_VERSION, uint8_t, state->header.version, 0)
             USE_PARSER(uint8_t)
-            CLAMP_RANGE(0x10)
+            CHECK_RANGE(0x10)
         END_DIRECTIVE
 
         BEGIN_DIRECTIVE(DIR_ROM_REGION, uint8_t, state->header.region, DEFAULT_REGION)
             PARSER_BRANCH(uint8_t, {
-                CLAMP_RANGE(0x10)
-                VALIDATE(region_code_to_string(arg))
+                CHECK_RANGE(0x10)
+                VALIDATE(region_code_to_string)
             }, {
-                VALIDATE(parse_region_string(&arg, line))
+                USE_PARSER(uint8_t, region_string)
             })
         END_DIRECTIVE
 
         BEGIN_DIRECTIVE(DIR_ROM_DECLSIZE, uint8_t, state->header.rom_size, 0)
             PARSER_BRANCH(uint8_t, {
-                CLAMP_RANGE(0x10)
-                VALIDATE(size_code_to_bytes(arg))
+                CHECK_RANGE(0x10)
+                VALIDATE(size_code_to_bytes)
             }, {
-                VALIDATE(parse_size_code(&arg, line))
+                USE_PARSER(uint8_t, size_code)
             })
         END_DIRECTIVE
 
