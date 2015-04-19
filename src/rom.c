@@ -16,6 +16,7 @@
 #define NUM_LOCATIONS 3
 #define MAGIC_LEN 8
 #define HEADER_SIZE 16
+#define SIZE_CODE_BUF 8
 
 static size_t header_locations[NUM_LOCATIONS] = {0x7FF0, 0x3FF0, 0x1FF0};
 static const char header_magic[MAGIC_LEN + 1] = "TMR SEGA";
@@ -100,18 +101,17 @@ static uint16_t compute_checksum(const uint8_t *data, size_t size, uint8_t range
 */
 static const char* parse_reported_size(uint8_t value)
 {
-    switch (value) {
-        case 0xA: return "8 KB";
-        case 0xB: return "16 KB";
-        case 0xC: return "32 KB";
-        case 0xD: return "48 KB";
-        case 0xE: return "64 KB";
-        case 0xF: return "128 KB";
-        case 0x0: return "256 KB";
-        case 0x1: return "512 KB";
-        case 0x2: return "1 MB";
-        default:  return "Unknown";
-    }
+    static char buffer[SIZE_CODE_BUF];
+    size_t size = size_code_to_bytes(value);
+
+    if (!size)
+        strncpy(buffer, "Unknown", SIZE_CODE_BUF);
+    else if (size >= (1 << 20))
+        snprintf(buffer, SIZE_CODE_BUF, "%zu MB", size >> 20);
+    else
+        snprintf(buffer, SIZE_CODE_BUF, "%zu KB", size >> 10);
+
+    return buffer;
 }
 #endif
 

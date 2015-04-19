@@ -44,7 +44,7 @@ static ErrorInfo* resolve_defaults(AssemblerState *state)
                     // check reported rom size is <= actual rom size
 
     // if (!state.header.rom_size)
-            // set to actual rom size
+            // set to actual rom size using util's size_bytes_to_code()
 
     (void) state;
     return NULL;

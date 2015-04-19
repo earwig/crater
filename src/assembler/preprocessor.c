@@ -306,6 +306,14 @@ static ErrorInfo* build_asm_lines(
 }
 
 /*
+    Return whether the given header offset is a valid location.
+*/
+static inline bool is_header_offset_valid(uint16_t offset)
+{
+    return offset == 0x7FF0 || offset == 0x3FF0 || offset == 0x1FF0;
+}
+
+/*
     Parse the region code string in an ASMLine and store it in *result.
 
     Return true on success and false on failure; in the latter case, *result is
@@ -334,11 +342,20 @@ static bool parse_region_string(uint8_t *result, const ASMLine *line)
 }
 
 /*
-    Return whether the given header offset is a valid location.
+    Parse the size code in an ASMLine and store it in *result.
+
+    Return true on success and false on failure.
 */
-static inline bool is_header_offset_valid(uint16_t offset)
+static bool parse_size_code(uint8_t *result, const ASMLine *line)
 {
-    return offset == 0x7FF0 || offset == 0x3FF0 || offset == 0x1FF0;
+    uint32_t bytes;
+    if (!parse_uint32_t(&bytes, line, DIR_ROM_DECLSIZE))
+        return false;
+
+    uint8_t code = size_bytes_to_code(bytes);
+    if (code)
+        return (*result = code), true;
+    return false;
 }
 
 /*
@@ -417,8 +434,12 @@ ErrorInfo* preprocess(AssemblerState *state, const LineBuffer *source)
         END_DIRECTIVE
 
         BEGIN_DIRECTIVE(DIR_ROM_DECLSIZE, uint8_t, state->header.rom_size, 0)
-            // TODO: fixme
-            FAIL(ED_PP_UNKNOWN)
+            PARSER_BRANCH(uint8_t, {
+                CLAMP_RANGE(0x10)
+                VALIDATE(size_code_to_bytes(arg))
+            }, {
+                VALIDATE(parse_size_code(&arg, line))
+            })
         END_DIRECTIVE
 
         END_DIRECTIVE_BLOCK
