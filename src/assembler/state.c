@@ -24,7 +24,20 @@ void state_init(AssemblerState *state)
     state->lines = NULL;
     state->includes = NULL;
     state->instructions = NULL;
+    state->data = NULL;
     state->symtable = NULL;
+}
+
+/*
+    Deallocate the contents of an AssemblerState object.
+*/
+void state_free(AssemblerState *state)
+{
+    asm_lines_free(state->lines);
+    asm_includes_free(state->includes);
+    asm_instructions_free(state->instructions);
+    asm_data_free(state->data);
+    asm_symtable_free(state->symtable);
 }
 
 /*
@@ -79,6 +92,19 @@ void asm_instructions_free(ASMInstruction *inst)
             free(inst->symbol);
         free(inst);
         inst = temp;
+    }
+}
+
+/*
+    Deallocate an ASMData list.
+*/
+void asm_data_free(ASMData *data)
+{
+    while (data) {
+        ASMData *temp = data->next;
+        free(data->data);
+        free(data);
+        data = temp;
     }
 }
 

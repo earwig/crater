@@ -33,9 +33,9 @@ static ErrorInfo* parse_instruction(
 /*
     Tokenize ASMLines into ASMInstructions.
 
-    On success, state->instructions is modified and NULL is returned. On error,
-    an ErrorInfo object is returned and state->instructions is not modified.
-    state->symtable may or may not be modified regardless of success.
+    NULL is returned on success and an ErrorInfo object is returned on failure.
+    state->instructions, state->data, and state->symtable may or may not be
+    modified regardless of success.
 */
 static ErrorInfo* tokenize(AssemblerState *state)
 {
@@ -53,32 +53,33 @@ static ErrorInfo* tokenize(AssemblerState *state)
 
     while (line) {
         if (IS_LOCAL_DIRECTIVE(line)) {
-            if (!IS_DIRECTIVE(line, DIR_ORIGIN)) {
+            if (IS_DIRECTIVE(line, DIR_ORIGIN)) {
+                if (!DIRECTIVE_HAS_ARG(line, DIR_ORIGIN)) {
+                    ei = error_info_create(line, ET_PREPROC, ED_PP_NO_ARG);
+                    goto cleanup;
+                }
+
+                uint32_t arg;
+                if (!parse_uint32_t(&arg, line, DIR_ORIGIN)) {
+                    ei = error_info_create(line, ET_PREPROC, ED_PP_BAD_ARG);
+                    goto cleanup;
+                }
+
+                offset = arg;
+                origin = line;
+            }
+            else {
                 // TODO
                 ei = error_info_create(line, ET_PREPROC, ED_PP_UNKNOWN);
-                goto error;
+                goto cleanup;
             }
-
-            if (!DIRECTIVE_HAS_ARG(line, DIR_ORIGIN)) {
-                ei = error_info_create(line, ET_PREPROC, ED_PP_NO_ARG);
-                goto error;
-            }
-
-            uint32_t arg;
-            if (!parse_uint32_t(&arg, line, DIR_ORIGIN)) {
-                ei = error_info_create(line, ET_PREPROC, ED_PP_BAD_ARG);
-                goto error;
-            }
-
-            offset = arg;
-            origin = line;
         }
         else if (IS_LABEL(line)) {
             // TODO: add to symbol table
         }
         else {
             if ((ei = parse_instruction(line, &inst, offset)))
-                goto error;
+                goto cleanup;
 
             // TODO: bounded check on range [offset, offset + inst->length) against overlap table
                 // if clash, use error with current line,
@@ -92,13 +93,8 @@ static ErrorInfo* tokenize(AssemblerState *state)
         line = line->next;
     }
 
-    state->instructions = dummy.next;
-    goto cleanup;
-
-    error:
-    asm_instructions_free(dummy.next);
-
     cleanup:
+    state->instructions = dummy.next;
     free(overlap_table);
     return ei;
 }
@@ -144,7 +140,7 @@ static ErrorInfo* resolve_symbols(AssemblerState *state)
 }
 
 /*
-    Convert finalized ASMInstructions into a binary data block.
+    Convert finalized ASMInstructions and ASMData into a binary data block.
 
     This function should never fail.
 */
@@ -208,10 +204,7 @@ size_t assemble(const LineBuffer *source, uint8_t **binary_ptr, ErrorInfo **ei_p
     *ei_ptr = error_info;
 
     cleanup:
-    asm_lines_free(state.lines);
-    asm_includes_free(state.includes);
-    asm_instructions_free(state.instructions);
-    asm_symtable_free(state.symtable);
+    state_free(&state);
     return retval;
 }
 

@@ -42,6 +42,14 @@ struct ASMInstruction {
 };
 typedef struct ASMInstruction ASMInstruction;
 
+struct ASMData {
+    size_t offset;
+    size_t length;
+    uint8_t *data;
+    struct ASMData *next;
+};
+typedef struct ASMData ASMData;
+
 struct ASMSymbol {
     size_t offset;
     char *symbol;
@@ -69,16 +77,19 @@ typedef struct {
     ASMLine *lines;
     ASMInclude *includes;
     ASMInstruction *instructions;
+    ASMData *data;
     ASMSymbolTable *symtable;
 } AssemblerState;
 
 /* Functions */
 
 void state_init(AssemblerState*);
+void state_free(AssemblerState*);
 void asm_symtable_init(ASMSymbolTable**);
 void asm_lines_free(ASMLine*);
 void asm_includes_free(ASMInclude*);
 void asm_instructions_free(ASMInstruction*);
+void asm_data_free(ASMData*);
 void asm_symtable_free(ASMSymbolTable*);
 
 #ifdef DEBUG_MODE
