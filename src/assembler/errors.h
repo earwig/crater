@@ -11,7 +11,9 @@
 
 typedef enum {
     ET_INCLUDE,
-    ET_PREPROC
+    ET_PREPROC,
+    ET_LAYOUT,
+    ET_PARSER
 } ASMErrorType;
 
 typedef enum {
@@ -24,30 +26,15 @@ typedef enum {
     ED_PP_NO_ARG,
     ED_PP_BAD_ARG,
     ED_PP_ARG_RANGE,
-    ED_PP_HEADER_RANGE,
-    ED_PP_DECLARE_RANGE
+
+    ED_LYT_HEADER_RANGE,
+    ED_LYT_DECLARE_RANGE,
+    ED_LYT_HEAD_OVERLAP,
+    ED_LYT_INST_OVERLAP,
+    ED_LYT_DATA_OVERLAP,
+
+    ED_PARSE_SYNTAX
 } ASMErrorDesc;
-
-/* Strings */
-
-static const char *asm_error_types[] = {
-    "include directive",
-    "preprocessor"
-};
-
-static const char *asm_error_descs[] = {
-    "missing or invalid argument",
-    "infinite recursion detected",
-    "couldn't read included file",
-
-    "unknown directive",
-    "multiple values for directive",
-    "missing argument for directive",
-    "invalid argument for directive",
-    "directive argument out of range",
-    "header offset exceeds given ROM size",
-    "declared ROM size in header exceeds actual size"
-};
 
 /* Structs */
 

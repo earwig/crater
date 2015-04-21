@@ -11,6 +11,35 @@
 #define ERROR_TYPE(err_info) (asm_error_types[err_info->type])
 #define ERROR_DESC(err_info) (asm_error_descs[err_info->desc])
 
+/* Error strings */
+
+static const char *asm_error_types[] = {
+    "include directive",    // ET_INCLUDE
+    "preprocessor",         // ET_PREPROC
+    "memory layout",        // ET_LAYOUT
+    "instruction parser"    // ET_PARSER
+};
+
+static const char *asm_error_descs[] = {
+    "missing or invalid argument",  // ED_INC_BAD_ARG
+    "infinite recursion detected",  // ED_INC_RECURSION
+    "couldn't read included file",  // ED_INC_FILE_READ
+
+    "unknown directive",                // ED_PP_UNKNOWN
+    "multiple values for directive",    // ED_PP_DUPLICATE
+    "missing argument for directive",   // ED_PP_NO_ARG
+    "invalid argument for directive",   // ED_PP_BAD_ARG
+    "directive argument out of range",  // ED_PP_ARG_RANGE
+
+    "header offset exceeds given ROM size",             // ED_LYT_HEADER_RANGE
+    "declared ROM size in header exceeds actual size",  // ED_LYT_DECLARE_RANGE
+    "location overlaps with ROM header",                // ED_LYT_HEAD_OVERLAP
+    "location overlaps with previous instruction",      // ED_LYT_INST_OVERLAP
+    "location overlaps with previous data",             // ED_LYT_DATA_OVERLAP
+
+    "syntax error"  // ED_PARSE_SYNTAX
+};
+
 /* Internal structs */
 
 struct ASMErrorLine {

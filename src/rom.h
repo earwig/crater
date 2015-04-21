@@ -6,6 +6,9 @@
 #include <stdint.h>
 #include <stdlib.h>
 
+#define ROM_SIZE_MIN (32 << 10)  // 32 KB
+#define ROM_SIZE_MAX ( 1 << 20)  //  1 MB
+
 #define HEADER_SIZE 16
 
 /* Error strings */

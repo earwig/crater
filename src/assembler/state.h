@@ -80,3 +80,7 @@ void asm_lines_free(ASMLine*);
 void asm_includes_free(ASMInclude*);
 void asm_instructions_free(ASMInstruction*);
 void asm_symtable_free(ASMSymbolTable*);
+
+#ifdef DEBUG_MODE
+void asm_lines_print(const ASMLine*);
+#endif

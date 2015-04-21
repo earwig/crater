@@ -101,3 +101,18 @@ void asm_symtable_free(ASMSymbolTable *symtable)
     }
     free(symtable);
 }
+
+#ifdef DEBUG_MODE
+/*
+    DEBUG FUNCTION: Print out an ASMLine list to stdout.
+*/
+void asm_lines_print(const ASMLine *line)
+{
+    DEBUG("Dumping ASMLines:")
+    while (line) {
+        DEBUG("- %-40.*s [%s:%02zu]", (int) line->length, line->data,
+              line->filename, line->original->lineno)
+        line = line->next;
+    }
+}
+#endif

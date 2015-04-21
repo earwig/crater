@@ -4,13 +4,31 @@
 #include <stdlib.h>
 
 #include "assembler.h"
+#include "assembler/directives.h"
 #include "assembler/errors.h"
 #include "assembler/io.h"
+#include "assembler/parse_util.h"
 #include "assembler/preprocessor.h"
 #include "assembler/state.h"
 #include "logging.h"
 #include "rom.h"
 #include "util.h"
+
+#define IS_LABEL(line) (line->data[line->length - 1] == ':')
+
+/*
+    Parse an instruction encoded in line into an ASMInstruction object.
+
+    On success, return NULL and store the instruction in *inst_ptr. On failure,
+    return an ErrorInfo object; *inst_ptr is not modified.
+*/
+static ErrorInfo* parse_instruction(
+    const ASMLine *line, ASMInstruction **inst_ptr, size_t offset)
+{
+    // TODO
+
+    return error_info_create(line, ET_PARSER, ED_PARSE_SYNTAX);
+}
 
 /*
     Tokenize ASMLines into ASMInstructions.
@@ -21,25 +39,68 @@
 */
 static ErrorInfo* tokenize(AssemblerState *state)
 {
-    // TODO
+    size_t size = state->rom_size ? state->rom_size : ROM_SIZE_MAX;
+    const ASMLine **overlap_table = calloc(size, sizeof(const ASMLine*));
+    if (!overlap_table)
+        OUT_OF_MEMORY()
 
-    // verify no instructions clash with header offset
-    // if rom size is set, verify nothing overflows
-    // otherwise, check nothing overflows max rom size (1 MB)
+    // TODO: fill overlap table for header with pointers to a dummy object
 
-    (void) state;
+    ErrorInfo *ei = NULL;
+    ASMInstruction dummy = {.next = NULL}, *inst, *prev = &dummy;
+    const ASMLine *line = state->lines, *origin = NULL;
+    size_t offset = 0;
 
-#ifdef DEBUG_MODE
-    DEBUG("Dumping ASMLines:")
-    const ASMLine *temp = state->lines;
-    while (temp) {
-        DEBUG("- %-40.*s [%s:%02zu]", (int) temp->length, temp->data,
-              temp->filename, temp->original->lineno)
-        temp = temp->next;
+    while (line) {
+        if (IS_LOCAL_DIRECTIVE(line)) {
+            if (!IS_DIRECTIVE(line, DIR_ORIGIN)) {
+                // TODO
+                ei = error_info_create(line, ET_PREPROC, ED_PP_UNKNOWN);
+                goto error;
+            }
+
+            if (!DIRECTIVE_HAS_ARG(line, DIR_ORIGIN)) {
+                ei = error_info_create(line, ET_PREPROC, ED_PP_NO_ARG);
+                goto error;
+            }
+
+            uint32_t arg;
+            if (!parse_uint32_t(&arg, line, DIR_ORIGIN)) {
+                ei = error_info_create(line, ET_PREPROC, ED_PP_BAD_ARG);
+                goto error;
+            }
+
+            offset = arg;
+            origin = line;
+        }
+        else if (IS_LABEL(line)) {
+            // TODO: add to symbol table
+        }
+        else {
+            if ((ei = parse_instruction(line, &inst, offset)))
+                goto error;
+
+            // TODO: bounded check on range [offset, offset + inst->length) against overlap table
+                // if clash, use error with current line,
+                // then table line (if not header),
+                // then origin line (if non-null)
+
+            offset += inst->length;
+            prev->next = inst;
+            prev = inst;
+        }
+        line = line->next;
     }
-#endif
 
-    return NULL;
+    state->instructions = dummy.next;
+    goto cleanup;
+
+    error:
+    asm_instructions_free(dummy.next);
+
+    cleanup:
+    free(overlap_table);
+    return ei;
 }
 
 /*
@@ -51,7 +112,7 @@ static ErrorInfo* tokenize(AssemblerState *state)
 static ErrorInfo* resolve_defaults(AssemblerState *state)
 {
     if (!state->rom_size) {
-        state->rom_size = 32 << 10;
+        state->rom_size = ROM_SIZE_MIN;
 
         // TODO: use highest instruction too
 
@@ -120,6 +181,10 @@ size_t assemble(const LineBuffer *source, uint8_t **binary_ptr, ErrorInfo **ei_p
         goto error;
 
     asm_symtable_init(&state.symtable);
+
+#ifdef DEBUG_MODE
+    asm_lines_print(state.lines);
+#endif
 
     if ((error_info = tokenize(&state)))
         goto error;

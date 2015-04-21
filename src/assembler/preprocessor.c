@@ -359,8 +359,8 @@ ErrorInfo* preprocess(AssemblerState *state, const LineBuffer *source)
         next = line->next;
         if (line->data[0] != DIRECTIVE_MARKER)
             continue;
-        if (IS_DIRECTIVE(line, DIR_ORIGIN))
-            continue;  // Origins are handled by tokenizer
+        if (IS_LOCAL_DIRECTIVE(line))
+            continue;  // "Local" directives are handled by the tokenizer
 
         DEBUG("- handling directive: %.*s", (int) line->length, line->data)
 
@@ -426,13 +426,14 @@ ErrorInfo* preprocess(AssemblerState *state, const LineBuffer *source)
     }
 
     if (rom_size_line && state->header.offset + HEADER_SIZE > state->rom_size) {
-        ei = error_info_create(rom_size_line, ET_PREPROC, ED_PP_HEADER_RANGE);
+        // TODO: maybe should force offset to be explicit, otherwise autofix
+        ei = error_info_create(rom_size_line, ET_LAYOUT, ED_LYT_HEADER_RANGE);
         goto cleanup;
     }
 
     if (rom_size_line && rom_declsize_line &&
             size_code_to_bytes(state->header.rom_size) > state->rom_size) {
-        ei = error_info_create(rom_size_line, ET_PREPROC, ED_PP_DECLARE_RANGE);
+        ei = error_info_create(rom_size_line, ET_LAYOUT, ED_LYT_DECLARE_RANGE);
         error_info_append(ei, rom_declsize_line);
         goto cleanup;
     }
