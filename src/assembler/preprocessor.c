@@ -83,18 +83,76 @@
     else FAIL_ON_COND_(true, ED_PP_UNKNOWN)
 
 /*
-    Preprocess a single source line (source, length) into a normalized ASMLine.
+    Return whether the given character is a valid label character.
+*/
+static inline bool is_valid_label_char(char c, bool first)
+{
+    return (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') ||
+           (!first && c >= '0' && c <= '9') || c == '_';
+}
 
-    *Only* the data and length fields in the ASMLine object are populated. The
-    normalization process converts tabs to spaces, lowercases all alphabetical
-    characters, and removes runs of multiple spaces (outside of string
-    literals), strips comments, and other things.
+/*
+    Preprocess a single source line for labels.
+
+    Return the index of first non-whitespace non-label character. *head_ptr is
+    updated to the first label in sequence, and *tail_ptr to the last. Both
+    will be set to NULL if the line doesn't contain labels.
+*/
+static size_t read_labels(
+    const char *source, size_t length, ASMLine **head_ptr, ASMLine **tail_ptr)
+{
+    size_t start = 0, i, nexti;
+    while (start < length && (source[start] == ' ' || source[start] == '\t'))
+        start++;
+
+    i = start;
+    while (i < length && is_valid_label_char(source[i], i == start))
+        i++;
+
+    if (i == start || i == length || source[i] != ':') {
+        *head_ptr = NULL;
+        *tail_ptr = NULL;
+        return 0;
+    }
+
+    ASMLine *line = malloc(sizeof(ASMLine));
+    if (!line)
+        OUT_OF_MEMORY()
+
+    line->data = malloc(sizeof(char) * (i - start + 1));
+    if (!line->data)
+        OUT_OF_MEMORY()
+
+    strncpy(line->data, source + start, i - start + 1);
+    line->length = i - start + 1;
+
+    nexti = read_labels(source + i + 1, length - i - 1, &line->next, tail_ptr);
+    *head_ptr = line;
+    if (!nexti)
+        *tail_ptr = line;
+    return i + 1 + nexti;
+}
+
+/*
+    Preprocess a single source line (source, length) into one or more ASMLines.
+
+    Only the data, length, and next fields of the ASMLine objects are
+    populated. The normalization process strips comments, makes various
+    adjustments outside of string literals (converts tabs to spaces, lowercases
+    all alphabetical characters, and removes runs of multiple spaces), among
+    other things.
 
     Return NULL if an ASM line was not generated from the source, i.e. if it is
     blank after being stripped.
 */
 static ASMLine* normalize_line(const char *source, size_t length)
 {
+    ASMLine *head, *tail;
+    size_t offset = read_labels(source, length, &head, &tail);
+
+    source += offset;
+    length -= offset;
+
     char *data = malloc(sizeof(char) * length);
     if (!data)
         OUT_OF_MEMORY()
@@ -138,7 +196,7 @@ static ASMLine* normalize_line(const char *source, size_t length)
 
     if (!has_content) {
         free(data);
-        return NULL;
+        return head;
     }
 
     ASMLine *line = malloc(sizeof(ASMLine));
@@ -151,6 +209,12 @@ static ASMLine* normalize_line(const char *source, size_t length)
 
     line->data = data;
     line->length = di;
+    line->next = NULL;
+
+    if (head) {  // Line has labels, so link the main part up
+        tail->next = line;
+        return head;
+    }
     return line;
 }
 
@@ -240,19 +304,28 @@ static ErrorInfo* build_asm_lines(
 {
     ErrorInfo *ei;
     ASMLine dummy = {.next = NULL};
-    ASMLine *line, *prev = &dummy;
+    ASMLine *line, *prev = &dummy, *temp;
     const Line *orig, *next_orig = source->lines;
 
     while ((orig = next_orig)) {
-        line = normalize_line(orig->data, orig->length);
+        line = temp = normalize_line(orig->data, orig->length);
         next_orig = orig->next;
         if (!line)
             continue;
 
         // Populate ASMLine fields not set by normalize_line():
-        line->original = orig;
-        line->filename = source->filename;
-        line->next = NULL;
+        while (temp) {
+            temp->original = orig;
+            temp->filename = source->filename;
+            temp = temp->next;
+        }
+
+        // If there are multiple ASMLines, all but the last must be labels:
+        while (line->next) {
+            prev->next = line;
+            prev = line;
+            line = line->next;
+        }
 
         if (IS_DIRECTIVE(line, DIR_INCLUDE)) {
             char *path = read_include_path(line);
