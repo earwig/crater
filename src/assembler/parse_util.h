@@ -8,15 +8,19 @@
 
 #include "state.h"
 
-#define parse_bool parse__Bool
+#define dparse__Bool dparse_bool
 
 /* Functions */
 
-bool parse__Bool(bool*, const ASMLine*, const char*);
-bool parse_uint32_t(uint32_t*, const ASMLine*, const char*);
-bool parse_uint16_t(uint16_t*, const ASMLine*, const char*);
-bool parse_uint8_t(uint8_t*, const ASMLine*, const char*);
+bool parse_bool(bool*, const char*, ssize_t);
+bool parse_uint32_t(uint32_t*, const char*, ssize_t);
+bool parse_string(char**, size_t*, const char*, ssize_t);
 
-bool parse_rom_size(uint32_t*, const ASMLine*, const char*);
-bool parse_region_string(uint8_t*, const ASMLine*, const char*);
-bool parse_size_code(uint8_t*, const ASMLine*, const char*);
+bool dparse_bool(bool*, const ASMLine*, const char*);
+bool dparse_uint32_t(uint32_t*, const ASMLine*, const char*);
+bool dparse_uint16_t(uint16_t*, const ASMLine*, const char*);
+bool dparse_uint8_t(uint8_t*, const ASMLine*, const char*);
+
+bool dparse_rom_size(uint32_t*, const ASMLine*, const char*);
+bool dparse_region_string(uint8_t*, const ASMLine*, const char*);
+bool dparse_size_code(uint8_t*, const ASMLine*, const char*);

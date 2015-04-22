@@ -2,6 +2,7 @@
    Released under the terms of the MIT License. See LICENSE for details. */
 
 #include <limits.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "parse_util.h"
@@ -10,8 +11,8 @@
 
 #define MAX_REGION_SIZE 32
 
-#define PARSE_FUNC_HEADER(name, type)                                         \
-    bool parse_##name(type *result, const ASMLine *line, const char *directive)
+#define DIRECTIVE_PARSE_FUNC(name, type)                                      \
+    bool dparse_##name(type *result, const ASMLine *line, const char *directive)
 
 /*
     All public functions in this file follow the same return conventions:
@@ -21,18 +22,14 @@
 */
 
 /*
-    Read in a boolean argument from the given line and store it in *result.
+    Read in a boolean value and store it in *result.
 */
-PARSE_FUNC_HEADER(bool, bool)
+bool parse_bool(bool *result, const char *arg, ssize_t size)
 {
-    size_t offset = DIRECTIVE_OFFSET(line, directive) + 1;
-    const char *arg = line->data + offset;
-    ssize_t len = line->length - offset;
-
-    if (len <= 0 || len > 5)
+    if (size <= 0 || size > 5)
         return false;
 
-    switch (len) {
+    switch (size) {
         case 1:  // 0, 1
             if (*arg == '0' || *arg == '1')
                 return (*result = *arg - '0'), true;
@@ -58,42 +55,40 @@ PARSE_FUNC_HEADER(bool, bool)
 }
 
 /*
-    Read in a 32-bit int argument from the given line and store it in *result.
+    Read in a 32-bit integer and store it in *result.
 */
-PARSE_FUNC_HEADER(uint32_t, uint32_t)
+bool parse_uint32_t(uint32_t *result, const char *arg, ssize_t size)
 {
-    const char *str = line->data + DIRECTIVE_OFFSET(line, directive) + 1;
-    const char *end = line->data + line->length;
-
-    if (end - str <= 0)
+    if (size <= 0)
         return false;
 
+    const char *end = arg + size;
     uint64_t value = 0;
-    if (*str == '$') {
-        str++;
-        if (str == end)
+    if (*arg == '$') {
+        arg++;
+        if (arg == end)
             return false;
 
-        while (str < end) {
-            if (*str >= '0' && *str <= '9')
-                value = value * 16 + (*str - '0');
-            else if (*str >= 'a' && *str <= 'f')
-                value = (value * 0x10) + 0xA + (*str - 'a');
+        while (arg < end) {
+            if (*arg >= '0' && *arg <= '9')
+                value = value * 16 + (*arg - '0');
+            else if (*arg >= 'a' && *arg <= 'f')
+                value = (value * 0x10) + 0xA + (*arg - 'a');
             else
                 return false;
             if (value > UINT32_MAX)
                 return false;
-            str++;
+            arg++;
         }
     }
     else {
-        while (str < end) {
-            if (*str < '0' || *str > '9')
+        while (arg < end) {
+            if (*arg < '0' || *arg > '9')
                 return false;
-            value = (value * 10) + (*str - '0');
+            value = (value * 10) + (*arg - '0');
             if (value > UINT32_MAX)
                 return false;
-            str++;
+            arg++;
         }
     }
 
@@ -102,12 +97,63 @@ PARSE_FUNC_HEADER(uint32_t, uint32_t)
 }
 
 /*
+    Read in a string, possibly with escape sequences, and store it in *result.
+
+    *length is also updated to the size of the string, which is *not*
+    null-terminated. *result must be free()'d when finished.
+*/
+bool parse_string(char **result, size_t *length, const char *arg, ssize_t size)
+{
+    if (size < 2 || arg[0] != '"' || arg[size - 1] != '"')
+        return false;
+
+    ssize_t i, slashes = 0;
+    for (i = 1; i < size; i++) {
+        if (arg[i] == '"' && (slashes % 2) == 0)
+            break;
+
+        // TODO: parse escape codes here
+
+        if (arg[i] == '\\')
+            slashes++;
+        else
+            slashes = 0;
+    }
+
+    if (i != size - 1)  // Junk present after closing quote
+        return false;
+
+    *length = size - 2;
+    *result = malloc(sizeof(char) * (*length));
+    memcpy(*result, arg + 1, *length);
+    return true;
+}
+
+/*
+    Read in a boolean argument from the given line and store it in *result.
+*/
+DIRECTIVE_PARSE_FUNC(bool, bool)
+{
+    size_t offset = DIRECTIVE_OFFSET(line, directive) + 1;
+    return parse_bool(result, line->data + offset, line->length - offset);
+}
+
+/*
+    Read in a 32-bit int argument from the given line and store it in *result.
+*/
+DIRECTIVE_PARSE_FUNC(uint32_t, uint32_t)
+{
+    size_t offset = DIRECTIVE_OFFSET(line, directive) + 1;
+    return parse_uint32_t(result, line->data + offset, line->length - offset);
+}
+
+/*
     Read in a 16-bit int argument from the given line and store it in *result.
 */
-PARSE_FUNC_HEADER(uint16_t, uint16_t)
+DIRECTIVE_PARSE_FUNC(uint16_t, uint16_t)
 {
     uint32_t value;
-    if (parse_uint32_t(&value, line, directive) && value <= UINT16_MAX)
+    if (dparse_uint32_t(&value, line, directive) && value <= UINT16_MAX)
         return (*result = value), true;
     return false;
 }
@@ -115,10 +161,10 @@ PARSE_FUNC_HEADER(uint16_t, uint16_t)
 /*
     Read in an 8-bit int argument from the given line and store it in *result.
 */
-PARSE_FUNC_HEADER(uint8_t, uint8_t)
+DIRECTIVE_PARSE_FUNC(uint8_t, uint8_t)
 {
     uint32_t value;
-    if (parse_uint32_t(&value, line, directive) && value <= UINT8_MAX)
+    if (dparse_uint32_t(&value, line, directive) && value <= UINT8_MAX)
         return (*result = value), true;
     return false;
 }
@@ -126,7 +172,7 @@ PARSE_FUNC_HEADER(uint8_t, uint8_t)
 /*
     Parse a ROM size string in an ASMLine and store it in *result.
 */
-PARSE_FUNC_HEADER(rom_size, uint32_t)
+DIRECTIVE_PARSE_FUNC(rom_size, uint32_t)
 {
     const char *arg = line->data + DIRECTIVE_OFFSET(line, directive) + 1;
     const char *end = line->data + line->length - 1;
@@ -168,7 +214,7 @@ PARSE_FUNC_HEADER(rom_size, uint32_t)
 /*
     Parse a region code string in an ASMLine and store it in *result.
 */
-PARSE_FUNC_HEADER(region_string, uint8_t)
+DIRECTIVE_PARSE_FUNC(region_string, uint8_t)
 {
     char buffer[MAX_REGION_SIZE];
 
@@ -193,11 +239,11 @@ PARSE_FUNC_HEADER(region_string, uint8_t)
 /*
     Parse a size code in an ASMLine and store it in *result.
 */
-PARSE_FUNC_HEADER(size_code, uint8_t)
+DIRECTIVE_PARSE_FUNC(size_code, uint8_t)
 {
     uint32_t bytes;
-    if (!parse_uint32_t(&bytes, line, directive)) {
-        if (!parse_rom_size(&bytes, line, directive))
+    if (!dparse_uint32_t(&bytes, line, directive)) {
+        if (!dparse_rom_size(&bytes, line, directive))
             return false;
     }
 

@@ -27,10 +27,10 @@
     }
 
 #define CALL_GENERIC_PARSER_(arg_type)                                        \
-    parse_##arg_type((arg_type*) &arg, line, directive)
+    dparse_##arg_type((arg_type*) &arg, line, directive)
 
 #define CALL_SPECIFIC_PARSER_(arg_type, parser)                               \
-    parse_##parser((arg_type*) &arg, line, directive)
+    dparse_##parser((arg_type*) &arg, line, directive)
 
 #define DISPATCH_(first, second, target, ...) target
 
@@ -227,42 +227,30 @@ static ASMLine* normalize_line(const char *source, size_t length)
 */
 static char* read_include_path(const ASMLine *line)
 {
-    size_t maxlen = strlen(line->filename) + line->length, i, start, slashes;
+    size_t maxlen = strlen(line->filename) + line->length, i, baselen;
     if (maxlen >= INT_MAX)  // Allows us to safely downcast to int later
         return NULL;
 
-    char *path = malloc(sizeof(char) * maxlen);
+    char *path = malloc(sizeof(char) * maxlen), *base, *dup;
     if (!path)
         OUT_OF_MEMORY()
 
     if (!(i = DIRECTIVE_OFFSET(line, DIR_INCLUDE)))
         goto error;
-    if (line->length - i <= 4)  // Not long enough to hold a non-zero argument
+    if (line->length - i <= 3)  // Not long enough to hold a non-zero argument
         goto error;
-    if (line->data[i++] != ' ' || line->data[i++] != '"')
+    if (line->data[i++] != ' ')
         goto error;
-
-    // TODO: parse escaped characters properly <-- use new parse_util func here
-    for (start = i, slashes = 0; i < line->length; i++) {
-        if (line->data[i] == '"' && (slashes % 2) == 0)
-            break;
-        if (line->data[i] == '\\')
-            slashes++;
-        else
-            slashes = 0;
-    }
-
-    if (i != line->length - 1)  // Junk present after closing quote
+    if (!parse_string(&base, &baselen, line->data + i, line->length - i))
         goto error;
 
-    char *dup = strdup(line->filename);
-    if (!dup)
+    if (!(dup = strdup(line->filename)))
         OUT_OF_MEMORY()
 
     // TODO: should normalize filenames in some way to prevent accidental dupes
-    snprintf(path, maxlen, "%s/%.*s", dirname(dup), (int) (i - start),
-             line->data + start);
+    snprintf(path, maxlen, "%s/%.*s", dirname(dup), (int) baselen, base);
     free(dup);
+    free(base);
     return path;
 
     error:

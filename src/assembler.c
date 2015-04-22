@@ -60,7 +60,7 @@ static ErrorInfo* tokenize(AssemblerState *state)
                 }
 
                 uint32_t arg;
-                if (!parse_uint32_t(&arg, line, DIR_ORIGIN)) {
+                if (!dparse_uint32_t(&arg, line, DIR_ORIGIN)) {
                     ei = error_info_create(line, ET_PREPROC, ED_PP_BAD_ARG);
                     goto cleanup;
                 }
