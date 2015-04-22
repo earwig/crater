@@ -249,13 +249,13 @@ static int parse_args(Config *config, int argc, char *argv[])
 
 /*
     If no output file is specified for the assembler, this function picks a
-    filename based on the input file, replacing its extension with '.gg' or
-    '.s' (or adding it, if none is present).
+    filename based on the input file, replacing its extension with ".gg" or
+    ".asm" (or adding it, if none is present).
 */
 static void guess_assembler_output_file(Config* config)
 {
     char *src = config->src_path, *ptr = src + strlen(src) - 1,
-         *ext = config->assemble ? ".gg" : ".s";
+         *ext = config->assemble ? ".gg" : ".asm";
     size_t until_ext = ptr - src + 1;
 
     do {
@@ -265,7 +265,7 @@ static void guess_assembler_output_file(Config* config)
         }
     } while (ptr-- >= src);
 
-    config->dst_path = malloc(sizeof(char) * (until_ext + 4));
+    config->dst_path = malloc(sizeof(char) * (until_ext + 5));
     if (!config->dst_path)
         OUT_OF_MEMORY()
     strcpy(stpncpy(config->dst_path, src, until_ext), ext);

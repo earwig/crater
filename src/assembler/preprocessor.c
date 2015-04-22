@@ -242,7 +242,7 @@ static char* read_include_path(const ASMLine *line)
     if (line->data[i++] != ' ' || line->data[i++] != '"')
         goto error;
 
-    // TODO: parse escaped characters properly
+    // TODO: parse escaped characters properly <-- use new parse_util func here
     for (start = i, slashes = 0; i < line->length; i++) {
         if (line->data[i] == '"' && (slashes % 2) == 0)
             break;

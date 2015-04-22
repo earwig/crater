@@ -69,7 +69,9 @@ static ErrorInfo* tokenize(AssemblerState *state)
                 origin = line;
             }
             else {
-                // TODO
+                // TODO: first parse data item, then do same bounded check as
+                    // with instructions below, then increment offset and
+                    // ASMData list pointers appropriate
                 ei = error_info_create(line, ET_PREPROC, ED_PP_UNKNOWN);
                 goto cleanup;
             }
