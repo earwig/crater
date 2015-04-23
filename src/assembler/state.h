@@ -53,6 +53,7 @@ typedef struct ASMData ASMData;
 struct ASMSymbol {
     size_t offset;
     char *symbol;
+    const ASMLine *line;
     struct ASMSymbol *next;
 };
 typedef struct ASMSymbol ASMSymbol;
@@ -91,6 +92,9 @@ void asm_includes_free(ASMInclude*);
 void asm_instructions_free(ASMInstruction*);
 void asm_data_free(ASMData*);
 void asm_symtable_free(ASMSymbolTable*);
+
+const ASMSymbol* asm_symtable_find(const ASMSymbolTable*, const char*);
+void asm_symtable_insert(ASMSymbolTable*, ASMSymbol*);
 
 #ifdef DEBUG_MODE
 void asm_lines_print(const ASMLine*);

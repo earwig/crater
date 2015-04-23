@@ -128,6 +128,40 @@ void asm_symtable_free(ASMSymbolTable *symtable)
     free(symtable);
 }
 
+/*
+    ...
+*/
+static inline size_t hash_key(const char *key)
+{
+    return 0;
+}
+
+/*
+    Search for a key in the symbol table.
+
+    Return the key on success and NULL on failure.
+*/
+const ASMSymbol* asm_symtable_find(const ASMSymbolTable *tab, const char *key)
+{
+    ASMSymbol *symbol = tab->buckets[hash_key(key)];
+    while (symbol) {
+        if (!strcmp(key, symbol->symbol))
+            return symbol;
+        symbol = symbol->next;
+    }
+    return NULL;
+}
+
+/*
+    Insert a symbol into the table.
+*/
+void asm_symtable_insert(ASMSymbolTable *tab, ASMSymbol *symbol)
+{
+    size_t index = hash_key(symbol->symbol);
+    symbol->next = tab->buckets[index];
+    tab->buckets[index] = symbol;
+}
+
 #ifdef DEBUG_MODE
 /*
     DEBUG FUNCTION: Print out an ASMLine list to stdout.

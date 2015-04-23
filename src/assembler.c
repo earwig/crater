@@ -17,6 +17,37 @@
 #define IS_LABEL(line) (line->data[line->length - 1] == ':')
 
 /*
+    Add a given line, representing a label, to the symbol table.
+
+    Return NULL on success and an ErrorInfo object on failure (in the case of
+    duplicate labels).
+*/
+static ErrorInfo* add_label_to_table(
+    ASMSymbolTable *symtable, const ASMLine *line, size_t offset)
+{
+    char *symbol = strndup(line->data, line->length - 1);
+    if (!symbol)
+        OUT_OF_MEMORY()
+
+    const ASMSymbol *current = asm_symtable_find(symtable, symbol);
+    if (current) {
+        ErrorInfo *ei = error_info_create(line, ET_LAYOUT, ED_LYT_DUPE_LABELS);
+        error_info_append(ei, current->line);
+        return ei;
+    }
+
+    ASMSymbol *label = malloc(sizeof(ASMSymbol));
+    if (!label)
+        OUT_OF_MEMORY()
+
+    label->offset = offset;
+    label->symbol = symbol;
+    label->line = line;
+    asm_symtable_insert(symtable, label);
+    return NULL;
+}
+
+/*
     Parse an instruction encoded in line into an ASMInstruction object.
 
     On success, return NULL and store the instruction in *inst_ptr. On failure,
@@ -44,7 +75,9 @@ static ErrorInfo* tokenize(AssemblerState *state)
     if (!overlap_table)
         OUT_OF_MEMORY()
 
-    // TODO: fill overlap table for header with pointers to a dummy object
+    ASMLine header_indicator;
+    for (size_t i = 0; i < HEADER_SIZE; i++)
+        overlap_table[state->header.offset + i] = &header_indicator;
 
     ErrorInfo *ei = NULL;
     ASMInstruction dummy = {.next = NULL}, *inst, *prev = &dummy;
@@ -77,7 +110,8 @@ static ErrorInfo* tokenize(AssemblerState *state)
             }
         }
         else if (IS_LABEL(line)) {
-            // TODO: add to symbol table
+            if ((ei = add_label_to_table(state->symtable, line, offset)))
+                goto cleanup;
         }
         else {
             if ((ei = parse_instruction(line, &inst, offset)))
