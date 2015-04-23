@@ -129,11 +129,16 @@ void asm_symtable_free(ASMSymbolTable *symtable)
 }
 
 /*
-    ...
+    Hash a string key into a symbol table bucket index.
+
+    This uses the djb2 algorithm: http://www.cse.yorku.ca/~oz/hash.html
 */
 static inline size_t hash_key(const char *key)
 {
-    return 0;
+    size_t hash = 5381;
+    while (*key)
+        hash = ((hash << 5) + hash) + *(key++);
+    return hash % SYMBOL_TABLE_BUCKETS;
 }
 
 /*
