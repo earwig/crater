@@ -34,9 +34,9 @@ static const char *asm_error_descs[] = {
     "header offset exceeds given ROM size",             // ED_LYT_HEADER_RANGE
     "declared ROM size in header exceeds actual size",  // ED_LYT_DECLARE_RANGE
     "duplicate definitions for label",                  // ED_LYT_DUPE_LABELS
-    "location overlaps with ROM header",                // ED_LYT_HEAD_OVERLAP
-    "location overlaps with previous instruction",      // ED_LYT_INST_OVERLAP
-    "location overlaps with previous data",             // ED_LYT_DATA_OVERLAP
+    "location is out of bounds for the ROM size",       // ED_LYT_BOUNDS
+    "location overlaps with instruction or data",       // ED_LYT_OVERLAP
+    "location overlaps with ROM header",                // ED_LYT_OVERLAP_HEAD
 
     "syntax error"  // ED_PARSE_SYNTAX
 };

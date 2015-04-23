@@ -16,6 +16,9 @@
 
 #define IS_LABEL(line) (line->data[line->length - 1] == ':')
 
+/* Sentinel values for overlap table */
+const ASMLine header_sentinel, bounds_sentinel;
+
 /*
     Add a given line, representing a label, to the symbol table.
 
@@ -48,7 +51,21 @@ static ErrorInfo* add_label_to_table(
 }
 
 /*
-    Parse an instruction encoded in line into an ASMInstruction object.
+    Parse data encoded in a line into an ASMData object.
+
+    On success, return NULL and store the instruction in *data_ptr. On failure,
+    return an ErrorInfo object; *data_ptr is not modified.
+*/
+static ErrorInfo* parse_data(
+    const ASMLine *line, ASMData **data_ptr, size_t offset)
+{
+    // TODO
+
+    return error_info_create(line, ET_PARSER, ED_PARSE_SYNTAX);
+}
+
+/*
+    Parse an instruction encoded in a line into an ASMInstruction object.
 
     On success, return NULL and store the instruction in *inst_ptr. On failure,
     return an ErrorInfo object; *inst_ptr is not modified.
@@ -59,6 +76,42 @@ static ErrorInfo* parse_instruction(
     // TODO
 
     return error_info_create(line, ET_PARSER, ED_PARSE_SYNTAX);
+}
+
+/*
+    Check if the range [offset, offset + length) overlaps with existing data.
+
+    Return the ASMLine corresponding to the earliest data that overlaps, or
+    NULL if there is no overlap.
+*/
+static const ASMLine* check_layout(
+    const ASMLine **overlap_table, size_t size, size_t offset, size_t length)
+{
+    if (offset + length >= size)
+        return &bounds_sentinel;
+
+    for (size_t i = 0; i < length; i++) {
+        if (overlap_table[offset + i])
+            return overlap_table[offset + i];
+    }
+    return NULL;
+}
+
+/*
+    Build and return an error message for overlapping or out-of-bounds lines.
+*/
+static ErrorInfo* build_layout_error(
+    const ASMLine *line, const ASMLine *clash, const ASMLine *origin)
+{
+    ErrorInfo *ei = error_info_create(line, ET_LAYOUT,
+            (clash == &header_sentinel) ? ED_LYT_OVERLAP_HEAD :
+            (clash == &bounds_sentinel) ? ED_LYT_BOUNDS : ED_LYT_OVERLAP);
+
+    if (origin)
+        error_info_append(ei, origin);
+    if (clash != &header_sentinel && clash != &bounds_sentinel)
+        error_info_append(ei, clash);
+    return ei;
 }
 
 /*
@@ -75,17 +128,21 @@ static ErrorInfo* tokenize(AssemblerState *state)
     if (!overlap_table)
         OUT_OF_MEMORY()
 
-    ASMLine header_indicator;
-    for (size_t i = 0; i < HEADER_SIZE; i++)
-        overlap_table[state->header.offset + i] = &header_indicator;
-
     ErrorInfo *ei = NULL;
-    ASMInstruction dummy = {.next = NULL}, *inst, *prev = &dummy;
-    const ASMLine *line = state->lines, *origin = NULL;
+    ASMInstruction dummy_inst = {.next = NULL}, *inst, *prev_inst = &dummy_inst;
+    ASMData dummy_data = {.next = NULL}, *data, *prev_data = &dummy_data;
+    const ASMLine *line = state->lines, *origin = NULL, *clash;
     size_t offset = 0;
 
+    for (size_t i = 0; i < HEADER_SIZE; i++)
+        overlap_table[state->header.offset + i] = &header_sentinel;
+
     while (line) {
-        if (IS_LOCAL_DIRECTIVE(line)) {
+        if (IS_LABEL(line)) {
+            if ((ei = add_label_to_table(state->symtable, line, offset)))
+                goto cleanup;
+        }
+        else if (IS_LOCAL_DIRECTIVE(line)) {
             if (IS_DIRECTIVE(line, DIR_ORIGIN)) {
                 if (!DIRECTIVE_HAS_ARG(line, DIR_ORIGIN)) {
                     ei = error_info_create(line, ET_PREPROC, ED_PP_NO_ARG);
@@ -102,35 +159,42 @@ static ErrorInfo* tokenize(AssemblerState *state)
                 origin = line;
             }
             else {
-                // TODO: first parse data item, then do same bounded check as
-                    // with instructions below, then increment offset and
-                    // ASMData list pointers appropriate
-                ei = error_info_create(line, ET_PREPROC, ED_PP_UNKNOWN);
-                goto cleanup;
+                if ((ei = parse_data(line, &data, offset)))
+                    goto cleanup;
+
+                offset += data->length;
+                prev_data->next = data;
+                prev_data = data;
+
+                clash = check_layout(overlap_table, size, data->offset, data->length);
+                if (clash) {
+                    ei = build_layout_error(line, clash, origin);
+                    goto cleanup;
+                }
+                // TODO: enter data into overlap table
             }
-        }
-        else if (IS_LABEL(line)) {
-            if ((ei = add_label_to_table(state->symtable, line, offset)))
-                goto cleanup;
         }
         else {
             if ((ei = parse_instruction(line, &inst, offset)))
                 goto cleanup;
 
-            // TODO: bounded check on range [offset, offset + inst->length) against overlap table
-                // if clash, use error with current line,
-                // then table line (if not header),
-                // then origin line (if non-null)
-
             offset += inst->length;
-            prev->next = inst;
-            prev = inst;
+            prev_inst->next = inst;
+            prev_inst = inst;
+
+            clash = check_layout(overlap_table, size, inst->offset, inst->length);
+            if (clash) {
+                ei = build_layout_error(line, clash, origin);
+                goto cleanup;
+            }
+            // TODO: enter inst into overlap table
         }
         line = line->next;
     }
 
     cleanup:
-    state->instructions = dummy.next;
+    state->instructions = dummy_inst.next;
+    state->data = dummy_data.next;
     free(overlap_table);
     return ei;
 }
