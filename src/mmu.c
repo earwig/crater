@@ -52,15 +52,28 @@ void mmu_load_rom(MMU *mmu, const uint8_t *data, size_t size)
     if (size % MMU_ROM_BANK_SIZE)
         return;
 
-    size_t banks = size / MMU_ROM_BANK_SIZE;
+    size_t banks = size / MMU_ROM_BANK_SIZE, bank, mirror;
     if (banks > MMU_NUM_ROM_BANKS)
         banks = MMU_NUM_ROM_BANKS;
 
-    for (size_t bank = 0; bank < banks; bank++) {
-        for (size_t mirror = bank; mirror < banks; mirror += bank + 1) {
+    for (bank = 0; bank < banks; bank++) {
+        for (mirror = bank; mirror < MMU_NUM_ROM_BANKS; mirror += banks)
             mmu->rom_banks[mirror] = data + (bank * MMU_ROM_BANK_SIZE);
-        }
     }
+
+#ifdef DEBUG_MODE
+    char temp_str[64];
+    DEBUG("Dumping MMU bank table:")
+    for (size_t group = 0; group < MMU_NUM_ROM_BANKS / 8; group++) {
+        for (size_t elem = 0; elem < 8; elem++) {
+            bank = 8 * group + elem;
+            snprintf(temp_str + 6 * elem, 7, "%02zX=%02zX ", bank,
+                     (mmu->rom_banks[bank] - data) >> 14);
+        }
+        temp_str[47] = '\0';
+        DEBUG("- %s", temp_str)
+    }
+#endif
 }
 
 /*
@@ -68,7 +81,7 @@ void mmu_load_rom(MMU *mmu, const uint8_t *data, size_t size)
 */
 static inline void map_slot(MMU *mmu, size_t slot, size_t bank)
 {
-    DEBUG("MMU mapping memory slot %zu to bank %zu", slot, bank)
+    DEBUG("MMU mapping memory slot %zu to bank 0x%02zX", slot, bank)
     mmu->map_slots[slot] = mmu->rom_banks[bank];
 }
 

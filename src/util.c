@@ -126,7 +126,7 @@ size_t size_code_to_bytes(uint8_t code)
 uint8_t size_bytes_to_code(size_t bytes)
 {
     if (bytes & ((1 << 10) - 1))
-        return 0;  // Not an even number of KB
+        return INVALID_SIZE_CODE;  // Not an even number of KB
 
     switch (bytes >> 10) {
         case    8: return 0xA;

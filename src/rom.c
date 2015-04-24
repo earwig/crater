@@ -20,18 +20,6 @@
 static size_t header_locations[NUM_LOCATIONS] = {0x7FF0, 0x3FF0, 0x1FF0};
 static const char header_magic[MAGIC_LEN + 1] = "TMR SEGA";
 
-/*
-    Return whether or not the given ROM image size is valid.
-*/
-static bool validate_size(off_t size)
-{
-    if (size & (size - 1))
-        return false;  // Ensure size is a power of two
-
-    off_t kbytes = size >> 10;
-    return kbytes >= 8 && kbytes <= 1024;
-}
-
 #ifdef DEBUG_MODE
 /*
     DEBUG FUNCTION: Print out the header to stdout.
@@ -96,15 +84,14 @@ static uint16_t compute_checksum(const uint8_t *data, size_t size, uint8_t range
 
 #ifdef DEBUG_MODE
 /*
-    DEBUG FUNCTION: Return the ROM's size as a string, according to its header.
+    DEBUG FUNCTION: Given a ROM size, return a pretty string.
 */
-static const char* parse_reported_size(uint8_t value)
+static const char* size_to_string(size_t size)
 {
     static char buffer[SIZE_CODE_BUF];
-    size_t size = size_code_to_bytes(value);
 
     if (!size)
-        strncpy(buffer, "Unknown", SIZE_CODE_BUF);
+        strncpy(buffer, "unknown", SIZE_CODE_BUF);
     else if (size >= (1 << 20))
         snprintf(buffer, SIZE_CODE_BUF, "%zu MB", size >> 20);
     else
@@ -162,7 +149,8 @@ static bool parse_header(ROM *rom, const uint8_t *header)
     DEBUG("  - version:       %u", rom->version)
     DEBUG("  - region code:   %u (%s)", rom->region_code,
           rom_region(rom) ? rom_region(rom) : "unknown")
-    DEBUG("  - reported size: %s", parse_reported_size(header[0xF] & 0xF))
+    DEBUG("  - reported size: %s",
+          size_to_string(size_code_to_bytes(header[0xF] & 0xF)))
     return true;
 }
 
@@ -191,7 +179,7 @@ static bool find_and_read_header(ROM *rom)
             return parse_header(rom, header);
         }
     }
-    DEBUG("  - could not find header")
+    DEBUG("  - couldn't find header")
     return false;
 }
 
@@ -240,8 +228,8 @@ const char* rom_open(ROM **rom_ptr, const char *path)
     DEBUG("Loading ROM %s:", rom->name)
 
     // Set rom->size:
-    DEBUG("- size: %lld", st.st_size)
-    if (!validate_size(st.st_size)) {
+    DEBUG("- size: %lld bytes (%s)", st.st_size, size_to_string(st.st_size))
+    if (size_bytes_to_code(st.st_size) == INVALID_SIZE_CODE) {
         rom_close(rom);
         fclose(fp);
         return rom_err_badsize;

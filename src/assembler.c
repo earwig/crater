@@ -91,7 +91,7 @@ static ErrorInfo* check_layout(
 {
     const ASMLine *clash = NULL;
 
-    if (loc->offset + loc->length >= size) {
+    if (loc->offset + loc->length > size) {
         clash = &bounds_sentinel;
     } else {
         for (size_t i = 0; i < loc->length; i++) {
@@ -226,7 +226,7 @@ static ErrorInfo* resolve_defaults(AssemblerState *state)
         const ASMInstruction *inst = state->instructions;
         while (inst) {
             size_t bound = inst->loc.offset + inst->loc.length;
-            if (bound >= state->rom_size)
+            if (bound > state->rom_size)
                 state->rom_size = bounding_rom_size(bound);
             inst = inst->next;
         }
@@ -234,7 +234,7 @@ static ErrorInfo* resolve_defaults(AssemblerState *state)
         const ASMData *data = state->data;
         while (data) {
             size_t bound = data->loc.offset + data->loc.length;
-            if (bound >= state->rom_size)
+            if (bound > state->rom_size)
                 state->rom_size = bounding_rom_size(bound);
             data = data->next;
         }
