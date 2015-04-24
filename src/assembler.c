@@ -60,6 +60,7 @@ static ErrorInfo* parse_data(
     const ASMLine *line, ASMData **data_ptr, size_t offset)
 {
     // TODO
+    DEBUG("parse_data(): %.*s", (int) line->length, line->data)
 
     return error_info_create(line, ET_PARSER, ED_PARSE_SYNTAX);
 }
@@ -74,6 +75,7 @@ static ErrorInfo* parse_instruction(
     const ASMLine *line, ASMInstruction **inst_ptr, size_t offset)
 {
     // TODO
+    DEBUG("parse_instruction(): %.*s", (int) line->length, line->data)
 
     return error_info_create(line, ET_PARSER, ED_PARSE_SYNTAX);
 }
@@ -119,7 +121,7 @@ static ErrorInfo* check_layout(
 }
 
 /*
-    Tokenize ASMLines into ASMInstructions.
+    Tokenize ASMLines into ASMInstructions and ASMData.
 
     NULL is returned on success and an ErrorInfo object is returned on failure.
     state->instructions, state->data, and state->symtable may or may not be
@@ -196,6 +198,22 @@ static ErrorInfo* tokenize(AssemblerState *state)
 }
 
 /*
+    Return the smallest ROM size that can contain the given address.
+
+    This uses bit twiddling hacks up to the largest possible ROM size.
+*/
+static size_t bounding_rom_size(size_t size)
+{
+    size |= size >> 1;
+    size |= size >> 2;
+    size |= size >> 4;
+    size |= size >> 8;
+    size |= size >> 16;
+    size++;
+    return size;
+}
+
+/*
     Resolve default placeholder values in assembler state, such as ROM size.
 
     On success, no new heap objects are allocated. On error, an ErrorInfo
@@ -206,7 +224,21 @@ static ErrorInfo* resolve_defaults(AssemblerState *state)
     if (!state->rom_size) {
         state->rom_size = ROM_SIZE_MIN;
 
-        // TODO: use highest instruction too
+        const ASMInstruction *inst = state->instructions;
+        while (inst) {
+            size_t bound = inst->loc.offset + inst->loc.length;
+            if (bound >= state->rom_size)
+                state->rom_size = bounding_rom_size(bound);
+            inst = inst->next;
+        }
+
+        const ASMData *data = state->data;
+        while (data) {
+            size_t bound = data->loc.offset + data->loc.length;
+            if (bound >= state->rom_size)
+                state->rom_size = bounding_rom_size(bound);
+            data = data->next;
+        }
 
         if (state->header.rom_size != INVALID_SIZE_CODE) {
             size_t decl_size = size_code_to_bytes(state->header.rom_size);
