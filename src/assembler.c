@@ -79,39 +79,43 @@ static ErrorInfo* parse_instruction(
 }
 
 /*
-    Check if the range [offset, offset + length) overlaps with existing data.
+    Check if the given location overlaps with any existing objects.
 
-    Return the ASMLine corresponding to the earliest data that overlaps, or
-    NULL if there is no overlap.
+    On success, return NULL and add the location to the overlap table.
+    On failure, return an ErrorInfo object.
 */
-static const ASMLine* check_layout(
-    const ASMLine **overlap_table, size_t size, size_t offset, size_t length)
+static ErrorInfo* check_layout(
+    const ASMLine **overlap_table, size_t size, const ASMLocation *loc,
+    const ASMLine *line, const ASMLine *origin)
 {
-    if (offset + length >= size)
-        return &bounds_sentinel;
+    const ASMLine *clash = NULL;
 
-    for (size_t i = 0; i < length; i++) {
-        if (overlap_table[offset + i])
-            return overlap_table[offset + i];
+    if (loc->offset + loc->length >= size) {
+        clash = &bounds_sentinel;
+    } else {
+        for (size_t i = 0; i < loc->length; i++) {
+            if (overlap_table[loc->offset + i]) {
+                clash = overlap_table[loc->offset + i];
+                break;
+            }
+        }
     }
-    return NULL;
-}
 
-/*
-    Build and return an error message for overlapping or out-of-bounds lines.
-*/
-static ErrorInfo* build_layout_error(
-    const ASMLine *line, const ASMLine *clash, const ASMLine *origin)
-{
-    ErrorInfo *ei = error_info_create(line, ET_LAYOUT,
+    if (clash) {
+        ErrorInfo *ei = error_info_create(line, ET_LAYOUT,
             (clash == &header_sentinel) ? ED_LYT_OVERLAP_HEAD :
             (clash == &bounds_sentinel) ? ED_LYT_BOUNDS : ED_LYT_OVERLAP);
 
-    if (origin)
-        error_info_append(ei, origin);
-    if (clash != &header_sentinel && clash != &bounds_sentinel)
-        error_info_append(ei, clash);
-    return ei;
+        if (origin)
+            error_info_append(ei, origin);
+        if (clash != &header_sentinel && clash != &bounds_sentinel)
+            error_info_append(ei, clash);
+        return ei;
+    }
+
+    for (size_t i = 0; i < loc->length; i++)
+        overlap_table[loc->offset + i] = line;
+    return NULL;
 }
 
 /*
@@ -131,7 +135,7 @@ static ErrorInfo* tokenize(AssemblerState *state)
     ErrorInfo *ei = NULL;
     ASMInstruction dummy_inst = {.next = NULL}, *inst, *prev_inst = &dummy_inst;
     ASMData dummy_data = {.next = NULL}, *data, *prev_data = &dummy_data;
-    const ASMLine *line = state->lines, *origin = NULL, *clash;
+    const ASMLine *line = state->lines, *origin = NULL;
     size_t offset = 0;
 
     for (size_t i = 0; i < HEADER_SIZE; i++)
@@ -162,32 +166,24 @@ static ErrorInfo* tokenize(AssemblerState *state)
                 if ((ei = parse_data(line, &data, offset)))
                     goto cleanup;
 
-                offset += data->length;
+                offset += data->loc.length;
                 prev_data->next = data;
                 prev_data = data;
 
-                clash = check_layout(overlap_table, size, data->offset, data->length);
-                if (clash) {
-                    ei = build_layout_error(line, clash, origin);
+                if ((ei = check_layout(overlap_table, size, &data->loc, line, origin)))
                     goto cleanup;
-                }
-                // TODO: enter data into overlap table
             }
         }
         else {
             if ((ei = parse_instruction(line, &inst, offset)))
                 goto cleanup;
 
-            offset += inst->length;
+            offset += inst->loc.length;
             prev_inst->next = inst;
             prev_inst = inst;
 
-            clash = check_layout(overlap_table, size, inst->offset, inst->length);
-            if (clash) {
-                ei = build_layout_error(line, clash, origin);
+            if ((ei = check_layout(overlap_table, size, &inst->loc, line, origin)))
                 goto cleanup;
-            }
-            // TODO: enter inst into overlap table
         }
         line = line->next;
     }

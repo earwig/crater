@@ -32,9 +32,13 @@ struct ASMInclude {
 };
 typedef struct ASMInclude ASMInclude;
 
-struct ASMInstruction {
+typedef struct {
     size_t offset;
-    uint8_t length;
+    size_t length;
+} ASMLocation;
+
+struct ASMInstruction {
+    ASMLocation loc;
     uint8_t b1, b2, b3, b4;
     uint8_t virtual_byte;
     char *symbol;
@@ -43,8 +47,7 @@ struct ASMInstruction {
 typedef struct ASMInstruction ASMInstruction;
 
 struct ASMData {
-    size_t offset;
-    size_t length;
+    ASMLocation loc;
     uint8_t *data;
     struct ASMData *next;
 };
