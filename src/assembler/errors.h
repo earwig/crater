@@ -13,6 +13,7 @@ typedef enum {
     ET_INCLUDE,
     ET_PREPROC,
     ET_LAYOUT,
+    ET_SYMBOL,
     ET_PARSER
 } ASMErrorType;
 
@@ -29,10 +30,12 @@ typedef enum {
 
     ED_LYT_HEADER_RANGE,
     ED_LYT_DECLARE_RANGE,
-    ED_LYT_DUPE_LABELS,
     ED_LYT_BOUNDS,
     ED_LYT_OVERLAP,
     ED_LYT_OVERLAP_HEAD,
+
+    ED_SYM_DUPE_LABELS,
+    ED_SYM_NO_LABEL,
 
     ED_PARSE_SYNTAX
 } ASMErrorDesc;

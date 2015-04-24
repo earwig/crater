@@ -22,6 +22,7 @@ struct ASMLine {
     size_t length;
     const Line *original;
     const char *filename;
+    bool is_label;
     struct ASMLine *next;
 };
 typedef struct ASMLine ASMLine;
@@ -40,8 +41,8 @@ typedef struct {
 struct ASMInstruction {
     ASMLocation loc;
     uint8_t b1, b2, b3, b4;
-    uint8_t virtual_byte;
     char *symbol;
+    const ASMLine *line;
     struct ASMInstruction *next;
 };
 typedef struct ASMInstruction ASMInstruction;
@@ -54,7 +55,7 @@ struct ASMData {
 typedef struct ASMData ASMData;
 
 struct ASMSymbol {
-    size_t offset;
+    uint16_t offset;
     char *symbol;
     const ASMLine *line;
     struct ASMSymbol *next;

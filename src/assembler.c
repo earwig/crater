@@ -14,8 +14,6 @@
 #include "rom.h"
 #include "util.h"
 
-#define IS_LABEL(line) (line->data[line->length - 1] == ':')
-
 /* Sentinel values for overlap table */
 const ASMLine header_sentinel, bounds_sentinel;
 
@@ -34,7 +32,7 @@ static ErrorInfo* add_label_to_table(
 
     const ASMSymbol *current = asm_symtable_find(symtable, symbol);
     if (current) {
-        ErrorInfo *ei = error_info_create(line, ET_LAYOUT, ED_LYT_DUPE_LABELS);
+        ErrorInfo *ei = error_info_create(line, ET_SYMBOL, ED_SYM_DUPE_LABELS);
         error_info_append(ei, current->line);
         return ei;
     }
@@ -43,7 +41,8 @@ static ErrorInfo* add_label_to_table(
     if (!label)
         OUT_OF_MEMORY()
 
-    label->offset = offset;
+    // TODO: don't assume all ROM gets mapped to slot 2
+    label->offset = (offset >= 0xC000) ? ((offset & 0x3FFF) + 0x8000) : offset;
     label->symbol = symbol;
     label->line = line;
     asm_symtable_insert(symtable, label);
@@ -144,7 +143,7 @@ static ErrorInfo* tokenize(AssemblerState *state)
         overlap_table[state->header.offset + i] = &header_sentinel;
 
     while (line) {
-        if (IS_LABEL(line)) {
+        if (line->is_label) {
             if ((ei = add_label_to_table(state->symtable, line, offset)))
                 goto cleanup;
         }
@@ -261,9 +260,31 @@ static ErrorInfo* resolve_defaults(AssemblerState *state)
 */
 static ErrorInfo* resolve_symbols(AssemblerState *state)
 {
-    // TODO
+    ErrorInfo *ei;
+    ASMInstruction *inst = state->instructions;
+    const ASMSymbol *symbol;
 
-    (void) state;
+    while (inst) {
+        if (inst->symbol) {
+            symbol = asm_symtable_find(state->symtable, inst->symbol);
+            if (!symbol) {
+                ei = error_info_create(inst->line, ET_SYMBOL, ED_SYM_NO_LABEL);
+                return ei;
+            }
+
+            if (inst->loc.length == 3) {
+                inst->b2 = symbol->offset & 0xFF;
+                inst->b3 = symbol->offset >> 8;
+            } else {
+                inst->b3 = symbol->offset & 0xFF;
+                inst->b4 = symbol->offset >> 8;
+            }
+
+            free(inst->symbol);
+            inst->symbol = NULL;
+        }
+        inst = inst->next;
+    }
     return NULL;
 }
 

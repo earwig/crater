@@ -88,7 +88,7 @@
 static inline bool is_valid_label_char(char c, bool first)
 {
     return (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') ||
-           (!first && c >= '0' && c <= '9') || c == '_';
+           (!first && c >= '0' && c <= '9') || c == '_' || c == '.';
 }
 
 /*
@@ -125,6 +125,7 @@ static size_t read_labels(
 
     strncpy(line->data, source + start, i - start + 1);
     line->length = i - start + 1;
+    line->is_label = true;
 
     nexti = read_labels(source + i + 1, length - i - 1, &line->next, tail_ptr);
     *head_ptr = line;
@@ -136,7 +137,7 @@ static size_t read_labels(
 /*
     Preprocess a single source line (source, length) into one or more ASMLines.
 
-    Only the data, length, and next fields of the ASMLine objects are
+    Only the data, length, is_label, and next fields of the ASMLine objects are
     populated. The normalization process strips comments, makes various
     adjustments outside of string literals (converts tabs to spaces, lowercases
     all alphabetical characters, and removes runs of multiple spaces), among
@@ -209,6 +210,7 @@ static ASMLine* normalize_line(const char *source, size_t length)
 
     line->data = data;
     line->length = di;
+    line->is_label = false;
     line->next = NULL;
 
     if (head) {  // Line has labels, so link the main part up
@@ -418,7 +420,7 @@ ErrorInfo* preprocess(AssemblerState *state, const LineBuffer *source)
 
     while ((prev = line, line = next)) {
         next = line->next;
-        if (line->data[0] != DIRECTIVE_MARKER)
+        if (line->is_label || line->data[0] != DIRECTIVE_MARKER)
             continue;
         if (IS_LOCAL_DIRECTIVE(line))
             continue;  // "Local" directives are handled by the tokenizer

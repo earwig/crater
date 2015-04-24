@@ -144,7 +144,7 @@ static inline size_t hash_key(const char *key)
 /*
     Search for a key in the symbol table.
 
-    Return the key on success and NULL on failure.
+    Return the corresponding symbol on success and NULL on failure.
 */
 const ASMSymbol* asm_symtable_find(const ASMSymbolTable *tab, const char *key)
 {
@@ -159,6 +159,8 @@ const ASMSymbol* asm_symtable_find(const ASMSymbolTable *tab, const char *key)
 
 /*
     Insert a symbol into the table.
+
+    TODO: return boolean on success instead of void.
 */
 void asm_symtable_insert(ASMSymbolTable *tab, ASMSymbol *symbol)
 {

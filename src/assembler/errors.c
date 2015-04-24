@@ -17,6 +17,7 @@ static const char *asm_error_types[] = {
     "include directive",    // ET_INCLUDE
     "preprocessor",         // ET_PREPROC
     "memory layout",        // ET_LAYOUT
+    "symbol table",         // ET_SYMBOL
     "instruction parser"    // ET_PARSER
 };
 
@@ -33,10 +34,12 @@ static const char *asm_error_descs[] = {
 
     "header offset exceeds given ROM size",             // ED_LYT_HEADER_RANGE
     "declared ROM size in header exceeds actual size",  // ED_LYT_DECLARE_RANGE
-    "duplicate definitions for label",                  // ED_LYT_DUPE_LABELS
     "location is out of bounds for the ROM size",       // ED_LYT_BOUNDS
     "location overlaps with instruction or data",       // ED_LYT_OVERLAP
     "location overlaps with ROM header",                // ED_LYT_OVERLAP_HEAD
+
+    "duplicate definitions for label",  // ED_SYM_DUPE_LABELS
+    "undefined reference to label",     // ED_SYM_NO_LABEL
 
     "syntax error"  // ED_PARSE_SYNTAX
 };
