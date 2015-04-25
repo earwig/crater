@@ -14,36 +14,36 @@
 /* Error strings */
 
 static const char *asm_error_types[] = {
-    "include directive",    // ET_INCLUDE
-    "preprocessor",         // ET_PREPROC
-    "memory layout",        // ET_LAYOUT
-    "symbol table",         // ET_SYMBOL
-    "instruction parser"    // ET_PARSER
+    [ET_INCLUDE] = "include directive",
+    [ET_PREPROC] = "preprocessor",
+    [ET_LAYOUT]  = "memory layout",
+    [ET_SYMBOL]  = "symbol table",
+    [ET_PARSER]  = "instruction parser"
 };
 
 static const char *asm_error_descs[] = {
-    "missing or invalid argument",  // ED_INC_BAD_ARG
-    "infinite recursion detected",  // ED_INC_RECURSION
-    "couldn't read included file",  // ED_INC_FILE_READ
+    [ED_INC_BAD_ARG]      = "missing or invalid argument",
+    [ED_INC_RECURSION]    = "infinite recursion detected",
+    [ED_INC_FILE_READ]    = "couldn't read included file",
 
-    "unknown directive",                // ED_PP_UNKNOWN
-    "multiple values for directive",    // ED_PP_DUPLICATE
-    "missing argument for directive",   // ED_PP_NO_ARG
-    "invalid argument for directive",   // ED_PP_BAD_ARG
-    "directive argument out of range",  // ED_PP_ARG_RANGE
+    [ED_PP_UNKNOWN]       = "unknown directive",
+    [ED_PP_DUPLICATE]     = "multiple values for directive",
+    [ED_PP_NO_ARG]        = "missing argument for directive",
+    [ED_PP_BAD_ARG]       = "invalid argument for directive",
+    [ED_PP_ARG_RANGE]     = "directive argument out of range",
 
-    "header offset exceeds given ROM size",             // ED_LYT_HEADER_RANGE
-    "declared ROM size in header exceeds actual size",  // ED_LYT_DECLARE_RANGE
-    "location is out of bounds for the ROM size",       // ED_LYT_BOUNDS
-    "block zero cannot be mapped into a nonzero slot",  // ED_LYT_BLOCK0
-    "multiple slot declarations for block directive",   // ED_LYT_SLOTS
-    "location overlaps with instruction or data",       // ED_LYT_OVERLAP
-    "location overlaps with ROM header",                // ED_LYT_OVERLAP_HEAD
+    [ED_LYT_HEADER_RANGE] = "header offset exceeds given ROM size",
+    [ED_LYT_DECL_RANGE]   = "declared ROM size in header exceeds actual size",
+    [ED_LYT_BOUNDS]       = "location is out of bounds for the ROM size",
+    [ED_LYT_BLOCK0]       = "block zero cannot be mapped into a nonzero slot",
+    [ED_LYT_SLOTS]        = "multiple slot declarations for block directive",
+    [ED_LYT_OVERLAP]      = "location overlaps with instruction or data",
+    [ED_LYT_OVERLAP_HEAD] = "location overlaps with ROM header",
 
-    "duplicate definitions for label",  // ED_SYM_DUPE_LABELS
-    "undefined reference to label",     // ED_SYM_NO_LABEL
+    [ED_SYM_DUPE_LABELS]  = "duplicate definitions for label",
+    [ED_SYM_NO_LABEL]     = "undefined reference to label",
 
-    "syntax error"  // ED_PARSE_SYNTAX
+    [ED_PARSE_SYNTAX]     = "syntax error"
 };
 
 /* Internal structs */

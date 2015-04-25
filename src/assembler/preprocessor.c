@@ -500,7 +500,7 @@ ErrorInfo* preprocess(AssemblerState *state, const LineBuffer *source)
 
     if (rom_size_line && rom_declsize_line &&
             size_code_to_bytes(state->header.rom_size) > state->rom_size) {
-        ei = error_info_create(rom_size_line, ET_LAYOUT, ED_LYT_DECLARE_RANGE);
+        ei = error_info_create(rom_size_line, ET_LAYOUT, ED_LYT_DECL_RANGE);
         error_info_append(ei, rom_declsize_line);
         goto cleanup;
     }
