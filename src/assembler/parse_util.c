@@ -130,6 +130,18 @@ bool parse_string(char **result, size_t *length, const char *arg, ssize_t size)
 }
 
 /*
+    Read in a space-separated sequence of bytes and store it in *result.
+
+    *length is also updated to the number of bytes in the array. *result must
+    be free()'d when finished.
+*/
+bool parse_bytes(uint8_t **result, size_t *length, const char *arg, ssize_t size)
+{
+    // TODO
+    return false;
+}
+
+/*
     Read in a boolean argument from the given line and store it in *result.
 */
 DIRECTIVE_PARSE_FUNC(bool, bool)

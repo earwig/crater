@@ -479,6 +479,10 @@ ErrorInfo* preprocess(AssemblerState *state, const LineBuffer *source)
             SAVE_LINE(rom_declsize_line)
         END_DIRECTIVE
 
+        BEGIN_DIRECTIVE(DIR_CROSS_BLOCKS, bool, state->cross_blocks, false)
+            USE_PARSER(bool)
+        END_DIRECTIVE
+
         END_DIRECTIVE_BLOCK
 
         // Remove directive from lines, and schedule it for deletion:

@@ -78,6 +78,7 @@ typedef struct {
 typedef struct {
     ASMHeaderInfo header;
     bool optimizer;
+    bool cross_blocks;
     size_t rom_size;
     ASMLine *lines;
     ASMInclude *includes;

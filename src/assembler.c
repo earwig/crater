@@ -4,197 +4,14 @@
 #include <stdlib.h>
 
 #include "assembler.h"
-#include "assembler/directives.h"
 #include "assembler/errors.h"
 #include "assembler/io.h"
-#include "assembler/parse_util.h"
 #include "assembler/preprocessor.h"
 #include "assembler/state.h"
+#include "assembler/tokenizer.h"
 #include "logging.h"
 #include "rom.h"
 #include "util.h"
-
-/* Sentinel values for overlap table */
-const ASMLine header_sentinel, bounds_sentinel;
-
-/*
-    Add a given line, representing a label, to the symbol table.
-
-    Return NULL on success and an ErrorInfo object on failure (in the case of
-    duplicate labels).
-*/
-static ErrorInfo* add_label_to_table(
-    ASMSymbolTable *symtable, const ASMLine *line, size_t offset)
-{
-    char *symbol = strndup(line->data, line->length - 1);
-    if (!symbol)
-        OUT_OF_MEMORY()
-
-    const ASMSymbol *current = asm_symtable_find(symtable, symbol);
-    if (current) {
-        ErrorInfo *ei = error_info_create(line, ET_SYMBOL, ED_SYM_DUPE_LABELS);
-        error_info_append(ei, current->line);
-        return ei;
-    }
-
-    ASMSymbol *label = malloc(sizeof(ASMSymbol));
-    if (!label)
-        OUT_OF_MEMORY()
-
-    // TODO: don't assume all ROM gets mapped to slot 2
-    label->offset = (offset >= 0xC000) ? ((offset & 0x3FFF) + 0x8000) : offset;
-    label->symbol = symbol;
-    label->line = line;
-    asm_symtable_insert(symtable, label);
-    return NULL;
-}
-
-/*
-    Parse data encoded in a line into an ASMData object.
-
-    On success, return NULL and store the instruction in *data_ptr. On failure,
-    return an ErrorInfo object; *data_ptr is not modified.
-*/
-static ErrorInfo* parse_data(
-    const ASMLine *line, ASMData **data_ptr, size_t offset)
-{
-    // TODO
-    DEBUG("parse_data(): %.*s", (int) line->length, line->data)
-
-    return error_info_create(line, ET_PARSER, ED_PARSE_SYNTAX);
-}
-
-/*
-    Parse an instruction encoded in a line into an ASMInstruction object.
-
-    On success, return NULL and store the instruction in *inst_ptr. On failure,
-    return an ErrorInfo object; *inst_ptr is not modified.
-*/
-static ErrorInfo* parse_instruction(
-    const ASMLine *line, ASMInstruction **inst_ptr, size_t offset)
-{
-    // TODO
-    DEBUG("parse_instruction(): %.*s", (int) line->length, line->data)
-
-    return error_info_create(line, ET_PARSER, ED_PARSE_SYNTAX);
-}
-
-/*
-    Check if the given location overlaps with any existing objects.
-
-    On success, return NULL and add the location to the overlap table.
-    On failure, return an ErrorInfo object.
-*/
-static ErrorInfo* check_layout(
-    const ASMLine **overlap_table, size_t size, const ASMLocation *loc,
-    const ASMLine *line, const ASMLine *origin)
-{
-    const ASMLine *clash = NULL;
-
-    if (loc->offset + loc->length > size) {
-        clash = &bounds_sentinel;
-    } else {
-        for (size_t i = 0; i < loc->length; i++) {
-            if (overlap_table[loc->offset + i]) {
-                clash = overlap_table[loc->offset + i];
-                break;
-            }
-        }
-    }
-
-    if (clash) {
-        ErrorInfo *ei = error_info_create(line, ET_LAYOUT,
-            (clash == &header_sentinel) ? ED_LYT_OVERLAP_HEAD :
-            (clash == &bounds_sentinel) ? ED_LYT_BOUNDS : ED_LYT_OVERLAP);
-
-        if (origin)
-            error_info_append(ei, origin);
-        if (clash != &header_sentinel && clash != &bounds_sentinel)
-            error_info_append(ei, clash);
-        return ei;
-    }
-
-    for (size_t i = 0; i < loc->length; i++)
-        overlap_table[loc->offset + i] = line;
-    return NULL;
-}
-
-/*
-    Tokenize ASMLines into ASMInstructions and ASMData.
-
-    NULL is returned on success and an ErrorInfo object is returned on failure.
-    state->instructions, state->data, and state->symtable may or may not be
-    modified regardless of success.
-*/
-static ErrorInfo* tokenize(AssemblerState *state)
-{
-    size_t size = state->rom_size ? state->rom_size : ROM_SIZE_MAX;
-    const ASMLine **overlap_table = calloc(size, sizeof(const ASMLine*));
-    if (!overlap_table)
-        OUT_OF_MEMORY()
-
-    ErrorInfo *ei = NULL;
-    ASMInstruction dummy_inst = {.next = NULL}, *inst, *prev_inst = &dummy_inst;
-    ASMData dummy_data = {.next = NULL}, *data, *prev_data = &dummy_data;
-    const ASMLine *line = state->lines, *origin = NULL;
-    size_t offset = 0;
-
-    for (size_t i = 0; i < HEADER_SIZE; i++)
-        overlap_table[state->header.offset + i] = &header_sentinel;
-
-    while (line) {
-        if (line->is_label) {
-            if ((ei = add_label_to_table(state->symtable, line, offset)))
-                goto cleanup;
-        }
-        else if (IS_LOCAL_DIRECTIVE(line)) {
-            if (IS_DIRECTIVE(line, DIR_ORIGIN)) {
-                if (!DIRECTIVE_HAS_ARG(line, DIR_ORIGIN)) {
-                    ei = error_info_create(line, ET_PREPROC, ED_PP_NO_ARG);
-                    goto cleanup;
-                }
-
-                uint32_t arg;
-                if (!dparse_uint32_t(&arg, line, DIR_ORIGIN)) {
-                    ei = error_info_create(line, ET_PREPROC, ED_PP_BAD_ARG);
-                    goto cleanup;
-                }
-
-                offset = arg;
-                origin = line;
-            }
-            else {
-                if ((ei = parse_data(line, &data, offset)))
-                    goto cleanup;
-
-                offset += data->loc.length;
-                prev_data->next = data;
-                prev_data = data;
-
-                if ((ei = check_layout(overlap_table, size, &data->loc, line, origin)))
-                    goto cleanup;
-            }
-        }
-        else {
-            if ((ei = parse_instruction(line, &inst, offset)))
-                goto cleanup;
-
-            offset += inst->loc.length;
-            prev_inst->next = inst;
-            prev_inst = inst;
-
-            if ((ei = check_layout(overlap_table, size, &inst->loc, line, origin)))
-                goto cleanup;
-        }
-        line = line->next;
-    }
-
-    cleanup:
-    state->instructions = dummy_inst.next;
-    state->data = dummy_data.next;
-    free(overlap_table);
-    return ei;
-}
 
 /*
     Return the smallest ROM size that can contain the given address.
@@ -203,6 +20,7 @@ static ErrorInfo* tokenize(AssemblerState *state)
 */
 static size_t bounding_rom_size(size_t size)
 {
+    size--;
     size |= size >> 1;
     size |= size >> 2;
     size |= size >> 4;
