@@ -8,10 +8,35 @@
 #include "directives.h"
 #include "parse_util.h"
 #include "../logging.h"
+#include "../mmu.h"
 #include "../rom.h"
 
+/* Internal structs */
+
+typedef struct {
+    int8_t slots[MMU_NUM_ROM_BANKS];
+    const ASMLine *lines[MMU_NUM_ROM_BANKS];
+} ASMSlotInfo;
+
 /* Sentinel values for overlap table */
+
 const ASMLine header_sentinel, bounds_sentinel;
+
+/*
+    Return the address of a given ROM offset when mapped into the given slot.
+*/
+static inline uint16_t map_into_slot(size_t offset, int8_t slot)
+{
+    return (slot * MMU_ROM_BANK_SIZE) + (offset & (MMU_ROM_BANK_SIZE - 1));
+}
+
+/*
+    Return the default slot associated with a given memory bank.
+*/
+static inline int8_t default_bank_slot(size_t bank)
+{
+    return bank > 2 ? 2 : bank;
+}
 
 /*
     Add a given line, representing a label, to the symbol table.
@@ -20,7 +45,7 @@ const ASMLine header_sentinel, bounds_sentinel;
     duplicate labels).
 */
 static ErrorInfo* add_label_to_table(
-    ASMSymbolTable *symtable, const ASMLine *line, size_t offset, ssize_t slot)
+    ASMSymbolTable *symtable, const ASMLine *line, size_t offset, int8_t slot)
 {
     char *symbol = strndup(line->data, line->length - 1);
     if (!symbol)
@@ -37,9 +62,8 @@ static ErrorInfo* add_label_to_table(
     if (!label)
         OUT_OF_MEMORY()
 
-    size_t block_offset = offset & 0x3FFF;
-    label->offset = slot >= 0 ? (block_offset + slot * 0x4000) :
-                    (offset >= 0xC000 ? (block_offset + 0x8000) : offset);
+    label->offset = map_into_slot(offset,
+        (slot >= 0) ? slot : default_bank_slot(offset / MMU_ROM_BANK_SIZE));
     label->symbol = symbol;
     label->line = line;
     asm_symtable_insert(symtable, label);
@@ -47,12 +71,11 @@ static ErrorInfo* add_label_to_table(
 }
 
 /*
-    Handle an origin directive by updating the offset and (maybe) the slot.
+    Handle an origin directive by updating the offset.
 
     Return NULL on success and an ErrorInfo object on failure.
 */
-static ErrorInfo* handle_origin_directive(
-    const ASMLine *line, size_t *offset, ssize_t *slot)
+static ErrorInfo* handle_origin_directive(const ASMLine *line, size_t *offset)
 {
     if (!DIRECTIVE_HAS_ARG(line, DIR_ORIGIN))
         return error_info_create(line, ET_PREPROC, ED_PP_NO_ARG);
@@ -61,8 +84,10 @@ static ErrorInfo* handle_origin_directive(
     if (!dparse_uint32_t(&arg, line, DIR_ORIGIN))
         return error_info_create(line, ET_PREPROC, ED_PP_BAD_ARG);
 
+    if (arg >= MMU_NUM_ROM_BANKS * MMU_ROM_BANK_SIZE)
+        return error_info_create(line, ET_PREPROC, ED_PP_ARG_RANGE);
+
     *offset = arg;
-    // TODO: if different block, *slot <-- slot lookup table for this block
     return NULL;
 }
 
@@ -72,27 +97,41 @@ static ErrorInfo* handle_origin_directive(
     Return NULL on success and an ErrorInfo object on failure.
 */
 static ErrorInfo* handle_block_directive(
-    const ASMLine *line, size_t *offset, ssize_t *slot)
+    const ASMLine *line, size_t *offset, ASMSlotInfo *si)
 {
     if (!DIRECTIVE_HAS_ARG(line, DIR_BLOCK))
         return error_info_create(line, ET_PREPROC, ED_PP_NO_ARG);
 
-    uint8_t *args;
+    uint8_t *args, bank, slot;
     size_t dir_offset = DIRECTIVE_OFFSET(line, DIR_BLOCK) + 1, nargs;
 
     if (!parse_bytes(&args, &nargs, line->data + dir_offset,
                      line->length - dir_offset))
         return error_info_create(line, ET_PREPROC, ED_PP_BAD_ARG);
+    if (nargs < 1 || nargs > 2)
+        return free(args), error_info_create(line, ET_PREPROC, ED_PP_BAD_ARG);
 
-    if (nargs < 1 || nargs > 2 || args[0] >= 64 || (nargs == 2 && args[1] > 2))
-        return error_info_create(line, ET_PREPROC, ED_PP_BAD_ARG);
-
-    if (nargs == 2 && args[0] == 0 && args[1] != 0)
-        return error_info_create(line, ET_LAYOUT, ED_LYT_BLOCK0);
-
-    *offset = args[0] * (16 << 10);
-    *slot = nargs == 2 ? args[1] : -1;
+    bank = args[0];
+    slot = nargs == 2 ? args[1] : default_bank_slot(bank);
     free(args);
+
+    if (bank >= MMU_NUM_ROM_BANKS || slot >= MMU_NUM_SLOTS)
+        return error_info_create(line, ET_PREPROC, ED_PP_ARG_RANGE);
+
+    if (nargs == 2) {
+        if (bank == 0 && slot != 0)
+            return error_info_create(line, ET_LAYOUT, ED_LYT_BLOCK0);
+        if (si->slots[bank] >= 0 && si->slots[bank] != slot) {
+            ErrorInfo *ei = error_info_create(line, ET_LAYOUT, ED_LYT_SLOTS);
+            error_info_append(ei, si->lines[bank]);
+            return ei;
+        }
+    }
+
+    *offset = bank * MMU_ROM_BANK_SIZE;
+    si->slots[bank] = slot;
+    if (!si->lines[bank])
+        si->lines[bank] = line;
     return NULL;
 }
 
@@ -108,7 +147,19 @@ static ErrorInfo* parse_data(
     // TODO
     DEBUG("parse_data(): %.*s", (int) line->length, line->data)
 
-    return error_info_create(line, ET_PARSER, ED_PARSE_SYNTAX);
+    // return error_info_create(line, ET_PARSER, ED_PARSE_SYNTAX);
+
+    ASMData *data = malloc(sizeof(ASMData));
+    if (!data)
+        OUT_OF_MEMORY()
+
+    data->loc.offset = offset;
+    data->loc.length = 6;
+    data->data = (uint8_t*) strdup("foobar");
+    data->next = NULL;
+
+    *data_ptr = data;
+    return NULL;
 }
 
 /*
@@ -123,7 +174,21 @@ static ErrorInfo* parse_instruction(
     // TODO
     DEBUG("parse_instruction(): %.*s", (int) line->length, line->data)
 
-    return error_info_create(line, ET_PARSER, ED_PARSE_SYNTAX);
+    // return error_info_create(line, ET_PARSER, ED_PARSE_SYNTAX);
+
+    ASMInstruction *inst = malloc(sizeof(ASMInstruction));
+    if (!inst)
+        OUT_OF_MEMORY()
+
+    inst->loc.offset = offset;
+    inst->loc.length = 1;
+    inst->b1 = 0x3C;
+    inst->symbol = NULL;
+    inst->line = line;
+    inst->next = NULL;
+
+    *inst_ptr = inst;
+    return NULL;
 }
 
 /*
@@ -186,24 +251,30 @@ ErrorInfo* tokenize(AssemblerState *state)
     ASMData dummy_data = {.next = NULL}, *data, *prev_data = &dummy_data;
     const ASMLine *line = state->lines, *origin = NULL;
     size_t offset = 0;
-    ssize_t slot = -1;
+    ASMSlotInfo si = {.lines = {0}};
 
     for (size_t i = 0; i < HEADER_SIZE; i++)
         overlap_table[state->header.offset + i] = &header_sentinel;
+    memset(si.slots, -1, MMU_NUM_ROM_BANKS);
 
     while (line) {
         if (line->is_label) {
+            if (offset >= size) {
+                ei = error_info_create(line, ET_LAYOUT, ED_LYT_BOUNDS);
+                goto cleanup;
+            }
+            int8_t slot = si.slots[offset / MMU_NUM_ROM_BANKS];
             if ((ei = add_label_to_table(state->symtable, line, offset, slot)))
                 goto cleanup;
         }
         else if (IS_LOCAL_DIRECTIVE(line)) {
             if (IS_DIRECTIVE(line, DIR_ORIGIN)) {
-                if ((ei = handle_origin_directive(line, &offset, &slot)))
+                if ((ei = handle_origin_directive(line, &offset)))
                     goto cleanup;
                 origin = line;
             }
             else if (IS_DIRECTIVE(line, DIR_BLOCK)) {
-                if ((ei = handle_block_directive(line, &offset, &slot)))
+                if ((ei = handle_block_directive(line, &offset, &si)))
                     goto cleanup;
                 origin = line;
             }

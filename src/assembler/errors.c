@@ -34,8 +34,9 @@ static const char *asm_error_descs[] = {
 
     "header offset exceeds given ROM size",             // ED_LYT_HEADER_RANGE
     "declared ROM size in header exceeds actual size",  // ED_LYT_DECLARE_RANGE
-    "block zero cannot be mapped into a nonzero slot",  // ED_LYT_BLOCK0
     "location is out of bounds for the ROM size",       // ED_LYT_BOUNDS
+    "block zero cannot be mapped into a nonzero slot",  // ED_LYT_BLOCK0
+    "multiple slot declarations for block directive",   // ED_LYT_SLOTS
     "location overlaps with instruction or data",       // ED_LYT_OVERLAP
     "location overlaps with ROM header",                // ED_LYT_OVERLAP_HEAD
 
