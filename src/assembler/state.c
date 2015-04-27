@@ -89,8 +89,7 @@ void asm_instructions_free(ASMInstruction *inst)
     while (inst) {
         ASMInstruction *temp = inst->next;
         free(inst->bytes);
-        if (inst->symbol)
-            free(inst->symbol);
+        free(inst->symbol);
         free(inst);
         inst = temp;
     }

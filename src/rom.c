@@ -261,10 +261,8 @@ const char* rom_open(ROM **rom_ptr, const char *path)
 */
 void rom_close(ROM *rom)
 {
-    if (rom->name)
-        free(rom->name);
-    if (rom->data)
-        free(rom->data);
+    free(rom->name);
+    free(rom->data);
     free(rom);
 }
 

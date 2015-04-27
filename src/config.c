@@ -136,8 +136,7 @@ static char* get_rom_path_from_user()
         if (paths[i] != path)
             free(paths[i]);
     }
-    if (paths)
-        free(paths);
+    free(paths);
     return path;
 }
 
@@ -351,12 +350,9 @@ int config_create(Config** config_ptr, int argc, char* argv[])
 */
 void config_destroy(Config *config)
 {
-    if (config->rom_path)
-        free(config->rom_path);
-    if (config->src_path)
-        free(config->src_path);
-    if (config->dst_path)
-        free(config->dst_path);
+    free(config->rom_path);
+    free(config->src_path);
+    free(config->dst_path);
     free(config);
 }
 
