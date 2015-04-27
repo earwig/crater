@@ -88,6 +88,7 @@ void asm_instructions_free(ASMInstruction *inst)
 {
     while (inst) {
         ASMInstruction *temp = inst->next;
+        free(inst->bytes);
         if (inst->symbol)
             free(inst->symbol);
         free(inst);
@@ -102,7 +103,7 @@ void asm_data_free(ASMData *data)
 {
     while (data) {
         ASMData *temp = data->next;
-        free(data->data);
+        free(data->bytes);
         free(data);
         data = temp;
     }

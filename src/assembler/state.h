@@ -40,7 +40,7 @@ typedef struct {
 
 struct ASMInstruction {
     ASMLocation loc;
-    uint8_t b1, b2, b3, b4;
+    uint8_t *bytes;
     char *symbol;
     const ASMLine *line;
     struct ASMInstruction *next;
@@ -49,7 +49,7 @@ typedef struct ASMInstruction ASMInstruction;
 
 struct ASMData {
     ASMLocation loc;
-    uint8_t *data;
+    uint8_t *bytes;
     struct ASMData *next;
 };
 typedef struct ASMData ASMData;

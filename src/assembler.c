@@ -90,14 +90,8 @@ static ErrorInfo* resolve_symbols(AssemblerState *state)
                 return ei;
             }
 
-            if (inst->loc.length == 3) {
-                inst->b2 = symbol->offset & 0xFF;
-                inst->b3 = symbol->offset >> 8;
-            } else {
-                inst->b3 = symbol->offset & 0xFF;
-                inst->b4 = symbol->offset >> 8;
-            }
-
+            inst->bytes[inst->loc.length - 2] = symbol->offset & 0xFF;
+            inst->bytes[inst->loc.length - 1] = symbol->offset >> 8;
             free(inst->symbol);
             inst->symbol = NULL;
         }

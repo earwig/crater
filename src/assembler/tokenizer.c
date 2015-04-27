@@ -155,7 +155,7 @@ static ErrorInfo* parse_data(
 
     data->loc.offset = offset;
     data->loc.length = 6;
-    data->data = (uint8_t*) strdup("foobar");
+    data->bytes = (uint8_t*) strdup("foobar");
     data->next = NULL;
 
     *data_ptr = data;
@@ -182,7 +182,8 @@ static ErrorInfo* parse_instruction(
 
     inst->loc.offset = offset;
     inst->loc.length = 1;
-    inst->b1 = 0x3C;
+    uint8_t tmp = 0x3C;
+    inst->bytes = memcpy(malloc(1), &tmp, 1);
     inst->symbol = NULL;
     inst->line = line;
     inst->next = NULL;
