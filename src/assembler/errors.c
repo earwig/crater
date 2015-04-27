@@ -35,7 +35,7 @@ static const char *error_descs[] = {
     [ED_LYT_BLOCK0]       = "block zero cannot be mapped into a nonzero slot",
     [ED_LYT_SLOTS]        = "multiple slot declarations for block directive",
     [ED_LYT_BLOCK_CROSS]  = "instruction or data extends past block boundary",
-    [ED_LYT_OVERLAP]      = "location overlaps with instruction or data",
+    [ED_LYT_OVERLAP]      = "multiple instructions/data occupy same location",
     [ED_LYT_OVERLAP_HEAD] = "location overlaps with ROM header",
 
     [ED_SYM_DUPE_LABELS]  = "duplicate definitions for label",

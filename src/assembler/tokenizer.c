@@ -16,6 +16,7 @@
 typedef struct {
     size_t size;
     const ASMLine **overlap_table;
+    const ASMLine **overlap_origins;
     const ASMLine *origin;
     uint8_t bank;
     bool cross_blocks;
@@ -125,15 +126,12 @@ static ErrorInfo* handle_block_directive(
 
     if (bank >= MMU_NUM_ROM_BANKS || slot >= MMU_NUM_SLOTS)
         return error_info_create(line, ET_PREPROC, ED_PP_ARG_RANGE);
-
-    if (nargs == 2) {
-        if (bank == 0 && slot != 0)
-            return error_info_create(line, ET_LAYOUT, ED_LYT_BLOCK0);
-        if (si->slots[bank] >= 0 && si->slots[bank] != slot) {
-            ErrorInfo *ei = error_info_create(line, ET_LAYOUT, ED_LYT_SLOTS);
-            error_info_append(ei, si->lines[bank]);
-            return ei;
-        }
+    if (bank == 0 && slot != 0)
+        return error_info_create(line, ET_LAYOUT, ED_LYT_BLOCK0);
+    if (si->slots[bank] >= 0 && si->slots[bank] != slot) {
+        ErrorInfo *ei = error_info_create(line, ET_LAYOUT, ED_LYT_SLOTS);
+        error_info_append(ei, si->lines[bank]);
+        return ei;
     }
 
     *offset = bank * MMU_ROM_BANK_SIZE;
@@ -212,13 +210,14 @@ static ErrorInfo* parse_instruction(
 static ErrorInfo* check_layout(
     ASMLayoutInfo *li, const ASMLocation *loc, const ASMLine *line)
 {
-    const ASMLine *clash = NULL;
+    const ASMLine *clash = NULL, *clash_origin;
     if (loc->offset + loc->length > li->size) {
         clash = &bounds_sentinel;
     } else {
         for (size_t i = 0; i < loc->length; i++) {
             if (li->overlap_table[loc->offset + i]) {
                 clash = li->overlap_table[loc->offset + i];
+                clash_origin = li->overlap_origins[loc->offset + i];
                 break;
             }
         }
@@ -231,8 +230,11 @@ static ErrorInfo* check_layout(
 
         if (li->origin)
             error_info_append(ei, li->origin);
-        if (clash != &header_sentinel && clash != &bounds_sentinel)
+        if (clash != &header_sentinel && clash != &bounds_sentinel) {
             error_info_append(ei, clash);
+            if (clash_origin)
+                error_info_append(ei, clash_origin);
+        }
         return ei;
     }
 
@@ -244,8 +246,10 @@ static ErrorInfo* check_layout(
         return ei;
     }
 
-    for (size_t i = 0; i < loc->length; i++)
+    for (size_t i = 0; i < loc->length; i++) {
         li->overlap_table[loc->offset + i] = line;
+        li->overlap_origins[loc->offset + i] = li->origin;
+    }
     return NULL;
 }
 
@@ -263,7 +267,8 @@ ErrorInfo* tokenize(AssemblerState *state)
         .origin = NULL, .bank = 0, .cross_blocks = state->cross_blocks
     };
     li.overlap_table = calloc(li.size, sizeof(const ASMLine*));
-    if (!li.overlap_table)
+    li.overlap_origins = calloc(li.size, sizeof(const ASMLine*));
+    if (!li.overlap_table || !li.overlap_origins)
         OUT_OF_MEMORY()
 
     ErrorInfo *ei = NULL;
@@ -332,5 +337,6 @@ ErrorInfo* tokenize(AssemblerState *state)
     state->instructions = dummy_inst.next;
     state->data = dummy_data.next;
     free(li.overlap_table);
+    free(li.overlap_origins);
     return ei;
 }
