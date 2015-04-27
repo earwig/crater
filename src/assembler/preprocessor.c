@@ -429,10 +429,6 @@ ErrorInfo* preprocess(AssemblerState *state, const LineBuffer *source)
 
         BEGIN_DIRECTIVE_BLOCK
 
-        BEGIN_DIRECTIVE(DIR_OPTIMIZER, bool, state->optimizer, false)
-            USE_PARSER(bool)
-        END_DIRECTIVE
-
         BEGIN_DIRECTIVE(DIR_ROM_SIZE, size_t, state->rom_size, 0)
             PARSER_BRANCH(uint32_t, {}, {
                 USE_PARSER(uint32_t, rom_size)

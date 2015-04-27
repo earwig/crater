@@ -2,7 +2,7 @@
 # Released under the terms of the MIT License. See LICENSE for details.
 
 PROGRAM = crater
-SOURCES = src src/assembler
+SOURCES = src
 BUILD   = build
 DEVEXT  = -dev
 
@@ -15,7 +15,8 @@ RM     = rm -rf
 
 MODE = release
 BNRY = $(PROGRAM)
-SRCS = $(filter-out %.inc.c,$(foreach d,. $(SOURCES),$(wildcard $(addprefix $(d)/*,.c))))
+SDRS = $(shell find $(SOURCES) -type d | xargs echo)
+SRCS = $(filter-out %.inc.c,$(foreach d,. $(SDRS),$(wildcard $(addprefix $(d)/*,.c))))
 OBJS = $(patsubst %.c,%.o,$(addprefix $(BUILD)/$(MODE)/,$(SRCS)))
 DEPS = $(OBJS:%.o=%.d)
 DIRS = $(sort $(dir $(OBJS)))

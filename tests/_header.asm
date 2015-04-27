@@ -7,8 +7,6 @@
 ; testing suite. It sets values for the ROM header, and contains basic test
 ; runner code.
 
-.optimizer	off		; Generate faithful rather than fast code
-
 .rom_size	auto		; Smallest possible ROM size >= 32 KB
 .rom_header	auto		; Standard header location (0x7FF0)
 .rom_checksum	off		; Don't write a ROM checksum to the header
@@ -16,6 +14,7 @@
 .rom_version	0		; Zero version number
 .rom_region	"GG Export"	; Common region code for Western ROMs
 .rom_declsize	auto		; Set declared size to actual ROM size
+.cross_blocks	auto		; Do not allow data to cross between blocks
 
 ; Main routine (execution begins here)
 .org $0000

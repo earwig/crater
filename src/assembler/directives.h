@@ -6,11 +6,10 @@
 #include <string.h>
 
 #define DIRECTIVE_MARKER '.'
-#define NUM_DIRECTIVES   16
+#define NUM_DIRECTIVES   15
 
 #define DIR_INCLUDE      ".include"
 
-#define DIR_OPTIMIZER    ".optimizer"
 #define DIR_ROM_SIZE     ".rom_size"
 #define DIR_ROM_HEADER   ".rom_header"
 #define DIR_ROM_CHECKSUM ".rom_checksum"

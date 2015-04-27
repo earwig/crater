@@ -8,9 +8,6 @@
 #include "../assembler.h"
 #include "../logging.h"
 
-#define ERROR_TYPE(err_info) (asm_error_types[err_info->type])
-#define ERROR_DESC(err_info) (asm_error_descs[err_info->desc])
-
 /* Error strings */
 
 static const char *asm_error_types[] = {
@@ -132,7 +129,8 @@ void error_info_print(const ErrorInfo *einfo, FILE *file)
 {
     ASMErrorLine *line = einfo->line;
 
-    fprintf(file, "error: %s: %s\n", ERROR_TYPE(einfo), ERROR_DESC(einfo));
+    fprintf(file, "error: %s: %s\n", asm_error_types[einfo->type],
+            asm_error_descs[einfo->desc]);
     while (line) {
         fprintf(file, "%s:%zu:\n", line->filename, line->lineno);
         fprintf(file, "    %.*s\n", (int) line->length, line->data);

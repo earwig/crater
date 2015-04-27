@@ -18,7 +18,6 @@ void state_init(AssemblerState *state)
     state->header.version = 0;
     state->header.region = DEFAULT_REGION;
     state->header.rom_size = DEFAULT_DECLSIZE;
-    state->optimizer = false;
     state->cross_blocks = false;
     state->rom_size = 0;
 
