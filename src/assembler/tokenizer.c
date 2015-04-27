@@ -14,6 +14,14 @@
 /* Internal structs */
 
 typedef struct {
+    size_t size;
+    const ASMLine **overlap_table;
+    const ASMLine *origin;
+    uint8_t bank;
+    bool cross_blocks;
+} ASMLayoutInfo;
+
+typedef struct {
     int8_t slots[MMU_NUM_ROM_BANKS];
     const ASMLine *lines[MMU_NUM_ROM_BANKS];
 } ASMSlotInfo;
@@ -33,7 +41,7 @@ static inline uint16_t map_into_slot(size_t offset, int8_t slot)
 /*
     Return the default slot associated with a given memory bank.
 */
-static inline int8_t default_bank_slot(size_t bank)
+static inline int8_t default_bank_slot(uint8_t bank)
 {
     return bank > 2 ? 2 : bank;
 }
@@ -84,7 +92,7 @@ static ErrorInfo* handle_origin_directive(const ASMLine *line, size_t *offset)
     if (!dparse_uint32_t(&arg, line, DIR_ORIGIN))
         return error_info_create(line, ET_PREPROC, ED_PP_BAD_ARG);
 
-    if (arg >= MMU_NUM_ROM_BANKS * MMU_ROM_BANK_SIZE)
+    if (arg >= ROM_SIZE_MAX)
         return error_info_create(line, ET_PREPROC, ED_PP_ARG_RANGE);
 
     *offset = arg;
@@ -193,24 +201,24 @@ static ErrorInfo* parse_instruction(
 }
 
 /*
-    Check if the given location overlaps with any existing objects.
+    Check if the given object location is legal.
+
+    Checks include ROM size bounding, overlapping with existing objects, and
+    block-crossing assuming the .cross_blocks directive has not been specified.
 
     On success, return NULL and add the location to the overlap table.
     On failure, return an ErrorInfo object.
 */
 static ErrorInfo* check_layout(
-    const ASMLine **overlap_table, size_t size, const ASMLocation *loc,
-    const ASMLine *line, const ASMLine *origin)
+    ASMLayoutInfo *li, const ASMLocation *loc, const ASMLine *line)
 {
-    // TODO: never let boundaries cross without state->cross_blocks
     const ASMLine *clash = NULL;
-
-    if (loc->offset + loc->length > size) {
+    if (loc->offset + loc->length > li->size) {
         clash = &bounds_sentinel;
     } else {
         for (size_t i = 0; i < loc->length; i++) {
-            if (overlap_table[loc->offset + i]) {
-                clash = overlap_table[loc->offset + i];
+            if (li->overlap_table[loc->offset + i]) {
+                clash = li->overlap_table[loc->offset + i];
                 break;
             }
         }
@@ -221,15 +229,23 @@ static ErrorInfo* check_layout(
             (clash == &header_sentinel) ? ED_LYT_OVERLAP_HEAD :
             (clash == &bounds_sentinel) ? ED_LYT_BOUNDS : ED_LYT_OVERLAP);
 
-        if (origin)
-            error_info_append(ei, origin);
+        if (li->origin)
+            error_info_append(ei, li->origin);
         if (clash != &header_sentinel && clash != &bounds_sentinel)
             error_info_append(ei, clash);
         return ei;
     }
 
+    uint8_t bank = (loc->offset + loc->length - 1) / MMU_ROM_BANK_SIZE;
+    if (bank != li->bank && !li->cross_blocks) {
+        ErrorInfo *ei = error_info_create(line, ET_LAYOUT, ED_LYT_BLOCK_CROSS);
+        if (li->origin)
+            error_info_append(ei, li->origin);
+        return ei;
+    }
+
     for (size_t i = 0; i < loc->length; i++)
-        overlap_table[loc->offset + i] = line;
+        li->overlap_table[loc->offset + i] = line;
     return NULL;
 }
 
@@ -242,25 +258,28 @@ static ErrorInfo* check_layout(
 */
 ErrorInfo* tokenize(AssemblerState *state)
 {
-    size_t size = state->rom_size ? state->rom_size : ROM_SIZE_MAX;
-    const ASMLine **overlap_table = calloc(size, sizeof(const ASMLine*));
-    if (!overlap_table)
+    ASMLayoutInfo li = {
+        .size = state->rom_size ? state->rom_size : ROM_SIZE_MAX,
+        .origin = NULL, .bank = 0, .cross_blocks = state->cross_blocks
+    };
+    li.overlap_table = calloc(li.size, sizeof(const ASMLine*));
+    if (!li.overlap_table)
         OUT_OF_MEMORY()
 
     ErrorInfo *ei = NULL;
     ASMInstruction dummy_inst = {.next = NULL}, *inst, *prev_inst = &dummy_inst;
     ASMData dummy_data = {.next = NULL}, *data, *prev_data = &dummy_data;
-    const ASMLine *line = state->lines, *origin = NULL;
+    const ASMLine *line = state->lines;
     size_t offset = 0;
     ASMSlotInfo si = {.lines = {0}};
 
     for (size_t i = 0; i < HEADER_SIZE; i++)
-        overlap_table[state->header.offset + i] = &header_sentinel;
+        li.overlap_table[state->header.offset + i] = &header_sentinel;
     memset(si.slots, -1, MMU_NUM_ROM_BANKS);
 
     while (line) {
         if (line->is_label) {
-            if (offset >= size) {
+            if (offset >= li.size) {
                 ei = error_info_create(line, ET_LAYOUT, ED_LYT_BOUNDS);
                 goto cleanup;
             }
@@ -272,12 +291,16 @@ ErrorInfo* tokenize(AssemblerState *state)
             if (IS_DIRECTIVE(line, DIR_ORIGIN)) {
                 if ((ei = handle_origin_directive(line, &offset)))
                     goto cleanup;
-                origin = line;
+
+                li.origin = line;
+                li.bank = offset / MMU_ROM_BANK_SIZE;
             }
             else if (IS_DIRECTIVE(line, DIR_BLOCK)) {
                 if ((ei = handle_block_directive(line, &offset, &si)))
                     goto cleanup;
-                origin = line;
+
+                li.origin = line;
+                li.bank = offset / MMU_ROM_BANK_SIZE;
             }
             else {
                 if ((ei = parse_data(line, &data, offset)))
@@ -287,7 +310,7 @@ ErrorInfo* tokenize(AssemblerState *state)
                 prev_data->next = data;
                 prev_data = data;
 
-                if ((ei = check_layout(overlap_table, size, &data->loc, line, origin)))
+                if ((ei = check_layout(&li, &data->loc, line)))
                     goto cleanup;
             }
         }
@@ -299,7 +322,7 @@ ErrorInfo* tokenize(AssemblerState *state)
             prev_inst->next = inst;
             prev_inst = inst;
 
-            if ((ei = check_layout(overlap_table, size, &inst->loc, line, origin)))
+            if ((ei = check_layout(&li, &inst->loc, line)))
                 goto cleanup;
         }
         line = line->next;
@@ -308,6 +331,6 @@ ErrorInfo* tokenize(AssemblerState *state)
     cleanup:
     state->instructions = dummy_inst.next;
     state->data = dummy_data.next;
-    free(overlap_table);
+    free(li.overlap_table);
     return ei;
 }

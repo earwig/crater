@@ -161,7 +161,7 @@ const ASMSymbol* asm_symtable_find(const ASMSymbolTable *tab, const char *key)
 /*
     Insert a symbol into the table.
 
-    TODO: return boolean on success instead of void.
+    This doesn't check for duplicate keys, so you must do that beforehand.
 */
 void asm_symtable_insert(ASMSymbolTable *tab, ASMSymbol *symbol)
 {

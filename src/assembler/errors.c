@@ -10,7 +10,7 @@
 
 /* Error strings */
 
-static const char *asm_error_types[] = {
+static const char *error_types[] = {
     [ET_INCLUDE] = "include directive",
     [ET_PREPROC] = "preprocessor",
     [ET_LAYOUT]  = "memory layout",
@@ -18,7 +18,7 @@ static const char *asm_error_types[] = {
     [ET_PARSER]  = "instruction parser"
 };
 
-static const char *asm_error_descs[] = {
+static const char *error_descs[] = {
     [ED_INC_BAD_ARG]      = "missing or invalid argument",
     [ED_INC_RECURSION]    = "infinite recursion detected",
     [ED_INC_FILE_READ]    = "couldn't read included file",
@@ -34,6 +34,7 @@ static const char *asm_error_descs[] = {
     [ED_LYT_BOUNDS]       = "location is out of bounds for the ROM size",
     [ED_LYT_BLOCK0]       = "block zero cannot be mapped into a nonzero slot",
     [ED_LYT_SLOTS]        = "multiple slot declarations for block directive",
+    [ED_LYT_BLOCK_CROSS]  = "instruction or data extends past block boundary",
     [ED_LYT_OVERLAP]      = "location overlaps with instruction or data",
     [ED_LYT_OVERLAP_HEAD] = "location overlaps with ROM header",
 
@@ -129,8 +130,8 @@ void error_info_print(const ErrorInfo *einfo, FILE *file)
 {
     ASMErrorLine *line = einfo->line;
 
-    fprintf(file, "error: %s: %s\n", asm_error_types[einfo->type],
-            asm_error_descs[einfo->desc]);
+    fprintf(file, "error: %s: %s\n", error_types[einfo->type],
+            error_descs[einfo->desc]);
     while (line) {
         fprintf(file, "%s:%zu:\n", line->filename, line->lineno);
         fprintf(file, "    %.*s\n", (int) line->length, line->data);

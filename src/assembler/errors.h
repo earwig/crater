@@ -33,6 +33,7 @@ typedef enum {
     ED_LYT_BOUNDS,
     ED_LYT_BLOCK0,
     ED_LYT_SLOTS,
+    ED_LYT_BLOCK_CROSS,
     ED_LYT_OVERLAP,
     ED_LYT_OVERLAP_HEAD,
 
