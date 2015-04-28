@@ -31,6 +31,10 @@ typedef struct {
 
 const ASMLine header_sentinel, bounds_sentinel;
 
+/* Typedef for parse_util data parser functions */
+
+typedef bool (*parser_func)(uint8_t**, size_t*, const char*, ssize_t);
+
 /*
     Return the address of a given ROM offset when mapped into the given slot.
 */
@@ -150,10 +154,7 @@ static ErrorInfo* handle_block_directive(
 static ErrorInfo* parse_data(
     const ASMLine *line, ASMData **data_ptr, size_t offset)
 {
-#define PARSER_ARGS uint8_t**, size_t*, const char*, ssize_t
-    bool (*parser)(PARSER_ARGS) = (bool (*)(PARSER_ARGS)) parse_string;
-#undef PARSER_ARGS
-
+    parser_func parser = (parser_func) parse_string;
     const char *directive;
     if (IS_DIRECTIVE(line, DIR_BYTE)) {
         directive = DIR_BYTE;
