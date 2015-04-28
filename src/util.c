@@ -188,3 +188,59 @@ uint16_t compute_checksum(const uint8_t *data, size_t size, uint8_t range)
     }
     return sum;
 }
+
+/*
+    Return the name of the third-party developer identified by the given code.
+
+    This method is imprecise and should not be relied on. NULL is returned if
+    the developer is unknown.
+
+    Information from (with modifications):
+    http://www.smspower.org/Development/ProductCodes
+*/
+const char* get_third_party_developer(uint8_t code)
+{
+    switch (code) {
+        case  11: return "Taito";
+        case  14: return "Namco";
+        case  15: return "SunSoft";
+        case  22: return "Micronet";
+        case  23: return "Vic Tokai";
+        case  25: return "NCS";
+        case  26: return "Sigma Enterprises";
+        case  28: return "Genki";
+        case  32: return "Wolf Team";
+        case  33: return "Kaneko";
+        case  44: return "Sanritsu/SIMS";
+        case  45: return "Game Arts/Studio Alex";
+        case  48: return "Tengen/Time Warner";
+        case  49: return "Telenet Japan";
+        case  50: return "EA";
+        case  51: return "SystemSoft";
+        case  52: return "Microcabin";
+        case  53: return "Riverhillsoft";
+        case  54: return "ASCII Corporation";
+        case  60: return "Victor/Loriciel/Infogrames";
+        case  65: return "Toei Animation";
+        case  66: return "Compile";
+        case  68: return "GRI";
+        case  70: return "Virgin";
+        case  79: return "U.S. Gold";
+        case  81: return "Acclaim";
+        case  83: return "GameTek";
+        case  87: return "Mindscape";
+        case  88: return "Domark";
+        case  93: return "Sony";
+        case 100: return "THQ";
+        case 103: return "SNK";
+        case 104: return "MicroProse";
+        case 112: return "Disney";
+        case 125: return "Beam Software";
+        case 133: return "Bandai";
+        case 139: return "Viacom";
+        case 149: return "Infocom/Gremlin";
+        case 151: return "Infogrames";
+        case 154: return "Technos Japan";
+        default:  return NULL;
+    }
+}

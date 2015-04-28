@@ -231,11 +231,18 @@ void rom_close(ROM *rom)
     Return a string explanation of this ROM's product code.
 
     NULL is returned if the product code is not known.
+
+    Information from: http://www.smspower.org/Development/ProductCodes
 */
 const char* rom_product(const ROM *rom)
 {
-    // TODO
-
+    uint32_t developer = rom->product_code / 1000;
+    if (developer == 2)
+        return "Sega of America";
+    if (developer == 3)
+        return "Sega of Japan";
+    if (developer > 10 && developer < 160)
+        return get_third_party_developer(developer);
     return NULL;
 }
 
