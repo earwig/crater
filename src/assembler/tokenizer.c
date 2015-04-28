@@ -150,19 +150,42 @@ static ErrorInfo* handle_block_directive(
 static ErrorInfo* parse_data(
     const ASMLine *line, ASMData **data_ptr, size_t offset)
 {
-    // TODO
-    DEBUG("parse_data(): %.*s", (int) line->length, line->data)
+#define PARSER_ARGS uint8_t**, size_t*, const char*, ssize_t
+    bool (*parser)(PARSER_ARGS) = (bool (*)(PARSER_ARGS)) parse_string;
+#undef PARSER_ARGS
 
-    // return error_info_create(line, ET_PARSER, ED_PARSE_SYNTAX);
+    const char *directive;
+    if (IS_DIRECTIVE(line, DIR_BYTE)) {
+        directive = DIR_BYTE;
+        parser = parse_bytes;
+    } else if (IS_DIRECTIVE(line, DIR_ASCII)) {
+        directive = DIR_ASCII;
+    } else if (IS_DIRECTIVE(line, DIR_ASCIZ)) {
+        directive = DIR_ASCIZ;
+    } else if (IS_DIRECTIVE(line, DIR_ASCIIZ)) {
+        directive = DIR_ASCIIZ;
+    } else {
+        return error_info_create(line, ET_PREPROC, ED_PP_UNKNOWN);
+    }
+
+    if (!DIRECTIVE_HAS_ARG(line, directive))
+        return error_info_create(line, ET_PREPROC, ED_PP_NO_ARG);
+
+    size_t dir_offset = DIRECTIVE_OFFSET(line, directive) + 1;
+    const char *arg = line->data + dir_offset;
+    size_t arglen = line->length - dir_offset;
 
     ASMData *data = malloc(sizeof(ASMData));
     if (!data)
         OUT_OF_MEMORY()
 
     data->loc.offset = offset;
-    data->loc.length = 6;
-    data->bytes = (uint8_t*) strdup("foobar");
     data->next = NULL;
+
+    if (!parser(&data->bytes, &data->loc.length, arg, arglen)) {
+        free(data);
+        return error_info_create(line, ET_PREPROC, ED_PP_BAD_ARG);
+    }
 
     *data_ptr = data;
     return NULL;
