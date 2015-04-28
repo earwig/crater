@@ -105,7 +105,8 @@ static bool parse_header(ROM *rom, const uint8_t *header)
     else
         DEBUG("  - checksum:      0x%04X (invalid, expected 0x%04X)",
               rom->reported_checksum, rom->expected_checksum)
-    DEBUG("  - product code:  %u", rom->product_code)
+    DEBUG("  - product code:  %u (%s)", rom->product_code,
+          rom_product(rom) ? rom_product(rom) : "unknown")
     DEBUG("  - version:       %u", rom->version)
     DEBUG("  - region code:   %u (%s)", rom->region_code,
           rom_region(rom) ? rom_region(rom) : "unknown")
@@ -224,6 +225,18 @@ void rom_close(ROM *rom)
     free(rom->name);
     free(rom->data);
     free(rom);
+}
+
+/*
+    Return a string explanation of this ROM's product code.
+
+    NULL is returned if the product code is not known.
+*/
+const char* rom_product(const ROM *rom)
+{
+    // TODO
+
+    return NULL;
 }
 
 /*

@@ -125,10 +125,10 @@ const char* gamegear_get_exception(GameGear *gg)
                     SET_EXC("CPU not powered")
                     break;
                 case Z80_EXC_UNIMPLEMENTED_OPCODE:
-                    SET_EXC("Unimplemented opcode: 0x%02X", gg->cpu.exc_data)
+                    SET_EXC("unimplemented opcode: 0x%02X", gg->cpu.exc_data)
                     break;
                 default:
-                    SET_EXC("Unknown exception")
+                    SET_EXC("unknown exception")
                     break;
             }
         } else {

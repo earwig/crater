@@ -41,4 +41,5 @@ typedef struct {
 
 const char* rom_open(ROM**, const char*);
 void rom_close(ROM*);
+const char* rom_product(const ROM*);
 const char* rom_region(const ROM*);
