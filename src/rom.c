@@ -213,6 +213,12 @@ const char* rom_open(ROM **rom_ptr, const char *path)
         return rom_err_badheader;
     }
 
+    if (rom->region_code == 3 || rom->region_code == 4) {
+        // TODO: support SMS ROMs eventually?
+        rom_close(rom);
+        return rom_err_sms;
+    }
+
     *rom_ptr = rom;
     return NULL;
 }

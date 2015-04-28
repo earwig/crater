@@ -154,8 +154,9 @@ static ErrorInfo* handle_block_directive(
 static ErrorInfo* parse_data(
     const ASMLine *line, ASMData **data_ptr, size_t offset)
 {
-    parser_func parser = (parser_func) parse_string;
     const char *directive;
+    parser_func parser = (parser_func) parse_string;
+
     if (IS_DIRECTIVE(line, DIR_BYTE)) {
         directive = DIR_BYTE;
         parser = parse_bytes;
