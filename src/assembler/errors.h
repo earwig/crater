@@ -19,7 +19,7 @@ typedef enum {
 
 typedef enum {
     ED_INC_BAD_ARG,
-    ED_INC_RECURSION,
+    ED_INC_DEPTH,
     ED_INC_FILE_READ,
 
     ED_PP_UNKNOWN,

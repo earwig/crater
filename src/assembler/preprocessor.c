@@ -18,6 +18,8 @@
 #include "../rom.h"
 #include "../util.h"
 
+#define MAX_INCLUDE_DEPTH 16
+
 /* Helper macros for preprocess() */
 
 #define FAIL_ON_COND_(cond, err_desc)                                         \
@@ -261,23 +263,6 @@ static char* read_include_path(const ASMLine *line)
 }
 
 /*
-    Return whether the given path has already been loaded.
-*/
-static bool path_has_been_loaded(
-    const char *path, const LineBuffer *root, const ASMInclude *include)
-{
-    if (!strcmp(path, root->filename))
-        return true;
-
-    while (include) {
-        if (!strcmp(path, include->lines->filename))
-            return true;
-        include = include->next;
-    }
-    return false;
-}
-
-/*
     Build a LineBuffer into a ASMLines, normalizing them along the way.
 
     This function operates recursively to handle includes, but handles no other
@@ -289,8 +274,8 @@ static bool path_has_been_loaded(
     *includes may be updated in either case.
 */
 static ErrorInfo* build_asm_lines(
-    const LineBuffer *root, const LineBuffer *source, ASMLine **head,
-    ASMLine **tail, ASMInclude **includes)
+    const LineBuffer *source, ASMLine **head, ASMLine **tail,
+    ASMInclude **includes, unsigned depth)
 {
     ErrorInfo *ei;
     ASMLine dummy = {.next = NULL};
@@ -311,10 +296,13 @@ static ErrorInfo* build_asm_lines(
         }
 
         // If there are multiple ASMLines, all but the last must be labels:
-        while (line->next) {
-            prev->next = line;
-            prev = line;
-            line = line->next;
+        if (line->next) {
+            while (line->next) {
+                prev->next = line;
+                prev = line;
+                line = line->next;
+            }
+            prev->next = NULL;  // Disconnect in case the line is an .include
         }
 
         if (IS_DIRECTIVE(line, DIR_INCLUDE)) {
@@ -324,9 +312,9 @@ static ErrorInfo* build_asm_lines(
                 goto error;
             }
 
-            if (path_has_been_loaded(path, root, *includes)) {
+            if (depth >= MAX_INCLUDE_DEPTH) {
                 free(path);
-                ei = error_info_create(line, ET_INCLUDE, ED_INC_RECURSION);
+                ei = error_info_create(line, ET_INCLUDE, ED_INC_DEPTH);
                 goto error;
             }
 
@@ -347,8 +335,8 @@ static ErrorInfo* build_asm_lines(
             *includes = include;
 
             ASMLine *inchead, *inctail;
-            if ((ei = build_asm_lines(root, incbuffer, &inchead, &inctail,
-                                      includes))) {
+            if ((ei = build_asm_lines(incbuffer, &inchead, &inctail, includes,
+                                      depth + 1))) {
                 error_info_append(ei, line);
                 goto error;
             }
@@ -405,8 +393,7 @@ ErrorInfo* preprocess(AssemblerState *state, const LineBuffer *source)
     ErrorInfo* ei = NULL;
     DEBUG("Running preprocessor:")
 
-    if ((ei = build_asm_lines(source, source, &state->lines, NULL,
-                              &state->includes)))
+    if ((ei = build_asm_lines(source, &state->lines, NULL, &state->includes, 0)))
         return ei;
 
     const ASMLine *firsts[NUM_DIRECTIVES];

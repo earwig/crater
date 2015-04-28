@@ -20,7 +20,7 @@ static const char *error_types[] = {
 
 static const char *error_descs[] = {
     [ED_INC_BAD_ARG]      = "missing or invalid argument",
-    [ED_INC_RECURSION]    = "infinite recursion detected",
+    [ED_INC_DEPTH]        = "maximum include depth exceeded",
     [ED_INC_FILE_READ]    = "couldn't read included file",
 
     [ED_PP_UNKNOWN]       = "unknown directive",
