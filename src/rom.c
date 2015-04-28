@@ -14,11 +14,9 @@
 #include "util.h"
 
 #define NUM_LOCATIONS 3
-#define MAGIC_LEN 8
 #define SIZE_CODE_BUF 8
 
 static size_t header_locations[NUM_LOCATIONS] = {0x7FF0, 0x3FF0, 0x1FF0};
-static const char header_magic[MAGIC_LEN + 1] = "TMR SEGA";
 
 #ifdef DEBUG_MODE
 /*
@@ -43,44 +41,6 @@ static void print_header(const uint8_t *header)
     DEBUG("- header dump (chr): %s", header_chr)
 }
 #endif
-
-/*
-    Compute the correct ROM data checksum.
-
-    If the summable region (as specified by the range parameter) is too large,
-    we'll compute the checksum over the default range (0x0000-0x7FF0), or the
-    largest possible range.
-*/
-static uint16_t compute_checksum(const uint8_t *data, size_t size, uint8_t range)
-{
-    size_t low_region, high_region;
-    switch (range & 0xF) {
-        case 0xA: low_region = 0x1FEF; high_region = 0;       break;
-        case 0xB: low_region = 0x3FEF; high_region = 0;       break;
-        case 0xC: low_region = 0x7FEF; high_region = 0;       break;
-        case 0xD: low_region = 0xBFEF; high_region = 0;       break;
-        case 0xE: low_region = 0x7FEF; high_region = 0x0FFFF; break;
-        case 0xF: low_region = 0x7FEF; high_region = 0x1FFFF; break;
-        case 0x0: low_region = 0x7FEF; high_region = 0x3FFFF; break;
-        case 0x1: low_region = 0x7FEF; high_region = 0x7FFFF; break;
-        case 0x2: low_region = 0x7FEF; high_region = 0xFFFFF; break;
-        default:  low_region = 0x7FEF; high_region = 0;       break;
-    }
-
-    if (low_region >= size)
-        low_region = (size >= 0x4000) ? 0x3FEF : 0x1FEF;
-    if (high_region >= size)
-        high_region = 0;
-
-    uint16_t sum = 0;
-    for (size_t index = 0; index <= low_region; index++)
-        sum += data[index];
-    if (high_region) {
-        for (size_t index = 0x08000; index <= high_region; index++)
-            sum += data[index];
-    }
-    return sum;
-}
 
 #ifdef DEBUG_MODE
 /*
@@ -171,7 +131,7 @@ static bool find_and_read_header(ROM *rom)
         }
         DEBUG("  - trying location 0x%zX:", location)
         header = &rom->data[location];
-        if (memcmp(header, header_magic, MAGIC_LEN)) {
+        if (memcmp(header, rom_header_magic, HEADER_MAGIC_LEN)) {
             DEBUG("    - magic not present")
         }
         else {

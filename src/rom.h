@@ -9,7 +9,12 @@
 #define ROM_SIZE_MIN (32 << 10)  // 32 KB
 #define ROM_SIZE_MAX ( 1 << 20)  //  1 MB
 
+/* Header info */
+
 #define HEADER_SIZE 16
+#define HEADER_MAGIC_LEN 8
+
+static const char rom_header_magic[HEADER_MAGIC_LEN + 1] = "TMR SEGA";
 
 /* Error strings */
 

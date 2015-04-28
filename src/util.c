@@ -20,7 +20,15 @@
 #define NS_PER_SEC 1000000000
 
 /*
-    Convert a BCD-encoded hexadecimal number to decimal.
+    Convert a decimal integer to BCD-encoded form.
+*/
+uint8_t bcd_encode(uint8_t num)
+{
+    return ((num / 10) << 4) | (num % 10);
+}
+
+/*
+    Convert a BCD-encoded integer to decimal.
 */
 uint8_t bcd_decode(uint8_t num)
 {
@@ -140,4 +148,43 @@ uint8_t size_bytes_to_code(size_t bytes)
         case 1024: return 0x2;
         default:   return INVALID_SIZE_CODE;
     }
+}
+
+/*
+    Compute a ROM data checksum.
+
+    If the summable region (as specified by the range parameter) is too large
+    (as specified by the size parameter), we'll compute the checksum over the
+    default range (0x0000-0x7FF0), or the largest possible range. If size is
+    zero, we will compute it over the given range regardless.
+*/
+uint16_t compute_checksum(const uint8_t *data, size_t size, uint8_t range)
+{
+    size_t low_region, high_region;
+    switch (range & 0xF) {
+        case 0xA: low_region = 0x1FEF; high_region = 0;       break;
+        case 0xB: low_region = 0x3FEF; high_region = 0;       break;
+        case 0xC: low_region = 0x7FEF; high_region = 0;       break;
+        case 0xD: low_region = 0xBFEF; high_region = 0;       break;
+        case 0xE: low_region = 0x7FEF; high_region = 0x0FFFF; break;
+        case 0xF: low_region = 0x7FEF; high_region = 0x1FFFF; break;
+        case 0x0: low_region = 0x7FEF; high_region = 0x3FFFF; break;
+        case 0x1: low_region = 0x7FEF; high_region = 0x7FFFF; break;
+        case 0x2: low_region = 0x7FEF; high_region = 0xFFFFF; break;
+        default:  low_region = 0x7FEF; high_region = 0;       break;
+    }
+
+    if (size && low_region >= size)
+        low_region = (size >= 0x4000) ? 0x3FEF : 0x1FEF;
+    if (size && high_region >= size)
+        high_region = 0;
+
+    uint16_t sum = 0;
+    for (size_t index = 0; index <= low_region; index++)
+        sum += data[index];
+    if (high_region) {
+        for (size_t index = 0x08000; index <= high_region; index++)
+            sum += data[index];
+    }
+    return sum;
 }

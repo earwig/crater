@@ -101,16 +101,65 @@ static ErrorInfo* resolve_symbols(AssemblerState *state)
 }
 
 /*
+    Write the ROM header to the binary. Header contents are explained in rom.c.
+*/
+static void write_header(const ASMHeaderInfo *info, uint8_t *binary)
+{
+    uint8_t *header = binary + info->offset;
+
+    // Bytes 0-7: magic string
+    memcpy(header, rom_header_magic, HEADER_MAGIC_LEN);
+    header += HEADER_MAGIC_LEN;
+
+    // Bytes 8, 9: unused
+    *(header++) = 0x00;
+    *(header++) = 0x00;
+
+    // Bytes A, B: checksum
+    if (info->checksum) {
+        uint16_t checksum = compute_checksum(binary, 0, info->rom_size);
+        *header = checksum & 0xFF;
+        *(header + 1) = checksum >> 8;
+    } else {
+        *header = *(header + 1) = 0x00;
+    }
+    header += 2;
+
+    // Bytes C, D: product code (least significant two bytes)
+    *header = bcd_encode(info->product_code % 100);
+    *(header + 1) = bcd_encode((info->product_code / 100) % 100);
+    header += 2;
+
+    // Byte E: product code (most significant nibble), version
+    *header = (info->product_code / 10000) << 4 | (info->version & 0x0F);
+    header++;
+
+    // Byte F: region code, ROM size
+    *header = (info->region << 4) | (info->rom_size & 0x0F);
+}
+
+/*
     Convert finalized ASMInstructions and ASMData into a binary data block.
 
     This function should never fail.
 */
-static void serialize_binary(AssemblerState *state, uint8_t *binary)
+static void serialize_binary(const AssemblerState *state, uint8_t *binary)
 {
-    // TODO
+    memset(binary, 0xFF, state->rom_size);
 
-    for (size_t i = 0; i < state->rom_size; i++)
-        binary[i] = 'X';
+    const ASMInstruction *inst = state->instructions;
+    while (inst) {
+        memcpy(binary + inst->loc.offset, inst->bytes, inst->loc.length);
+        inst = inst->next;
+    }
+
+    const ASMData *data = state->data;
+    while (data) {
+        memcpy(binary + data->loc.offset, data->bytes, data->loc.length);
+        data = data->next;
+    }
+
+    write_header(&state->header, binary);
 }
 
 /*
