@@ -62,3 +62,24 @@ the opposite operation. If no output file is given, crater will use the name of
 the input file, with the extension replaced with `.gg` for `-a` and `.asm` for
 `-d`. By default, this will never overwrite the original filename; pass
 `--overwrite` (`-r`) to let crater do so.
+
+Credits
+-------
+
+Special thanks to [SMS Power!][sms_power]'s excellent [development][sms_dev]
+section, which has been invaluable in figuring out many of the Game Gear's
+details, including ROM header structure and the memory mapping system. Various
+source code comments reference their pages.
+
+Also thanks to [Thomas Scherrer's Z80 website][scherrer] for many useful
+resources about the Game Gear's CPU, including info about
+[undocumented opcodes][undoc_ops] and [flags][undoc_flags]. Finally, credit
+goes to [ClrHome][clrhome] for their helpful Z80 [instruction table][clrtab].
+
+[sms_power]: http://www.smspower.org/
+[sms_dev]: http://www.smspower.org/Development/Index
+[scherrer]: http://z80.info/
+[undoc_ops]: http://www.z80.info/z80undoc.htm
+[undoc_flags]: http://z80.info/z80sflag.htm
+[clrhome]: http://clrhome.org/
+[clrtab]: http://clrhome.org/table/
