@@ -43,10 +43,13 @@ static const char *error_descs[] = {
     [ED_SYM_DUPE_LABELS]  = "duplicate definitions for label",
     [ED_SYM_NO_LABEL]     = "undefined reference to label",
 
-    [ED_PARSE_OP_LONG]    = "opcode mnemonic is too long (2-4 characters)",
-    [ED_PARSE_OP_SHORT]   = "opcode mnemonic is too short (2-4 characters)",
-    [ED_PARSE_OP_CHARS]   = "invalid characters in opcode mnemonic",
-    [ED_PARSE_OP_UNKNOWN] = "unknown opcode mnemonic"
+    [ED_PS_OP_TOO_LONG]   = "opcode mnemonic is too long (2-4 characters)",
+    [ED_PS_OP_TOO_SHORT]  = "opcode mnemonic is too short (2-4 characters)",
+    [ED_PS_OP_INVALID]    = "invalid characters in opcode mnemonic",
+    [ED_PS_OP_UNKNOWN]    = "unknown opcode mnemonic",
+    [ED_PS_TOO_FEW_ARGS]  = "too few arguments for opcode",
+    [ED_PS_TOO_MANY_ARGS] = "too many arguments for opcode",
+    // [ED_PS_ARG1_TYPE]     = "invalid type for first argument",
 };
 
 /* Internal structs */

@@ -12,8 +12,9 @@
 
 /* Typedefs */
 
-typedef ASMErrorDesc (*ASMInstParser)(uint8_t**, size_t*, char**, const char*, size_t);
+typedef ASMErrorDesc (*ASMInstParser)(
+    uint8_t**, size_t*, char**, const char*, size_t);
 
 /* Functions */
 
-ASMInstParser get_inst_parser(char[MAX_MNEMONIC_SIZE + 1]);
+ASMInstParser get_inst_parser(char[MAX_MNEMONIC_SIZE]);

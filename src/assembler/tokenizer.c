@@ -231,33 +231,32 @@ static ErrorInfo* parse_data(
 static ErrorInfo* parse_instruction(
     const ASMLine *line, ASMInstruction **inst_ptr, size_t offset)
 {
-    char mnemonic[MAX_MNEMONIC_SIZE + 1];
+    char mnemonic[MAX_MNEMONIC_SIZE] = {0};
     size_t i = 0;
     while (i < line->length) {
         char c = line->data[i];
         if (c == ' ')
             break;
         if (i >= MAX_MNEMONIC_SIZE)
-            return error_info_create(line, ET_PARSER, ED_PARSE_OP_LONG);
+            return error_info_create(line, ET_PARSER, ED_PS_OP_TOO_LONG);
         if ((c < 'a' || c > 'z') && (c < '0' || c > '9'))
-            return error_info_create(line, ET_PARSER, ED_PARSE_OP_CHARS);
+            return error_info_create(line, ET_PARSER, ED_PS_OP_INVALID);
         mnemonic[i++] = c;
     }
 
     if (i < MIN_MNEMONIC_SIZE)
-        return error_info_create(line, ET_PARSER, ED_PARSE_OP_SHORT);
+        return error_info_create(line, ET_PARSER, ED_PS_OP_TOO_SHORT);
 
     uint8_t *bytes;
     size_t arglen = line->length - i, length;
     char *argstart = arglen > 0 ? line->data + i : NULL, *symbol;
 
-    mnemonic[i] = '\0';
     ASMInstParser parser = get_inst_parser(mnemonic);
     if (!parser)
-        return error_info_create(line, ET_PARSER, ED_PARSE_OP_UNKNOWN);
+        return error_info_create(line, ET_PARSER, ED_PS_OP_UNKNOWN);
 
     ASMErrorDesc edesc = parser(&bytes, &length, &symbol, argstart, arglen);
-    if (edesc)
+    if (edesc != ED_NONE)
         return error_info_create(line, ET_PARSER, edesc);
 
     ASMInstruction *inst = malloc(sizeof(ASMInstruction));
