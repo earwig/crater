@@ -146,6 +146,31 @@ static ErrorInfo* handle_block_directive(
 }
 
 /*
+    Parse a .space directive, which fills a region with a single byte.
+*/
+static bool parse_space(
+    uint8_t **result, size_t *length, const char *arg, ssize_t size)
+{
+    uint8_t *bytes;
+    size_t nbytes;
+    if (!parse_bytes(&bytes, &nbytes, arg, size))
+        return false;
+
+    if (nbytes < 1 || nbytes > 2) {
+        free(bytes);
+        return false;
+    }
+
+    *length = bytes[0];
+    if (!(*result = malloc(sizeof(uint8_t) * (*length))))
+        OUT_OF_MEMORY()
+
+    memset(*result, nbytes == 2 ? bytes[1] : 0, *length);
+    free(bytes);
+    return true;
+}
+
+/*
     Parse data encoded in a line into an ASMData object.
 
     On success, return NULL and store the instruction in *data_ptr. On failure,
@@ -160,6 +185,9 @@ static ErrorInfo* parse_data(
     if (IS_DIRECTIVE(line, DIR_BYTE)) {
         directive = DIR_BYTE;
         parser = parse_bytes;
+    } else if (IS_DIRECTIVE(line, DIR_SPACE)) {
+        directive = DIR_SPACE;
+        parser = parse_space;
     } else if (IS_DIRECTIVE(line, DIR_ASCII)) {
         directive = DIR_ASCII;
     } else if (IS_DIRECTIVE(line, DIR_ASCIZ)) {
@@ -204,6 +232,9 @@ static ErrorInfo* parse_instruction(
 {
     // TODO
     DEBUG("parse_instruction(): %.*s", (int) line->length, line->data)
+
+    // SYNTAX NOTES:
+    // see http://clrhome.org/table/ and http://www.z80.info/z80undoc.htm
 
     // return error_info_create(line, ET_PARSER, ED_PARSE_SYNTAX);
 

@@ -147,9 +147,9 @@ bool parse_bytes(uint8_t **result, size_t *length, const char *arg, ssize_t size
     uint8_t *bytes = NULL;
     size_t nbytes = 0;
 
-    while (arg != end) {
+    while (arg < end) {
         const char *start = arg;
-        while (arg != end && *arg != ' ')
+        while (arg != end && *arg != ' ' && *arg != ',')
             arg++;
 
         uint32_t temp;
@@ -164,7 +164,9 @@ bool parse_bytes(uint8_t **result, size_t *length, const char *arg, ssize_t size
             OUT_OF_MEMORY()
         bytes[nbytes - 1] = temp;
 
-        if (arg++ == end)
+        if (arg < end - 1 && *arg == ',' && *(arg + 1) == ' ')
+            arg += 2;
+        else if (arg++ >= end)
             break;
     }
 

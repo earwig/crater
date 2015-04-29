@@ -6,7 +6,7 @@
 #include <string.h>
 
 #define DIRECTIVE_MARKER '.'
-#define NUM_DIRECTIVES   15
+#define NUM_DIRECTIVES   16
 
 #define DIR_INCLUDE      ".include"
 
@@ -22,6 +22,7 @@
 #define DIR_ORIGIN       ".org"
 #define DIR_BLOCK        ".block"
 #define DIR_BYTE         ".byte"
+#define DIR_SPACE        ".space"
 #define DIR_ASCII        ".ascii"
 #define DIR_ASCIZ        ".asciz"
 #define DIR_ASCIIZ       ".asciiz"
@@ -35,8 +36,9 @@
 
 #define IS_LOCAL_DIRECTIVE(line)                                              \
     (IS_DIRECTIVE(line, DIR_ORIGIN) || IS_DIRECTIVE(line, DIR_BLOCK) ||       \
-     IS_DIRECTIVE(line, DIR_BYTE)   || IS_DIRECTIVE(line, DIR_ASCII) ||       \
-     IS_DIRECTIVE(line, DIR_ASCIZ)  || IS_DIRECTIVE(line, DIR_ASCIIZ))
+     IS_DIRECTIVE(line, DIR_BYTE)   || IS_DIRECTIVE(line, DIR_SPACE) ||       \
+     IS_DIRECTIVE(line, DIR_ASCII)  || IS_DIRECTIVE(line, DIR_ASCIZ) ||       \
+     IS_DIRECTIVE(line, DIR_ASCIIZ))
 
 #define DIRECTIVE_OFFSET(line, d)                                             \
     (DIRECTIVE_HAS_ARG(line, d) ? strlen(d) : 0)
