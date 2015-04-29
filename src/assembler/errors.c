@@ -19,6 +19,8 @@ static const char *error_types[] = {
 };
 
 static const char *error_descs[] = {
+    [ED_NONE]             = "undefined error",
+
     [ED_INC_BAD_ARG]      = "missing or invalid argument",
     [ED_INC_DEPTH]        = "maximum include depth exceeded",
     [ED_INC_FILE_READ]    = "couldn't read included file",
@@ -41,7 +43,10 @@ static const char *error_descs[] = {
     [ED_SYM_DUPE_LABELS]  = "duplicate definitions for label",
     [ED_SYM_NO_LABEL]     = "undefined reference to label",
 
-    [ED_PARSE_SYNTAX]     = "syntax error"
+    [ED_PARSE_OP_LONG]    = "opcode mnemonic is too long (2-4 characters)",
+    [ED_PARSE_OP_SHORT]   = "opcode mnemonic is too short (2-4 characters)",
+    [ED_PARSE_OP_CHARS]   = "invalid characters in opcode mnemonic",
+    [ED_PARSE_OP_UNKNOWN] = "unknown opcode mnemonic"
 };
 
 /* Internal structs */

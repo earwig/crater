@@ -18,6 +18,8 @@ typedef enum {
 } ASMErrorType;
 
 typedef enum {
+    ED_NONE = 0,
+
     ED_INC_BAD_ARG,
     ED_INC_DEPTH,
     ED_INC_FILE_READ,
@@ -40,7 +42,10 @@ typedef enum {
     ED_SYM_DUPE_LABELS,
     ED_SYM_NO_LABEL,
 
-    ED_PARSE_SYNTAX
+    ED_PARSE_OP_LONG,
+    ED_PARSE_OP_SHORT,
+    ED_PARSE_OP_CHARS,
+    ED_PARSE_OP_UNKNOWN
 } ASMErrorDesc;
 
 /* Structs */

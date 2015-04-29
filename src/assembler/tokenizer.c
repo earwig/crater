@@ -6,6 +6,7 @@
 
 #include "tokenizer.h"
 #include "directives.h"
+#include "instructions.h"
 #include "parse_util.h"
 #include "../logging.h"
 #include "../mmu.h"
@@ -230,23 +231,43 @@ static ErrorInfo* parse_data(
 static ErrorInfo* parse_instruction(
     const ASMLine *line, ASMInstruction **inst_ptr, size_t offset)
 {
-    // TODO
-    DEBUG("parse_instruction(): %.*s", (int) line->length, line->data)
+    char mnemonic[MAX_MNEMONIC_SIZE + 1];
+    size_t i = 0;
+    while (i < line->length) {
+        char c = line->data[i];
+        if (c == ' ')
+            break;
+        if (i >= MAX_MNEMONIC_SIZE)
+            return error_info_create(line, ET_PARSER, ED_PARSE_OP_LONG);
+        if ((c < 'a' || c > 'z') && (c < '0' || c > '9'))
+            return error_info_create(line, ET_PARSER, ED_PARSE_OP_CHARS);
+        mnemonic[i++] = c;
+    }
 
-    // SYNTAX NOTES:
-    // see http://clrhome.org/table/ and http://www.z80.info/z80undoc.htm
+    if (i < MIN_MNEMONIC_SIZE)
+        return error_info_create(line, ET_PARSER, ED_PARSE_OP_SHORT);
 
-    // return error_info_create(line, ET_PARSER, ED_PARSE_SYNTAX);
+    uint8_t *bytes;
+    size_t arglen = line->length - i, length;
+    char *argstart = arglen > 0 ? line->data + i : NULL, *symbol;
+
+    mnemonic[i] = '\0';
+    ASMInstParser parser = get_inst_parser(mnemonic);
+    if (!parser)
+        return error_info_create(line, ET_PARSER, ED_PARSE_OP_UNKNOWN);
+
+    ASMErrorDesc edesc = parser(&bytes, &length, &symbol, argstart, arglen);
+    if (edesc)
+        return error_info_create(line, ET_PARSER, edesc);
 
     ASMInstruction *inst = malloc(sizeof(ASMInstruction));
     if (!inst)
         OUT_OF_MEMORY()
 
     inst->loc.offset = offset;
-    inst->loc.length = 1;
-    uint8_t tmp = 0x3C;
-    inst->bytes = memcpy(malloc(1), &tmp, 1);
-    inst->symbol = NULL;
+    inst->loc.length = length;
+    inst->bytes = bytes;
+    inst->symbol = symbol;
     inst->line = line;
     inst->next = NULL;
 

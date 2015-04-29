@@ -72,7 +72,7 @@ bool parse_uint32_t(uint32_t *result, const char *arg, ssize_t size)
 
         while (arg < end) {
             if (*arg >= '0' && *arg <= '9')
-                value = value * 16 + (*arg - '0');
+                value = (value * 0x10) + (*arg - '0');
             else if (*arg >= 'a' && *arg <= 'f')
                 value = (value * 0x10) + 0xA + (*arg - 'a');
             else
