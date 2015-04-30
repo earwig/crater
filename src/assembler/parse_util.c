@@ -27,9 +27,6 @@
 */
 bool parse_bool(bool *result, const char *arg, ssize_t size)
 {
-    if (size <= 0 || size > 5)
-        return false;
-
     switch (size) {
         case 1:  // 0, 1
             if (*arg == '0' || *arg == '1')
@@ -173,6 +170,63 @@ bool parse_bytes(uint8_t **result, size_t *length, const char *arg, ssize_t size
     *result = bytes;
     *length = nbytes;
     return true;
+}
+
+/*
+    Read in a register argument and store it in *result.
+*/
+bool parse_register(ASMArgRegister *result, const char *arg, ssize_t size)
+{
+    if (size < 1 || size > 3)
+        return false;
+
+#define LCASE(c) ((c >= 'A' && c <= 'Z') ? (c + 'a' - 'A') : c)
+    char buf[3] = {'\0'};
+    switch (size) {
+        case 3: buf[2] = LCASE(arg[2]);
+        case 2: buf[1] = LCASE(arg[1]);
+        case 1: buf[0] = LCASE(arg[0]);
+    }
+#undef LCASE
+
+    switch (size) {
+        case 1:
+            switch (buf[0]) {
+                case 'a': return (*result = REG_A), true;
+                case 'f': return (*result = REG_F), true;
+                case 'b': return (*result = REG_B), true;
+                case 'c': return (*result = REG_C), true;
+                case 'd': return (*result = REG_D), true;
+                case 'e': return (*result = REG_E), true;
+                case 'h': return (*result = REG_H), true;
+                case 'l': return (*result = REG_L), true;
+                case 'i': return (*result = REG_I), true;
+                case 'r': return (*result = REG_R), true;
+            }
+            return false;
+        case 2:
+            switch ((buf[0] << 8) + buf[1]) {
+                case 0x6166: return (*result = REG_AF), true;
+                case 0x6263: return (*result = REG_BC), true;
+                case 0x6465: return (*result = REG_DE), true;
+                case 0x686c: return (*result = REG_HL), true;
+                case 0x6978: return (*result = REG_IX), true;
+                case 0x6979: return (*result = REG_IY), true;
+                case 0x7063: return (*result = REG_PC), true;
+                case 0x7370: return (*result = REG_SP), true;
+            }
+            return false;
+        case 3:
+            switch ((buf[0] << 16) + (buf[1] << 8) + buf[2]) {
+                case 0x616627: return (*result = REG_AF_), true;
+                case 0x697868: return (*result = REG_IXH), true;
+                case 0x69786c: return (*result = REG_IXL), true;
+                case 0x697968: return (*result = REG_IYH), true;
+                case 0x69796c: return (*result = REG_IYL), true;
+            }
+            return false;
+    }
+    return false;
 }
 
 /*

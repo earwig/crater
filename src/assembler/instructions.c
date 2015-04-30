@@ -29,11 +29,11 @@
 #define JOIN_(a, b, c, d) ((uint32_t) ((a << 24) + (b << 16) + (c << 8) + d))
 
 #define DISPATCH_(s, z) (                                                     \
-    z == 2 ? JOIN_(s[0], s[1], 0x00, 0x00) :                                  \
-    z == 3 ? JOIN_(s[0], s[1], s[2], 0x00) :                                  \
-             JOIN_(s[0], s[1], s[2], s[3]))                                   \
+    (z) == 2 ? JOIN_(s[0], s[1], 0x00, 0x00) :                                \
+    (z) == 3 ? JOIN_(s[0], s[1], s[2], 0x00) :                                \
+               JOIN_(s[0], s[1], s[2], s[3]))                                 \
 
-#define MAKE_CMP_(s) DISPATCH_(s, (sizeof(s) / sizeof(char) - 1))
+#define MAKE_CMP_(s) DISPATCH_(s, sizeof(s) / sizeof(char) - 1)
 
 #define HANDLE(m) if (key == MAKE_CMP_(#m)) return parse_inst_##m;
 

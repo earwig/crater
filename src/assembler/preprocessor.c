@@ -94,6 +94,19 @@ static inline bool is_valid_label_char(char c, bool first)
 }
 
 /*
+    Functions similar memcpy, but lowercases the characters along the way.
+*/
+static void memcpy_lc(char *restrict dst, const char *restrict src, size_t n)
+{
+    while (n-- > 0) {
+        char c = *(src++);
+        if (c >= 'A' && c <= 'Z')
+            c += 'a' - 'A';
+        *(dst++) = c;
+    }
+}
+
+/*
     Preprocess a single source line for labels.
 
     Return the index of first non-whitespace non-label character. *head_ptr is
@@ -125,7 +138,7 @@ static size_t read_labels(
     if (!line->data)
         OUT_OF_MEMORY()
 
-    strncpy(line->data, source + start, i - start + 1);
+    memcpy_lc(line->data, source + start, i - start + 1);
     line->length = i - start + 1;
     line->is_label = true;
 

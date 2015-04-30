@@ -6,6 +6,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#include "inst_args.h"
 #include "state.h"
 
 #define dparse__Bool dparse_bool
@@ -16,6 +17,7 @@ bool parse_bool(bool*, const char*, ssize_t);
 bool parse_uint32_t(uint32_t*, const char*, ssize_t);
 bool parse_string(char**, size_t*, const char*, ssize_t);
 bool parse_bytes(uint8_t**, size_t*, const char*, ssize_t);
+bool parse_register(ASMArgRegister*, const char*, ssize_t);
 
 bool dparse_bool(bool*, const ASMLine*, const char*);
 bool dparse_uint32_t(uint32_t*, const ASMLine*, const char*);

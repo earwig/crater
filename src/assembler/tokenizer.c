@@ -7,6 +7,7 @@
 #include "tokenizer.h"
 #include "directives.h"
 #include "instructions.h"
+#include "inst_args.h"
 #include "parse_util.h"
 #include "../logging.h"
 #include "../mmu.h"
@@ -55,12 +56,16 @@ static inline int8_t default_bank_slot(uint8_t bank)
 /*
     Add a given line, representing a label, to the symbol table.
 
-    Return NULL on success and an ErrorInfo object on failure (in the case of
-    duplicate labels).
+    Return NULL on success and an ErrorInfo object on failure (e.g. in the case
+    of duplicate labels).
 */
 static ErrorInfo* add_label_to_table(
     ASMSymbolTable *symtable, const ASMLine *line, size_t offset, int8_t slot)
 {
+    ASMArgRegister reg;
+    if (parse_register(&reg, line->data, line->length - 1))
+        return error_info_create(line, ET_SYMBOL, ED_SYM_IS_REGISTER);
+
     char *symbol = strndup(line->data, line->length - 1);
     if (!symbol)
         OUT_OF_MEMORY()
@@ -69,6 +74,7 @@ static ErrorInfo* add_label_to_table(
     if (current) {
         ErrorInfo *ei = error_info_create(line, ET_SYMBOL, ED_SYM_DUPE_LABELS);
         error_info_append(ei, current->line);
+        free(symbol);
         return ei;
     }
 
@@ -249,7 +255,7 @@ static ErrorInfo* parse_instruction(
 
     uint8_t *bytes;
     size_t arglen = line->length - i, length;
-    char *argstart = arglen > 0 ? line->data + i : NULL, *symbol;
+    char *argstart = arglen > 0 ? line->data + i : NULL, *symbol = NULL;
 
     ASMInstParser parser = get_inst_parser(mnemonic);
     if (!parser)

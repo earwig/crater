@@ -42,6 +42,7 @@ static const char *error_descs[] = {
 
     [ED_SYM_DUPE_LABELS]  = "duplicate definitions for label",
     [ED_SYM_NO_LABEL]     = "undefined reference to label",
+    [ED_SYM_IS_REGISTER]  = "labels cannot share names with registers",
 
     [ED_PS_OP_TOO_LONG]   = "opcode mnemonic is too long (2-4 characters)",
     [ED_PS_OP_TOO_SHORT]  = "opcode mnemonic is too short (2-4 characters)",
@@ -49,7 +50,8 @@ static const char *error_descs[] = {
     [ED_PS_OP_UNKNOWN]    = "unknown opcode mnemonic",
     [ED_PS_TOO_FEW_ARGS]  = "too few arguments for opcode",
     [ED_PS_TOO_MANY_ARGS] = "too many arguments for opcode",
-    // [ED_PS_ARG1_TYPE]     = "invalid type for first argument",
+    // [ED_PS_ARG1_NEED_REG] = "invalid type for first argument (needs register)",
+    // [ED_PS_ARG1_BAD_REG]  = "first argument should be a register",
 };
 
 /* Internal structs */
