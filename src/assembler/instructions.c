@@ -91,12 +91,17 @@ static ASMErrorDesc parse_inst_##mnemonic(                                    \
         INST_ERROR(TOO_MANY_ARGS)
 
 #define INST_ARG(n) (args[n])
+#define INST_TYPE(n) INST_ARG(n).type
+#define INST_REG(n) INST_ARG(n).data.reg
+#define INST_IMM(n) INST_ARG(n).data.imm
+#define INST_INDIRECT(n) INST_ARG(n).data.indirect
+#define INST_INDEX(n) INST_ARG(n).data.index
+#define INST_LABEL(n) INST_ARG(n).data.label
+#define INST_COND(n) INST_ARG(n).data.cond
 
-#define INST_REG_PREFIX(n) INST_PREFIX_(INST_ARG(n).data.reg)
-
-#define INST_INDEX_PREFIX(n) INST_PREFIX_(INST_ARG(n).data.index.reg)
-
-#define INST_IND_PREFIX(n) INST_PREFIX_(INST_ARG(n).data.indirect.addr.reg)
+#define INST_REG_PREFIX(n) INST_PREFIX_(INST_REG(n))
+#define INST_INDEX_PREFIX(n) INST_PREFIX_(INST_INDEX(n).reg)
+#define INST_IND_PREFIX(n) INST_PREFIX_(INST_INDIRECT(n).addr.reg)
 
 #define INST_RETURN(len, ...) {                                               \
         (void) symbol;                                                        \
@@ -200,9 +205,9 @@ INST_FUNC(nop)
 INST_FUNC(inc)
 {
     INST_TAKES_ARGS(1, 1)
-    switch (INST_ARG(0).type) {
+    switch (INST_TYPE(0)) {
         case AT_REGISTER:
-            switch (INST_ARG(0).data.reg) {
+            switch (INST_REG(0)) {
                 case REG_A:   INST_RETURN(1, 0x3C)
                 case REG_B:   INST_RETURN(1, 0x04)
                 case REG_C:   INST_RETURN(1, 0x0C)
@@ -223,13 +228,13 @@ INST_FUNC(inc)
                 default: INST_ERROR(ARG0_BAD_REG)
             }
         case AT_INDIRECT:
-            if (INST_ARG(0).data.indirect.type != AT_REGISTER)
+            if (INST_INDIRECT(0).type != AT_REGISTER)
                 INST_ERROR(ARG0_TYPE)
-            if (INST_ARG(0).data.indirect.addr.reg != REG_HL)
+            if (INST_INDIRECT(0).addr.reg != REG_HL)
                 INST_ERROR(ARG0_BAD_REG)
             INST_RETURN(2, 0x34)
         case AT_INDEXED:
-            INST_RETURN(3, INST_INDEX_PREFIX(0), 0x34, INST_ARG(0).data.index.offset)
+            INST_RETURN(3, INST_INDEX_PREFIX(0), 0x34, INST_INDEX(0).offset)
         default:
             INST_ERROR(ARG0_TYPE)
     }
