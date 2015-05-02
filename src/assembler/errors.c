@@ -50,8 +50,9 @@ static const char *error_descs[] = {
     [ED_PS_OP_UNKNOWN]    = "unknown opcode mnemonic",
     [ED_PS_TOO_FEW_ARGS]  = "too few arguments for opcode",
     [ED_PS_TOO_MANY_ARGS] = "too many arguments for opcode",
-    // [ED_PS_ARG1_NEED_REG] = "invalid type for first argument (needs register)",
-    // [ED_PS_ARG1_BAD_REG]  = "first argument should be a register",
+    [ED_PS_ARG_SYNTAX]    = "invalid syntax in argument(s)",
+    [ED_PS_ARG0_TYPE]     = "invalid type for first argument",
+    [ED_PS_ARG0_BAD_REG]  = "unsupported register in first argument"
 };
 
 /* Internal structs */

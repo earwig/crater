@@ -48,7 +48,10 @@ typedef enum {
     ED_PS_OP_INVALID,
     ED_PS_OP_UNKNOWN,
     ED_PS_TOO_FEW_ARGS,
-    ED_PS_TOO_MANY_ARGS
+    ED_PS_TOO_MANY_ARGS,
+    ED_PS_ARG_SYNTAX,
+    ED_PS_ARG0_TYPE,
+    ED_PS_ARG0_BAD_REG
 } ASMErrorDesc;
 
 /* Structs */

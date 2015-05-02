@@ -253,6 +253,9 @@ static ErrorInfo* parse_instruction(
     if (i < MIN_MNEMONIC_SIZE)
         return error_info_create(line, ET_PARSER, ED_PS_OP_TOO_SHORT);
 
+    if (i + 1 < line->length)
+        i++;  // Advance past space
+
     uint8_t *bytes;
     size_t arglen = line->length - i, length;
     char *argstart = arglen > 0 ? line->data + i : NULL, *symbol = NULL;
