@@ -147,35 +147,30 @@ static uint8_t fill_bytes_variadic(uint8_t *bytes, size_t len, ...)
 static ASMErrorDesc parse_arg(
     ASMInstArg *arg, const char *str, size_t size, char **symbol)
 {
-    // TODO
-
-    // AT_REGISTER
-    // AT_IMMEDIATE
-    // AT_INDIRECT
-    // AT_INDEXED
-    // AT_LABEL
-    // AT_CONDITION
-
-    // ASMArgRegister reg;
-    // ASMArgImmediate imm;
-    // ASMArgIndirect indirect;
-    // ASMArgIndexed index;
-    // ASMArgLabel label;
-    // ASMArgCondition cond;
+#define USE_PARSER(func, argtype, field)                                      \
+    if (argparse_##func(&arg->data.field, str, size)) {                       \
+        arg->type = argtype;                                                  \
+        return ED_NONE;                                                       \
+    }
 
     DEBUG("parse_arg(): -->%.*s<-- %zu", (int) size, str, size)
+    USE_PARSER(register, AT_REGISTER, reg)
+    USE_PARSER(immediate, AT_IMMEDIATE, imm)
 
-    if (parse_register(&arg->data.reg, str, size)) {
-        arg->type = AT_REGISTER;
-        return ED_NONE;
-    }
+    // AT_INDIRECT
+    // ASMArgIndirect indirect;
 
-    if (parse_condition(&arg->data.cond, str, size)) {
-        arg->type = AT_CONDITION;
-        return ED_NONE;
-    }
+    // AT_INDEXED
+    // ASMArgIndexed index;
+
+    USE_PARSER(condition, AT_CONDITION, cond)
+
+    // AT_LABEL
+    // ASMArgLabel label;
 
     return ED_PS_ARG_SYNTAX;
+
+#undef USE_PARSER
 }
 
 /*
@@ -193,6 +188,8 @@ static ASMErrorDesc parse_args(
     while (i < size) {
         char c = str[i];
         if (c == ',') {
+            if (i == start)
+                return ED_PS_ARG_SYNTAX;
             if ((err = parse_arg(&args[*nargs], str + start, i - start, &symbol)))
                 return err;
             (*nargs)++;
@@ -201,7 +198,9 @@ static ASMErrorDesc parse_args(
             if (i < size && str[i] == ' ')
                 i++;
             start = i;
-            if (*nargs >= 3 && i < size)
+            if (i == size)
+                return ED_PS_ARG_SYNTAX;
+            if (*nargs >= 3)
                 return ED_PS_TOO_MANY_ARGS;
         } else {
             if ((c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') ||

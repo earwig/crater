@@ -177,7 +177,7 @@ bool parse_bytes(uint8_t **result, size_t *length, const char *arg, ssize_t size
 /*
     Read in a register argument and store it in *result.
 */
-bool parse_register(ASMArgRegister *result, const char *arg, ssize_t size)
+bool argparse_register(ASMArgRegister *result, const char *arg, ssize_t size)
 {
     if (size < 1 || size > 3)
         return false;
@@ -232,7 +232,7 @@ bool parse_register(ASMArgRegister *result, const char *arg, ssize_t size)
 /*
     Read in a register argument and store it in *result.
 */
-bool parse_condition(ASMArgCondition *result, const char *arg, ssize_t size)
+bool argparse_condition(ASMArgCondition *result, const char *arg, ssize_t size)
 {
     if (size < 1 || size > 2)
         return false;
@@ -262,6 +262,55 @@ bool parse_condition(ASMArgCondition *result, const char *arg, ssize_t size)
             return false;
     }
     return false;
+}
+
+/*
+    Read in an immediate argument and store it in *result.
+*/
+bool argparse_immediate(ASMArgImmediate *result, const char *arg, ssize_t size)
+{
+    bool negative = false;
+    ssize_t i = 0;
+
+    if (size <= 0)
+        return false;
+
+    while (arg[i] == '-' || arg[i] == '+' || arg[i] == ' ') {
+        if (arg[i] == '-')
+            negative = !negative;
+        if (++i >= size)
+            return false;
+    }
+
+    uint32_t uval;
+    if (parse_uint32_t(&uval, arg, size) && uval > UINT16_MAX)
+        return false;
+
+    int32_t sval = negative ? uval : -uval;
+    if (sval < INT16_MIN)
+        return false;
+
+    result->uval = uval;
+    result->sval = sval;
+    result->mask = 0;
+
+    if (negative) {
+        if (sval >= INT8_MIN && sval <= INT8_MAX)
+            result->mask |= IMM_S8;
+        if (sval >= INT8_MIN + 2 && sval <= INT8_MAX + 2)
+            result->mask |= IMM_REL;
+    } else {
+        result->mask = IMM_U16;
+        if (uval <= UINT8_MAX)
+            result->mask |= IMM_U8;
+        if (uval <= 7)
+            result->mask |= IMM_BIT;
+        if (!(uval & ~0x38))
+            result->mask |= IMM_RST;
+        if (uval <= 2)
+            result->mask |= IMM_IM;
+    }
+    return true;
 }
 
 /*

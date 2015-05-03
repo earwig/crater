@@ -34,7 +34,8 @@ typedef enum {
 
 typedef struct {
     ASMArgImmType mask;
-    uint16_t value;
+    uint16_t uval;
+    int16_t sval;
 } ASMArgImmediate;
 
 typedef struct {

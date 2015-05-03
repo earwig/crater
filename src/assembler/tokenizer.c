@@ -63,11 +63,11 @@ static ErrorInfo* add_label_to_table(
     ASMSymbolTable *symtable, const ASMLine *line, size_t offset, int8_t slot)
 {
     ASMArgRegister reg;
-    if (parse_register(&reg, line->data, line->length - 1))
+    if (argparse_register(&reg, line->data, line->length - 1))
         return error_info_create(line, ET_SYMBOL, ED_SYM_IS_REGISTER);
 
     ASMArgCondition cond;
-    if (parse_condition(&cond, line->data, line->length - 1))
+    if (argparse_condition(&cond, line->data, line->length - 1))
         return error_info_create(line, ET_SYMBOL, ED_SYM_IS_CONDITION);
 
     char *symbol = strndup(line->data, line->length - 1);
