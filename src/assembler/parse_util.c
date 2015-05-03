@@ -230,7 +230,7 @@ bool argparse_register(ASMArgRegister *result, const char *arg, ssize_t size)
 }
 
 /*
-    Read in a register argument and store it in *result.
+    Read in a condition argument and store it in *result.
 */
 bool argparse_condition(ASMArgCondition *result, const char *arg, ssize_t size)
 {
@@ -283,7 +283,7 @@ bool argparse_immediate(ASMArgImmediate *result, const char *arg, ssize_t size)
     }
 
     uint32_t uval;
-    if (parse_uint32_t(&uval, arg, size) && uval > UINT16_MAX)
+    if (!parse_uint32_t(&uval, arg, size) || uval > UINT16_MAX)
         return false;
 
     int32_t sval = negative ? uval : -uval;
@@ -311,6 +311,36 @@ bool argparse_immediate(ASMArgImmediate *result, const char *arg, ssize_t size)
             result->mask |= IMM_IM;
     }
     return true;
+}
+
+/*
+    Read in an indirect argument and store it in *result.
+*/
+bool argparse_indirect(ASMArgIndirect *result, const char *arg, ssize_t size)
+{
+    if (size < 3)
+        return false;
+    if (arg[0] != '(' || arg[size - 1] != ')')
+        return false;
+    arg++;
+    size -= 2;
+
+    ASMArgRegister reg;
+    ASMArgImmediate imm;
+    if (argparse_register(&reg, arg, size)) {
+        if (reg == REG_BC || reg == REG_DE || reg == REG_HL) {
+            result->type = AT_REGISTER;
+            result->addr.reg = reg;
+            return true;
+        }
+    } else if (argparse_immediate(&imm, arg, size)) {
+        if (imm.mask & IMM_U16) {
+            result->type = AT_IMMEDIATE;
+            result->addr.imm = imm;
+            return true;
+        }
+    }
+    return false;
 }
 
 /*

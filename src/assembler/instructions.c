@@ -155,9 +155,7 @@ static ASMErrorDesc parse_arg(
     DEBUG("parse_arg(): -->%.*s<-- %zu", (int) size, str, size)
     USE_PARSER(register, AT_REGISTER, reg)
     USE_PARSER(immediate, AT_IMMEDIATE, imm)
-
-    // AT_INDIRECT
-    // ASMArgIndirect indirect;
+    USE_PARSER(indirect, AT_INDIRECT, indirect)
 
     // AT_INDEXED
     // ASMArgIndexed index;

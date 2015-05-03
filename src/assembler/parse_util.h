@@ -23,6 +23,7 @@ bool parse_bytes(uint8_t**, size_t*, const char*, ssize_t);
 bool argparse_register(ASMArgRegister*, const char*, ssize_t);
 bool argparse_condition(ASMArgCondition*, const char*, ssize_t);
 bool argparse_immediate(ASMArgImmediate*, const char*, ssize_t);
+bool argparse_indirect(ASMArgIndirect*, const char*, ssize_t);
 
 /* Preprocessor directive parsers */
 bool dparse_bool(bool*, const ASMLine*, const char*);
