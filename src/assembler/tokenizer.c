@@ -57,7 +57,7 @@ static inline int8_t default_bank_slot(uint8_t bank)
     Add a given line, representing a label, to the symbol table.
 
     Return NULL on success and an ErrorInfo object on failure (e.g. in the case
-    of duplicate labels).
+    of duplicate labels, or labels sharing names with registers/conditions).
 */
 static ErrorInfo* add_label_to_table(
     ASMSymbolTable *symtable, const ASMLine *line, size_t offset, int8_t slot)
@@ -65,6 +65,10 @@ static ErrorInfo* add_label_to_table(
     ASMArgRegister reg;
     if (parse_register(&reg, line->data, line->length - 1))
         return error_info_create(line, ET_SYMBOL, ED_SYM_IS_REGISTER);
+
+    ASMArgCondition cond;
+    if (parse_condition(&cond, line->data, line->length - 1))
+        return error_info_create(line, ET_SYMBOL, ED_SYM_IS_CONDITION);
 
     char *symbol = strndup(line->data, line->length - 1);
     if (!symbol)

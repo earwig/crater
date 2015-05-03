@@ -43,6 +43,7 @@ static const char *error_descs[] = {
     [ED_SYM_DUPE_LABELS]  = "duplicate definitions for label",
     [ED_SYM_NO_LABEL]     = "undefined reference to label",
     [ED_SYM_IS_REGISTER]  = "labels cannot share names with registers",
+    [ED_SYM_IS_CONDITION] = "labels cannot share names with condition codes",
 
     [ED_PS_OP_TOO_LONG]   = "opcode mnemonic is too long (2-4 characters)",
     [ED_PS_OP_TOO_SHORT]  = "opcode mnemonic is too short (2-4 characters)",

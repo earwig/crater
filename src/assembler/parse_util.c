@@ -12,6 +12,8 @@
 
 #define MAX_REGION_SIZE 32
 
+#define LCASE(c) ((c >= 'A' && c <= 'Z') ? (c + 'a' - 'A') : c)
+
 #define DIRECTIVE_PARSE_FUNC(name, type)                                      \
     bool dparse_##name(type *result, const ASMLine *line, const char *directive)
 
@@ -180,14 +182,12 @@ bool parse_register(ASMArgRegister *result, const char *arg, ssize_t size)
     if (size < 1 || size > 3)
         return false;
 
-#define LCASE(c) ((c >= 'A' && c <= 'Z') ? (c + 'a' - 'A') : c)
     char buf[3] = {'\0'};
     switch (size) {
         case 3: buf[2] = LCASE(arg[2]);
         case 2: buf[1] = LCASE(arg[1]);
         case 1: buf[0] = LCASE(arg[0]);
     }
-#undef LCASE
 
     switch (size) {
         case 1:
@@ -209,7 +209,7 @@ bool parse_register(ASMArgRegister *result, const char *arg, ssize_t size)
                 case 0x6166: return (*result = REG_AF), true;
                 case 0x6263: return (*result = REG_BC), true;
                 case 0x6465: return (*result = REG_DE), true;
-                case 0x686c: return (*result = REG_HL), true;
+                case 0x686C: return (*result = REG_HL), true;
                 case 0x6978: return (*result = REG_IX), true;
                 case 0x6979: return (*result = REG_IY), true;
                 case 0x7063: return (*result = REG_PC), true;
@@ -220,9 +220,44 @@ bool parse_register(ASMArgRegister *result, const char *arg, ssize_t size)
             switch ((buf[0] << 16) + (buf[1] << 8) + buf[2]) {
                 case 0x616627: return (*result = REG_AF_), true;
                 case 0x697868: return (*result = REG_IXH), true;
-                case 0x69786c: return (*result = REG_IXL), true;
+                case 0x69786C: return (*result = REG_IXL), true;
                 case 0x697968: return (*result = REG_IYH), true;
-                case 0x69796c: return (*result = REG_IYL), true;
+                case 0x69796C: return (*result = REG_IYL), true;
+            }
+            return false;
+    }
+    return false;
+}
+
+/*
+    Read in a register argument and store it in *result.
+*/
+bool parse_condition(ASMArgCondition *result, const char *arg, ssize_t size)
+{
+    if (size < 1 || size > 2)
+        return false;
+
+    char buf[2] = {'\0'};
+    switch (size) {
+        case 2: buf[1] = LCASE(arg[1]);
+        case 1: buf[0] = LCASE(arg[0]);
+    }
+
+    switch (size) {
+        case 1:
+            switch (buf[0]) {
+                case 'n': return (*result = COND_N), true;
+                case 'c': return (*result = COND_C), true;
+                case 'p': return (*result = COND_P), true;
+                case 'm': return (*result = COND_M), true;
+            }
+            return false;
+        case 2:
+            switch ((buf[0] << 8) + buf[1]) {
+                case 0x6E7A: return (*result = COND_NZ), true;
+                case 0x6E63: return (*result = COND_NC), true;
+                case 0x706F: return (*result = COND_PO), true;
+                case 0x7065: return (*result = COND_PE), true;
             }
             return false;
     }

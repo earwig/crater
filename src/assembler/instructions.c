@@ -6,6 +6,7 @@
 
 #include "instructions.h"
 #include "inst_args.h"
+#include "parse_util.h"
 #include "../logging.h"
 
 /*
@@ -81,7 +82,7 @@ static ASMErrorDesc parse_inst_##mnemonic(                                    \
     if (!arg)                                                                 \
         INST_ERROR(TOO_FEW_ARGS)                                              \
     ASMInstArg args[3];                                                       \
-    size_t nargs;                                                             \
+    size_t nargs = 0;                                                         \
     ASMErrorDesc err = parse_args(args, &nargs, arg, size);                   \
     if (err)                                                                  \
         return err;                                                           \
@@ -90,14 +91,13 @@ static ASMErrorDesc parse_inst_##mnemonic(                                    \
     if (nargs > hi)                                                           \
         INST_ERROR(TOO_MANY_ARGS)
 
-#define INST_ARG(n) (args[n])
-#define INST_TYPE(n) INST_ARG(n).type
-#define INST_REG(n) INST_ARG(n).data.reg
-#define INST_IMM(n) INST_ARG(n).data.imm
-#define INST_INDIRECT(n) INST_ARG(n).data.indirect
-#define INST_INDEX(n) INST_ARG(n).data.index
-#define INST_LABEL(n) INST_ARG(n).data.label
-#define INST_COND(n) INST_ARG(n).data.cond
+#define INST_TYPE(n) args[n].type
+#define INST_REG(n) args[n].data.reg
+#define INST_IMM(n) args[n].data.imm
+#define INST_INDIRECT(n) args[n].data.indirect
+#define INST_INDEX(n) args[n].data.index
+#define INST_LABEL(n) args[n].data.label
+#define INST_COND(n) args[n].data.cond
 
 #define INST_REG_PREFIX(n) INST_PREFIX_(INST_REG(n))
 #define INST_INDEX_PREFIX(n) INST_PREFIX_(INST_INDEX(n).reg)
@@ -148,7 +148,33 @@ static ASMErrorDesc parse_arg(
     ASMInstArg *arg, const char *str, size_t size, char **symbol)
 {
     // TODO
-    DEBUG("parse_arg(): -->%.*s<--", (int) size, str)
+
+    // AT_REGISTER
+    // AT_IMMEDIATE
+    // AT_INDIRECT
+    // AT_INDEXED
+    // AT_LABEL
+    // AT_CONDITION
+
+    // ASMArgRegister reg;
+    // ASMArgImmediate imm;
+    // ASMArgIndirect indirect;
+    // ASMArgIndexed index;
+    // ASMArgLabel label;
+    // ASMArgCondition cond;
+
+    DEBUG("parse_arg(): -->%.*s<-- %zu", (int) size, str, size)
+
+    if (parse_register(&arg->data.reg, str, size)) {
+        arg->type = AT_REGISTER;
+        return ED_NONE;
+    }
+
+    if (parse_condition(&arg->data.cond, str, size)) {
+        arg->type = AT_CONDITION;
+        return ED_NONE;
+    }
+
     return ED_PS_ARG_SYNTAX;
 }
 
@@ -190,6 +216,7 @@ static ASMErrorDesc parse_args(
     if (i > start) {
         if ((err = parse_arg(&args[*nargs], str + start, i - start, &symbol)))
             return err;
+        (*nargs)++;
     }
     return ED_NONE;
 }
@@ -254,6 +281,12 @@ INST_FUNC(adc)
 }
 */
 
+INST_FUNC(retn)
+{
+    INST_TAKES_NO_ARGS
+    INST_RETURN(2, 0xED, 0x45)
+}
+
 /*
     Return the relevant ASMInstParser function for a given mnemonic.
 
@@ -271,6 +304,7 @@ ASMInstParser get_inst_parser(char mstr[MAX_MNEMONIC_SIZE])
     HANDLE(inc)
     // HANDLE(add)
     // HANDLE(adc)
+    HANDLE(retn)
 
     return NULL;
 }
