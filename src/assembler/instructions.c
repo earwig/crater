@@ -9,26 +9,6 @@
 #include "parse_util.h"
 #include "../logging.h"
 
-/*
-    TEMP SYNTAX NOTES:
-    - http://clrhome.org/table/
-    - http://www.z80.info/z80undoc.htm
-    - http://www.z80.info/z80code.txt
-    - http://www.z80.info/z80href.txt
-
-    inst     := mnemonic [arg[, arg[, arg]]]
-    mnemonic := [a-z0-9]{2-4}
-    arg      := register | immediate | indirect | indexed | label | condition
-
-    register  := A | B | C | D | E | AF | BC | DE | HL | H | L | F | I | IX |
-                 IY | PC | R | SP | AF' | IXH | IXL | IYH | IYL
-    immediate := 16-bit integer
-    indirect  := \( (register | immediate) \)
-    indexed   := \( (IX | IY) + immediate \)
-    label     := string
-    condition := NZ | N | NC | C | PO | PE | P | M
-*/
-
 /* Helper macros for get_inst_parser() */
 
 #define JOIN_(a, b, c, d) ((uint32_t) ((a << 24) + (b << 16) + (c << 8) + d))
@@ -91,6 +71,7 @@ static ASMErrorDesc parse_inst_##mnemonic(                                    \
     if (nargs > hi)                                                           \
         INST_ERROR(TOO_MANY_ARGS)
 
+#define INST_NARGS nargs
 #define INST_TYPE(n) args[n].type
 #define INST_REG(n) args[n].data.reg
 #define INST_IMM(n) args[n].data.imm
@@ -99,9 +80,22 @@ static ASMErrorDesc parse_inst_##mnemonic(                                    \
 #define INST_LABEL(n) args[n].data.label
 #define INST_COND(n) args[n].data.cond
 
-#define INST_REG_PREFIX(n) INST_PREFIX_(INST_REG(n))
-#define INST_INDEX_PREFIX(n) INST_PREFIX_(INST_INDEX(n).reg)
-#define INST_IND_PREFIX(n) INST_PREFIX_(INST_INDIRECT(n).addr.reg)
+#define INST_FORCE_TYPE(n, t) {                                               \
+        if (INST_TYPE(n) != t)                                                \
+            INST_ERROR(ARG##n##_TYPE)                                         \
+    }
+
+#define INST_CHECK_IMM(n, m) {                                                \
+        if (!(INST_IMM(n).mask & (m)))                                        \
+            INST_ERROR(ARG##n##_RANGE)                                        \
+    }
+
+#define INST_INDIRECT_HL_ONLY(n) {                                            \
+        if (INST_INDIRECT(n).type != AT_REGISTER)                             \
+            INST_ERROR(ARG##n##_TYPE)                                         \
+        if (INST_INDIRECT(n).addr.reg != REG_HL)                              \
+            INST_ERROR(ARG##n##_BAD_REG)                                      \
+    }
 
 #define INST_RETURN(len, ...) {                                               \
         (void) symbol;                                                        \
@@ -118,6 +112,11 @@ static ASMErrorDesc parse_inst_##mnemonic(                                    \
         INST_FILL_BYTES_(len - 2, __VA_ARGS__)                                \
         return ED_NONE;                                                       \
     }
+
+#define INST_INDEX_PREFIX(n) INST_PREFIX_(INST_INDEX(n).reg)
+
+#define INST_INDEX_BYTES(n, b)                                                \
+    INST_INDEX_PREFIX(n), b, INST_INDEX(n).offset
 
 /*
     Fill an instruction's byte array with the given data.
@@ -254,31 +253,89 @@ INST_FUNC(inc)
                 default: INST_ERROR(ARG0_BAD_REG)
             }
         case AT_INDIRECT:
-            if (INST_INDIRECT(0).type != AT_REGISTER)
-                INST_ERROR(ARG0_TYPE)
-            if (INST_INDIRECT(0).addr.reg != REG_HL)
-                INST_ERROR(ARG0_BAD_REG)
-            INST_RETURN(2, 0x34)
+            INST_INDIRECT_HL_ONLY(0)
+            INST_RETURN(1, 0x34)
         case AT_INDEXED:
-            INST_RETURN(3, INST_INDEX_PREFIX(0), 0x34, INST_INDEX(0).offset)
+            INST_RETURN(3, INST_INDEX_BYTES(0, 0x34))
+        default:
+            INST_ERROR(ARG0_TYPE)
+    }
+}
+
+INST_FUNC(add)
+{
+    INST_TAKES_ARGS(2, 2)
+    INST_FORCE_TYPE(0, AT_REGISTER)
+    switch (INST_REG(0)) {
+        case REG_A:
+            switch (INST_TYPE(1)) {
+                case AT_REGISTER:
+                    switch (INST_REG(1)) {
+                        case REG_A:   INST_RETURN(1, 0x87)
+                        case REG_B:   INST_RETURN(1, 0x80)
+                        case REG_C:   INST_RETURN(1, 0x81)
+                        case REG_D:   INST_RETURN(1, 0x82)
+                        case REG_E:   INST_RETURN(1, 0x83)
+                        case REG_H:   INST_RETURN(1, 0x84)
+                        case REG_L:   INST_RETURN(1, 0x85)
+                        case REG_IXH: INST_RETURN(2, 0xDD, 0x84)
+                        case REG_IXL: INST_RETURN(2, 0xDD, 0x85)
+                        case REG_IYH: INST_RETURN(2, 0xFD, 0x84)
+                        case REG_IYL: INST_RETURN(2, 0xFD, 0x85)
+                        default: INST_ERROR(ARG1_BAD_REG)
+                    }
+                case AT_IMMEDIATE:
+                    INST_CHECK_IMM(1, IMM_U8)
+                    INST_RETURN(2, 0xC6, INST_IMM(1).uval)
+                case AT_INDIRECT:
+                    INST_INDIRECT_HL_ONLY(1)
+                    INST_RETURN(1, 0x86)
+                case AT_INDEXED:
+                    INST_RETURN(3, INST_INDEX_BYTES(1, 0x86))
+                default:
+                    INST_ERROR(ARG1_TYPE)
+            }
+        case REG_HL:
+            INST_FORCE_TYPE(1, AT_REGISTER)
+            switch (INST_REG(1)) {
+                case REG_BC: INST_RETURN(1, 0x09)
+                case REG_DE: INST_RETURN(1, 0x19)
+                case REG_HL: INST_RETURN(1, 0x29)
+                case REG_SP: INST_RETURN(1, 0x39)
+                default: INST_ERROR(ARG1_BAD_REG)
+            }
+        case REG_IX:
+        case REG_IY:
+            INST_FORCE_TYPE(1, AT_REGISTER)
+            switch (INST_REG(1)) {
+                case REG_BC: INST_RETURN(2, INST_INDEX_PREFIX(1), 0x09)
+                case REG_DE: INST_RETURN(2, INST_INDEX_PREFIX(1), 0x19)
+                case REG_IX:
+                case REG_IY:
+                    if (INST_REG(0) != INST_REG(1))
+                        INST_ERROR(ARG1_BAD_REG)
+                    INST_RETURN(2, INST_INDEX_PREFIX(1), 0x29)
+                case REG_SP: INST_RETURN(2, INST_INDEX_PREFIX(1), 0x39)
+                default: INST_ERROR(ARG1_BAD_REG)
+            }
         default:
             INST_ERROR(ARG0_TYPE)
     }
 }
 
 /*
-INST_FUNC(add)
-{
-    DEBUG("dispatched to -> ADD")
-    return ED_PS_TOO_FEW_ARGS;
-}
-
 INST_FUNC(adc)
 {
     DEBUG("dispatched to -> ADC")
     return ED_PS_TOO_FEW_ARGS;
 }
 */
+
+INST_FUNC(reti)
+{
+    INST_TAKES_NO_ARGS
+    INST_RETURN(2, 0xED, 0x4D)
+}
 
 INST_FUNC(retn)
 {
@@ -301,8 +358,9 @@ ASMInstParser get_inst_parser(char mstr[MAX_MNEMONIC_SIZE])
 
     HANDLE(nop)
     HANDLE(inc)
-    // HANDLE(add)
+    HANDLE(add)
     // HANDLE(adc)
+    HANDLE(reti)
     HANDLE(retn)
 
     return NULL;

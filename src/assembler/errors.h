@@ -52,7 +52,10 @@ typedef enum {
     ED_PS_TOO_MANY_ARGS,
     ED_PS_ARG_SYNTAX,
     ED_PS_ARG0_TYPE,
-    ED_PS_ARG0_BAD_REG
+    ED_PS_ARG0_BAD_REG,
+    ED_PS_ARG1_TYPE,
+    ED_PS_ARG1_BAD_REG,
+    ED_PS_ARG1_RANGE
 } ASMErrorDesc;
 
 /* Structs */
