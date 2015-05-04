@@ -42,6 +42,7 @@ static const char *error_descs[] = {
 
     [ED_SYM_DUPE_LABELS]  = "duplicate definitions for label",
     [ED_SYM_NO_LABEL]     = "undefined reference to label",
+    [ED_SYM_TOO_LONG]     = "label name is too long",
     [ED_SYM_IS_REGISTER]  = "labels cannot share names with registers",
     [ED_SYM_IS_CONDITION] = "labels cannot share names with condition codes",
 

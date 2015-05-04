@@ -143,28 +143,24 @@ static uint8_t fill_bytes_variadic(uint8_t *bytes, size_t len, ...)
 
     Return ED_NONE (0) on success or an error code on failure.
 */
-static ASMErrorDesc parse_arg(
-    ASMInstArg *arg, const char *str, size_t size, char **symbol)
+static ASMErrorDesc parse_arg(ASMInstArg *arg, const char *str, size_t size)
 {
-#define USE_PARSER(func, argtype, field)                                      \
+#define TRY_PARSER(func, argtype, field)                                      \
     if (argparse_##func(&arg->data.field, str, size)) {                       \
         arg->type = argtype;                                                  \
         return ED_NONE;                                                       \
     }
 
     DEBUG("parse_arg(): -->%.*s<-- %zu", (int) size, str, size)
-    USE_PARSER(register, AT_REGISTER, reg)
-    USE_PARSER(immediate, AT_IMMEDIATE, imm)
-    USE_PARSER(indirect, AT_INDIRECT, indirect)
-    USE_PARSER(indexed, AT_INDEXED, index)
-    USE_PARSER(condition, AT_CONDITION, cond)
-
-    // AT_LABEL
-    // ASMArgLabel label;
-
+    TRY_PARSER(register, AT_REGISTER, reg)
+    TRY_PARSER(immediate, AT_IMMEDIATE, imm)
+    TRY_PARSER(indirect, AT_INDIRECT, indirect)
+    TRY_PARSER(indexed, AT_INDEXED, index)
+    TRY_PARSER(condition, AT_CONDITION, cond)
+    TRY_PARSER(label, AT_LABEL, label)
     return ED_PS_ARG_SYNTAX;
 
-#undef USE_PARSER
+#undef TRY_PARSER
 }
 
 /*
@@ -176,7 +172,6 @@ static ASMErrorDesc parse_args(
     ASMInstArg args[3], size_t *nargs, const char *str, size_t size)
 {
     ASMErrorDesc err;
-    static char *symbol = NULL;
     size_t start = 0, i = 0;
 
     while (i < size) {
@@ -184,7 +179,7 @@ static ASMErrorDesc parse_args(
         if (c == ',') {
             if (i == start)
                 return ED_PS_ARG_SYNTAX;
-            if ((err = parse_arg(&args[*nargs], str + start, i - start, &symbol)))
+            if ((err = parse_arg(&args[*nargs], str + start, i - start)))
                 return err;
             (*nargs)++;
 
@@ -207,7 +202,7 @@ static ASMErrorDesc parse_args(
     }
 
     if (i > start) {
-        if ((err = parse_arg(&args[*nargs], str + start, i - start, &symbol)))
+        if ((err = parse_arg(&args[*nargs], str + start, i - start)))
             return err;
         (*nargs)++;
     }

@@ -62,6 +62,9 @@ static inline int8_t default_bank_slot(uint8_t bank)
 static ErrorInfo* add_label_to_table(
     ASMSymbolTable *symtable, const ASMLine *line, size_t offset, int8_t slot)
 {
+    if (line->length - 1 >= MAX_SYMBOL_SIZE)
+        return error_info_create(line, ET_SYMBOL, ED_SYM_TOO_LONG);
+
     ASMArgRegister reg;
     if (argparse_register(&reg, line->data, line->length - 1))
         return error_info_create(line, ET_SYMBOL, ED_SYM_IS_REGISTER);

@@ -412,6 +412,26 @@ bool argparse_indexed(ASMArgIndexed *result, const char *arg, ssize_t size)
 }
 
 /*
+    Read in a label argument and store it in *result.
+*/
+bool argparse_label(ASMArgLabel *result, const char *arg, ssize_t size)
+{
+    if (size >= MAX_SYMBOL_SIZE)
+        return false;
+
+    for (const char *i = arg; i < arg + size; i++) {
+        char c = *i;
+        if (!((c >= 'a' && c <= 'z') || (i != arg && c >= '0' && c <= '9') ||
+              c == '_' || c == '.'))
+            return false;
+    }
+
+    strncpy(result->text, arg, size);
+    result->text[size] = '\0';
+    return true;
+}
+
+/*
     Read in a boolean argument from the given line and store it in *result.
 */
 DIRECTIVE_PARSE_FUNC(bool, bool)

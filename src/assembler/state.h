@@ -13,6 +13,7 @@
 #define DEFAULT_REGION 6  // GG Export
 #define DEFAULT_DECLSIZE 0xC  // 32 KB
 
+#define MAX_SYMBOL_SIZE 256
 #define SYMBOL_TABLE_BUCKETS 128
 
 /* Structs */

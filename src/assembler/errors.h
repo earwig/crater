@@ -41,6 +41,7 @@ typedef enum {
 
     ED_SYM_DUPE_LABELS,
     ED_SYM_NO_LABEL,
+    ED_SYM_TOO_LONG,
     ED_SYM_IS_REGISTER,
     ED_SYM_IS_CONDITION,
 
