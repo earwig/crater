@@ -25,6 +25,37 @@
 */
 
 /*
+    Adjust *arg_ptr / *size_ptr for an indirect argument, like (hl) or (ix+*).
+
+    *size_ptr must be > 2 to begin with, and is assured to be > 0 on success.
+    The two arguments are not modified on failure.
+*/
+static bool adjust_for_indirection(const char **arg_ptr, ssize_t *size_ptr)
+{
+    const char *arg = *arg_ptr;
+    ssize_t size = *size_ptr;
+
+    if (arg[0] != '(' || arg[size - 1] != ')')
+        return false;
+    arg++;
+    size -= 2;
+
+    if (arg[0] == ' ') {
+        arg++;
+        if (--size <= 0)
+            return false;
+    }
+    if (arg[size - 1] == ' ') {
+        if (--size <= 0)
+            return false;
+    }
+
+    *arg_ptr = arg;
+    *size_ptr = size;
+    return true;
+}
+
+/*
     Read in a boolean value and store it in *result.
 */
 bool parse_bool(bool *result, const char *arg, ssize_t size)
@@ -283,10 +314,10 @@ bool argparse_immediate(ASMArgImmediate *result, const char *arg, ssize_t size)
     }
 
     uint32_t uval;
-    if (!parse_uint32_t(&uval, arg, size) || uval > UINT16_MAX)
+    if (!parse_uint32_t(&uval, arg + i, size - i) || uval > UINT16_MAX)
         return false;
 
-    int32_t sval = negative ? uval : -uval;
+    int32_t sval = negative ? -uval : uval;
     if (sval < INT16_MIN)
         return false;
 
@@ -294,15 +325,19 @@ bool argparse_immediate(ASMArgImmediate *result, const char *arg, ssize_t size)
     result->sval = sval;
     result->mask = 0;
 
-    if (negative) {
-        if (sval >= INT8_MIN && sval <= INT8_MAX)
+    if (sval < 0) {
+        if (sval >= INT8_MIN)
             result->mask |= IMM_S8;
-        if (sval >= INT8_MIN + 2 && sval <= INT8_MAX + 2)
+        if (sval >= INT8_MIN + 2)
             result->mask |= IMM_REL;
     } else {
         result->mask = IMM_U16;
         if (uval <= UINT8_MAX)
             result->mask |= IMM_U8;
+        if (uval <= INT8_MAX)
+            result->mask |= IMM_S8;
+        if (uval <= INT8_MAX + 2)
+            result->mask |= IMM_REL;
         if (uval <= 7)
             result->mask |= IMM_BIT;
         if (!(uval & ~0x38))
@@ -318,12 +353,8 @@ bool argparse_immediate(ASMArgImmediate *result, const char *arg, ssize_t size)
 */
 bool argparse_indirect(ASMArgIndirect *result, const char *arg, ssize_t size)
 {
-    if (size < 3)
+    if (size < 3 || !adjust_for_indirection(&arg, &size))
         return false;
-    if (arg[0] != '(' || arg[size - 1] != ')')
-        return false;
-    arg++;
-    size -= 2;
 
     ASMArgRegister reg;
     ASMArgImmediate imm;
@@ -341,6 +372,43 @@ bool argparse_indirect(ASMArgIndirect *result, const char *arg, ssize_t size)
         }
     }
     return false;
+}
+
+/*
+    Read in an indexed argument and store it in *result.
+*/
+bool argparse_indexed(ASMArgIndexed *result, const char *arg, ssize_t size)
+{
+    if (size < 4 || !adjust_for_indirection(&arg, &size) || size < 2)
+        return false;
+
+    ASMArgRegister reg;
+    if (arg[0] != 'i')
+        return false;
+    if (arg[1] == 'x')
+        reg = REG_IX;
+    else if (arg[1] == 'y')
+        reg = REG_IY;
+    else
+        return false;
+
+    arg += 2;
+    size -= 2;
+    if (size > 0 && arg[0] == ' ') {
+        arg++;
+        size--;
+    }
+
+    if (size > 0) {
+        ASMArgImmediate imm;
+        if (!argparse_immediate(&imm, arg, size) || !(imm.mask & IMM_S8))
+            return false;
+        result->offset = imm.sval;
+    } else {
+        result->offset = 0;
+    }
+    result->reg = reg;
+    return true;
 }
 
 /*

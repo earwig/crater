@@ -156,10 +156,7 @@ static ASMErrorDesc parse_arg(
     USE_PARSER(register, AT_REGISTER, reg)
     USE_PARSER(immediate, AT_IMMEDIATE, imm)
     USE_PARSER(indirect, AT_INDIRECT, indirect)
-
-    // AT_INDEXED
-    // ASMArgIndexed index;
-
+    USE_PARSER(indexed, AT_INDEXED, index)
     USE_PARSER(condition, AT_CONDITION, cond)
 
     // AT_LABEL
@@ -202,7 +199,7 @@ static ASMErrorDesc parse_args(
         } else {
             if ((c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') ||
                  c == ' ' || c == '+' || c == '-' || c == '(' || c == ')' ||
-                 c == '_' || c == '.')
+                 c == '$' || c == '_' || c == '.')
                 i++;
             else
                 return ED_PS_ARG_SYNTAX;
@@ -351,8 +348,6 @@ ASMInstParser get_inst_parser(char mstr[MAX_MNEMONIC_SIZE])
     // Exploit the fact that we can store the entire mnemonic string as a
     // single 32-bit value to do fast lookups:
     uint32_t key = (mstr[0] << 24) + (mstr[1] << 16) + (mstr[2] << 8) + mstr[3];
-
-    DEBUG("get_inst_parser(): -->%.*s<-- 0x%08X", MAX_MNEMONIC_SIZE, mstr, key)
 
     HANDLE(nop)
     HANDLE(inc)
