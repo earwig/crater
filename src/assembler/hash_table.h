@@ -5,6 +5,7 @@
 
 #include <stdbool.h>
 #include <stddef.h>
+#include <unistd.h>
 
 #define hash_table_NEW(node, key, next, callback)                             \
     hash_table_new(offsetof(node, key), offsetof(node, next),                 \
@@ -28,6 +29,6 @@ typedef struct {
 
 HashTable* hash_table_new(size_t, size_t, HashFreeCallback);
 void hash_table_free(HashTable*);
-const HashNode* hash_table_find(const HashTable*, const char*);
+const HashNode* hash_table_find(const HashTable*, const char*, ssize_t);
 void hash_table_insert(HashTable*, HashNode*);
-bool hash_table_remove(HashTable*, const char*);
+bool hash_table_remove(HashTable*, const char*, ssize_t);

@@ -151,7 +151,7 @@ void asm_deftable_free(ASMDefineTable *deftable)
 */
 const ASMSymbol* asm_symtable_find(const ASMSymbolTable *tab, const char *key)
 {
-    return (ASMSymbol*) hash_table_find(tab, key);
+    return (ASMSymbol*) hash_table_find(tab, key, -1);
 }
 
 /*
@@ -169,9 +169,10 @@ void asm_symtable_insert(ASMSymbolTable *tab, ASMSymbol *symbol)
 
     Return the corresponding ASMDefine on success and NULL on failure.
 */
-const ASMDefine* asm_deftable_find(const ASMDefineTable *tab, const char *key)
+const ASMDefine* asm_deftable_find(
+    const ASMDefineTable *tab, const char *key, size_t size)
 {
-    return (ASMDefine*) hash_table_find(tab, key);
+    return (ASMDefine*) hash_table_find(tab, key, size);
 }
 
 /*
@@ -189,9 +190,10 @@ void asm_deftable_insert(ASMDefineTable *tab, ASMDefine *define)
 
     Return true if the node was removed, or false if it was not found.
 */
-bool asm_deftable_remove(ASMDefineTable *tab, const char *key)
+bool asm_deftable_remove(
+    ASMDefineTable *tab, const char *key, size_t size)
 {
-    return hash_table_remove(tab, key);
+    return hash_table_remove(tab, key, size);
 }
 
 #ifdef DEBUG_MODE

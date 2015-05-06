@@ -26,12 +26,21 @@ struct HashNode {
 
     This uses the djb2 algorithm: http://www.cse.yorku.ca/~oz/hash.html
 */
-static inline size_t hash_key(const HashTable *table, const char *key)
+static inline size_t hash_key(
+    const HashTable *table, const char *key, ssize_t size)
 {
     size_t hash = 5381;
-    while (*key)
+    while ((size < 0 || size-- > 0) && *key)
         hash = ((hash << 5) + hash) + *(key++);
     return hash % table->buckets;
+}
+
+/*
+    Return true if the two key strings are equal, or false if they aren't.
+*/
+static inline bool keyeq(const char *s1, const char *s2, ssize_t size)
+{
+    return !(size >= 0 ? strncmp(s1, s2, size) : strcmp(s1, s2));
 }
 
 /*
@@ -89,12 +98,15 @@ void hash_table_free(HashTable *table)
     Search for a key in the hash table.
 
     Return the corresponding node on success and NULL on failure.
+
+    If the key is null-terminated, pass size as -1.
 */
-const HashNode* hash_table_find(const HashTable *table, const char *key)
+const HashNode* hash_table_find(
+    const HashTable *table, const char *key, ssize_t size)
 {
-    HashNode *node = table->nodes[hash_key(table, key)];
+    HashNode *node = table->nodes[hash_key(table, key, size)];
     while (node) {
-        if (!strcmp(key, NODE_KEY(table, node)))
+        if (keyeq(key, NODE_KEY(table, node), size))
             return node;
         node = NEXT_NODE(table, node);
     }
@@ -111,7 +123,7 @@ const HashNode* hash_table_find(const HashTable *table, const char *key)
 */
 void hash_table_insert(HashTable *table, HashNode *node)
 {
-    size_t index = hash_key(table, NODE_KEY(table, node));
+    size_t index = hash_key(table, NODE_KEY(table, node), -1);
     NEXT_NODE(table, node) = table->nodes[index];
     table->nodes[index] = node;
 }
@@ -120,15 +132,17 @@ void hash_table_insert(HashTable *table, HashNode *node)
     (Try to) remove a node with the given key from the table.
 
     Return true if the node was removed, or false if it was not found.
+
+    If the key is null-terminated, pass size as -1.
 */
-bool hash_table_remove(HashTable *table, const char *key)
+bool hash_table_remove(HashTable *table, const char *key, ssize_t size)
 {
-    size_t index = hash_key(table, key);
+    size_t index = hash_key(table, key, size);
     HashNode *node = table->nodes[index], *prev = NULL, *next;
 
     while (node) {
         next = NEXT_NODE(table, node);
-        if (!strcmp(key, NODE_KEY(table, node))) {
+        if (keyeq(key, NODE_KEY(table, node), size)) {
             if (prev)
                 NEXT_NODE(table, prev) = next;
             else

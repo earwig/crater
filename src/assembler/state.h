@@ -108,9 +108,9 @@ void asm_deftable_free(ASMDefineTable*);
 
 const ASMSymbol* asm_symtable_find(const ASMSymbolTable*, const char*);
 void asm_symtable_insert(ASMSymbolTable*, ASMSymbol*);
-const ASMDefine* asm_deftable_find(const ASMDefineTable*, const char*);
+const ASMDefine* asm_deftable_find(const ASMDefineTable*, const char*, size_t);
 void asm_deftable_insert(ASMDefineTable*, ASMDefine*);
-bool asm_deftable_remove(ASMDefineTable*, const char*);
+bool asm_deftable_remove(ASMDefineTable*, const char*, size_t);
 
 #ifdef DEBUG_MODE
 void asm_lines_print(const ASMLine*);

@@ -303,7 +303,11 @@ bool argparse_immediate(ASMArgImmediate *result, ASMArgParseInfo ai)
     if (ai.size <= 0)
         return false;
 
-    // TODO: lookup here for definition table
+    const ASMDefine *define = asm_deftable_find(ai.deftable, ai.arg, ai.size);
+    if (define) {
+        *result = define->value;
+        return true;
+    }
 
     bool negative = false;
     ssize_t i = 0;
@@ -421,14 +425,16 @@ bool argparse_label(ASMArgLabel *result, ASMArgParseInfo ai)
     if (ai.size <= 0 || ai.size >= MAX_SYMBOL_SIZE)
         return false;
 
-    // TODO: check for deftable
-
+    // Validate the label characters:
     for (const char *i = ai.arg; i < ai.arg + ai.size; i++) {
         char c = *i;
         if (!((c >= 'a' && c <= 'z') || c == '_' || c == '.' ||
               (i != ai.arg && c >= '0' && c <= '9')))
             return false;
     }
+
+    if (asm_deftable_find(ai.deftable, ai.arg, ai.size))
+        return false;
 
     strncpy(result->text, ai.arg, ai.size);
     result->text[ai.size] = '\0';
