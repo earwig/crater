@@ -41,11 +41,29 @@ void state_free(AssemblerState *state)
 }
 
 /*
+    Callback function for freeing an ASMSymbol.
+*/
+static void free_asm_symbol(ASMSymbol *node)
+{
+    free(node->symbol);
+    free(node);
+}
+
+/*
     Initialize an ASMSymbolTable and place it in *symtable_ptr.
 */
 void asm_symtable_init(ASMSymbolTable **symtable_ptr)
 {
-    *symtable_ptr = hash_table_NEW(ASMSymbol, symbol, next);
+    *symtable_ptr = hash_table_NEW(ASMSymbol, symbol, next, free_asm_symbol);
+}
+
+/*
+    Callback function for freeing an ASMDefine.
+*/
+static void free_asm_define(ASMDefine *node)
+{
+    free(node->name);
+    free(node);
 }
 
 /*
@@ -53,7 +71,7 @@ void asm_symtable_init(ASMSymbolTable **symtable_ptr)
 */
 ASMDefineTable* asm_deftable_new()
 {
-    return hash_table_NEW(ASMDefine, name, next);
+    return hash_table_NEW(ASMDefine, name, next, free_asm_define);
 }
 
 /*
@@ -110,37 +128,20 @@ void asm_data_free(ASMData *data)
 }
 
 /*
-    Callback function for freeing an ASMSymbol.
-*/
-static void free_asm_symbol(HashNode *node)
-{
-    free(((ASMSymbol*) node)->symbol);
-    free(node);
-}
-
-/*
     Deallocate an ASMSymbolTable.
 */
 void asm_symtable_free(ASMSymbolTable *symtable)
 {
-    hash_table_free(symtable, free_asm_symbol);
+    hash_table_free(symtable);
 }
 
-/*
-    Callback function for freeing an ASMDefine.
-*/
-static void free_asm_define(HashNode *node)
-{
-    free(((ASMDefine*) node)->name);
-    free(node);
-}
 
 /*
     Deallocate an ASMDefineTable.
 */
 void asm_deftable_free(ASMDefineTable *deftable)
 {
-    hash_table_free(deftable, free_asm_define);
+    hash_table_free(deftable);
 }
 
 /*
