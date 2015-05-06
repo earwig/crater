@@ -29,9 +29,6 @@ int main(int argc, char *argv[])
 #endif
 
     if (config->assemble || config->disassemble) {
-        printf("crater: running %s: %s -> %s\n",
-               config->assemble ? "assembler" : "disassembler",
-               config->src_path, config->dst_path);
         if (config->assemble)
             retval = assemble_file(config->src_path, config->dst_path);
         else

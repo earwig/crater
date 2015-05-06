@@ -227,6 +227,7 @@ size_t assemble(const LineBuffer *source, uint8_t **binary_ptr, ErrorInfo **ei_p
 */
 bool assemble_file(const char *src_path, const char *dst_path)
 {
+    DEBUG("Assembling: %s -> %s", src_path, dst_path)
     LineBuffer *source = read_source_file(src_path, true);
     if (!source)
         return false;
