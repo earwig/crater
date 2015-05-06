@@ -45,14 +45,15 @@ void state_free(AssemblerState *state)
 */
 void asm_symtable_init(ASMSymbolTable **symtable_ptr)
 {
-    ASMSymbolTable *symtable;
-    if (!(symtable = malloc(sizeof(ASMSymbolTable))))
-        OUT_OF_MEMORY()
+    *symtable_ptr = hash_table_NEW(ASMSymbol, symbol, next);
+}
 
-    for (size_t bucket = 0; bucket < SYMBOL_TABLE_BUCKETS; bucket++)
-        symtable->buckets[bucket] = NULL;
-
-    *symtable_ptr = symtable;
+/*
+    Create and return a new ASMDefineTable.
+*/
+ASMDefineTable* asm_deftable_new()
+{
+    return hash_table_NEW(ASMDefine, name, next);
 }
 
 /*
@@ -109,36 +110,37 @@ void asm_data_free(ASMData *data)
 }
 
 /*
+    Callback function for freeing an ASMSymbol.
+*/
+static void free_asm_symbol(HashNode *node)
+{
+    free(((ASMSymbol*) node)->symbol);
+    free(node);
+}
+
+/*
     Deallocate an ASMSymbolTable.
 */
 void asm_symtable_free(ASMSymbolTable *symtable)
 {
-    if (!symtable)
-        return;
-
-    for (size_t bucket = 0; bucket < SYMBOL_TABLE_BUCKETS; bucket++) {
-        ASMSymbol *sym = symtable->buckets[bucket], *temp;
-        while (sym) {
-            temp = sym->next;
-            free(sym->symbol);
-            free(sym);
-            sym = temp;
-        }
-    }
-    free(symtable);
+    hash_table_free(symtable, free_asm_symbol);
 }
 
 /*
-    Hash a string key into a symbol table bucket index.
-
-    This uses the djb2 algorithm: http://www.cse.yorku.ca/~oz/hash.html
+    Callback function for freeing an ASMDefine.
 */
-static inline size_t hash_key(const char *key)
+static void free_asm_define(HashNode *node)
 {
-    size_t hash = 5381;
-    while (*key)
-        hash = ((hash << 5) + hash) + *(key++);
-    return hash % SYMBOL_TABLE_BUCKETS;
+    free(((ASMDefine*) node)->name);
+    free(node);
+}
+
+/*
+    Deallocate an ASMDefineTable.
+*/
+void asm_deftable_free(ASMDefineTable *deftable)
+{
+    hash_table_free(deftable, free_asm_define);
 }
 
 /*
@@ -148,13 +150,7 @@ static inline size_t hash_key(const char *key)
 */
 const ASMSymbol* asm_symtable_find(const ASMSymbolTable *tab, const char *key)
 {
-    ASMSymbol *symbol = tab->buckets[hash_key(key)];
-    while (symbol) {
-        if (!strcmp(key, symbol->symbol))
-            return symbol;
-        symbol = symbol->next;
-    }
-    return NULL;
+    return (ASMSymbol*) hash_table_find(tab, key);
 }
 
 /*
@@ -164,9 +160,27 @@ const ASMSymbol* asm_symtable_find(const ASMSymbolTable *tab, const char *key)
 */
 void asm_symtable_insert(ASMSymbolTable *tab, ASMSymbol *symbol)
 {
-    size_t index = hash_key(symbol->symbol);
-    symbol->next = tab->buckets[index];
-    tab->buckets[index] = symbol;
+    hash_table_insert(tab, (HashNode*) symbol);
+}
+
+/*
+    Search for a key in the define table.
+
+    Return the corresponding ASMDefine on success and NULL on failure.
+*/
+const ASMDefine* asm_deftable_find(const ASMDefineTable *tab, const char *key)
+{
+    return (ASMDefine*) hash_table_find(tab, key);
+}
+
+/*
+    Insert an ASMDefine into the define table.
+
+    This doesn't check for duplicate keys, so you must do that beforehand.
+*/
+void asm_deftable_insert(ASMDefineTable *tab, ASMDefine *define)
+{
+    hash_table_insert(tab, (HashNode*) define);
 }
 
 #ifdef DEBUG_MODE

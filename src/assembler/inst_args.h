@@ -5,7 +5,7 @@
 
 #include <stdint.h>
 
-#include "state.h"
+#define MAX_SYMBOL_SIZE 256
 
 typedef enum {
     AT_REGISTER,

@@ -54,6 +54,35 @@ static inline int8_t default_bank_slot(uint8_t bank)
 }
 
 /*
+    Initialize an ASMLayoutInfo object.
+*/
+static void init_layout_info(ASMLayoutInfo *li, AssemblerState *state)
+{
+    li->size = state->rom_size ? state->rom_size : ROM_SIZE_MAX;
+    li->origin = NULL;
+    li->bank = 0;
+    li->cross_blocks = state->cross_blocks;
+
+    if (!(li->overlap_table = calloc(li->size, sizeof(const ASMLine*))))
+        OUT_OF_MEMORY()
+
+    if (!(li->overlap_origins = calloc(li->size, sizeof(const ASMLine*))))
+        OUT_OF_MEMORY()
+
+    for (size_t i = 0; i < HEADER_SIZE; i++)
+        li->overlap_table[state->header.offset + i] = &header_sentinel;
+}
+
+/*
+    Free the resources allocated by an ASMLayoutInfo object.
+*/
+static void free_layout_info(ASMLayoutInfo *li)
+{
+    free(li->overlap_table);
+    free(li->overlap_origins);
+}
+
+/*
     Add a given line, representing a label, to the symbol table.
 
     Return NULL on success and an ErrorInfo object on failure (e.g. in the case
@@ -242,7 +271,8 @@ static ErrorInfo* parse_data(
     return an ErrorInfo object; *inst_ptr is not modified.
 */
 static ErrorInfo* parse_instruction(
-    const ASMLine *line, ASMInstruction **inst_ptr, size_t offset)
+    const ASMLine *line, ASMInstruction **inst_ptr, size_t offset,
+    ASMDefineTable *deftab)
 {
     char mnemonic[MAX_MNEMONIC_SIZE] = {0};
     size_t i = 0;
@@ -271,6 +301,7 @@ static ErrorInfo* parse_instruction(
     if (!parser)
         return error_info_create(line, ET_PARSER, ED_PS_OP_UNKNOWN);
 
+    // TODO: pass deftab here?
     ASMErrorDesc edesc = parser(&bytes, &length, &symbol, argstart, arglen);
     if (edesc != ED_NONE)
         return error_info_create(line, ET_PARSER, edesc);
@@ -354,24 +385,16 @@ static ErrorInfo* check_layout(
 */
 ErrorInfo* tokenize(AssemblerState *state)
 {
-    ASMLayoutInfo li = {
-        .size = state->rom_size ? state->rom_size : ROM_SIZE_MAX,
-        .origin = NULL, .bank = 0, .cross_blocks = state->cross_blocks
-    };
-    li.overlap_table = calloc(li.size, sizeof(const ASMLine*));
-    li.overlap_origins = calloc(li.size, sizeof(const ASMLine*));
-    if (!li.overlap_table || !li.overlap_origins)
-        OUT_OF_MEMORY()
-
     ErrorInfo *ei = NULL;
+    ASMLayoutInfo li;
+    ASMSlotInfo si = {.lines = {0}};
+    ASMDefineTable *deftab = asm_deftable_new();
     ASMInstruction dummy_inst = {.next = NULL}, *inst, *prev_inst = &dummy_inst;
     ASMData dummy_data = {.next = NULL}, *data, *prev_data = &dummy_data;
     const ASMLine *line = state->lines;
     size_t offset = 0;
-    ASMSlotInfo si = {.lines = {0}};
 
-    for (size_t i = 0; i < HEADER_SIZE; i++)
-        li.overlap_table[state->header.offset + i] = &header_sentinel;
+    init_layout_info(&li, state);
     memset(si.slots, -1, MMU_NUM_ROM_BANKS);
 
     while (line) {
@@ -385,7 +408,13 @@ ErrorInfo* tokenize(AssemblerState *state)
                 goto cleanup;
         }
         else if (IS_LOCAL_DIRECTIVE(line)) {
-            if (IS_DIRECTIVE(line, DIR_ORIGIN)) {
+            if (IS_DIRECTIVE(line, DIR_DEFINE)) {
+                // TODO
+            }
+            else if (IS_DIRECTIVE(line, DIR_UNDEF)) {
+                // TODO
+            }
+            else if (IS_DIRECTIVE(line, DIR_ORIGIN)) {
                 if ((ei = handle_origin_directive(line, &offset)))
                     goto cleanup;
 
@@ -412,7 +441,7 @@ ErrorInfo* tokenize(AssemblerState *state)
             }
         }
         else {
-            if ((ei = parse_instruction(line, &inst, offset)))
+            if ((ei = parse_instruction(line, &inst, offset, deftab)))
                 goto cleanup;
 
             offset += inst->loc.length;
@@ -428,7 +457,7 @@ ErrorInfo* tokenize(AssemblerState *state)
     cleanup:
     state->instructions = dummy_inst.next;
     state->data = dummy_data.next;
-    free(li.overlap_table);
-    free(li.overlap_origins);
+    free_layout_info(&li);
+    asm_deftable_free(deftab);
     return ei;
 }

@@ -6,7 +6,7 @@
 #include <string.h>
 
 #define DIRECTIVE_MARKER '.'
-#define NUM_DIRECTIVES   16
+#define NUM_DIRECTIVES   18
 
 #define DIR_INCLUDE      ".include"
 
@@ -19,6 +19,8 @@
 #define DIR_ROM_DECLSIZE ".rom_declsize"
 #define DIR_CROSS_BLOCKS ".cross_blocks"
 
+#define DIR_DEFINE       ".define"
+#define DIR_UNDEF        ".undef"
 #define DIR_ORIGIN       ".org"
 #define DIR_BLOCK        ".block"
 #define DIR_BYTE         ".byte"
@@ -35,9 +37,10 @@
     (!DIRECTIVE_HAS_ARG(line, d) || (line)->data[strlen(d)] == ' '))
 
 #define IS_LOCAL_DIRECTIVE(line)                                              \
-    (IS_DIRECTIVE(line, DIR_ORIGIN) || IS_DIRECTIVE(line, DIR_BLOCK) ||       \
-     IS_DIRECTIVE(line, DIR_BYTE)   || IS_DIRECTIVE(line, DIR_SPACE) ||       \
-     IS_DIRECTIVE(line, DIR_ASCII)  || IS_DIRECTIVE(line, DIR_ASCIZ) ||       \
+    (IS_DIRECTIVE(line, DIR_DEFINE) || IS_DIRECTIVE(line, DIR_UNDEF)  ||      \
+     IS_DIRECTIVE(line, DIR_ORIGIN) || IS_DIRECTIVE(line, DIR_BLOCK)  ||      \
+     IS_DIRECTIVE(line, DIR_BYTE)   || IS_DIRECTIVE(line, DIR_SPACE)  ||      \
+     IS_DIRECTIVE(line, DIR_ASCII)  || IS_DIRECTIVE(line, DIR_ASCIZ)  ||      \
      IS_DIRECTIVE(line, DIR_ASCIIZ))
 
 #define DIRECTIVE_OFFSET(line, d)                                             \
