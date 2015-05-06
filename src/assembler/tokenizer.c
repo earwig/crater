@@ -94,12 +94,13 @@ static ErrorInfo* add_label_to_table(
     if (line->length - 1 >= MAX_SYMBOL_SIZE)
         return error_info_create(line, ET_SYMBOL, ED_SYM_TOO_LONG);
 
+    ASMArgParseInfo info = {.arg = line->data, .size = line->length - 1};
     ASMArgRegister reg;
-    if (argparse_register(&reg, line->data, line->length - 1))
+    if (argparse_register(&reg, info))
         return error_info_create(line, ET_SYMBOL, ED_SYM_IS_REGISTER);
 
     ASMArgCondition cond;
-    if (argparse_condition(&cond, line->data, line->length - 1))
+    if (argparse_condition(&cond, info))
         return error_info_create(line, ET_SYMBOL, ED_SYM_IS_CONDITION);
 
     char *symbol = strndup(line->data, line->length - 1);
@@ -301,8 +302,8 @@ static ErrorInfo* parse_instruction(
     if (!parser)
         return error_info_create(line, ET_PARSER, ED_PS_OP_UNKNOWN);
 
-    // TODO: pass deftab here?
-    ASMErrorDesc edesc = parser(&bytes, &length, &symbol, argstart, arglen);
+    ASMArgParseInfo ai = {.arg = argstart, .size = arglen, .deftable = deftab};
+    ASMErrorDesc edesc = parser(&bytes, &length, &symbol, ai);
     if (edesc != ED_NONE)
         return error_info_create(line, ET_PARSER, edesc);
 

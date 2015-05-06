@@ -6,6 +6,7 @@
 #include <stdint.h>
 
 #include "errors.h"
+#include "parse_util.h"
 
 #define MIN_MNEMONIC_SIZE 2
 #define MAX_MNEMONIC_SIZE 4
@@ -13,7 +14,7 @@
 /* Typedefs */
 
 typedef ASMErrorDesc (*ASMInstParser)(
-    uint8_t**, size_t*, char**, const char*, size_t);
+    uint8_t**, size_t*, char**, ASMArgParseInfo);
 
 /* Functions */
 

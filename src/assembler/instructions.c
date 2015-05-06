@@ -49,21 +49,20 @@
 
 #define INST_FUNC(mnemonic)                                                   \
 static ASMErrorDesc parse_inst_##mnemonic(                                    \
-    uint8_t **bytes, size_t *length, char **symbol, const char *arg, size_t size)
+    uint8_t **bytes, size_t *length, char **symbol, ASMArgParseInfo ap_info)  \
 
 #define INST_ERROR(desc) return ED_PS_##desc;
 
 #define INST_TAKES_NO_ARGS                                                    \
-    if (arg)                                                                  \
+    if (ap_info.arg)                                                          \
         INST_ERROR(TOO_MANY_ARGS)                                             \
-    (void) size;
 
 #define INST_TAKES_ARGS(lo, hi)                                               \
-    if (!arg)                                                                 \
+    if (!ap_info.arg)                                                         \
         INST_ERROR(TOO_FEW_ARGS)                                              \
     ASMInstArg args[3];                                                       \
     size_t nargs = 0;                                                         \
-    ASMErrorDesc err = parse_args(args, &nargs, arg, size);                   \
+    ASMErrorDesc err = parse_args(args, &nargs, ap_info);                     \
     if (err)                                                                  \
         return err;                                                           \
     if (nargs < lo)                                                           \
@@ -143,14 +142,16 @@ static uint8_t fill_bytes_variadic(uint8_t *bytes, size_t len, ...)
 
     Return ED_NONE (0) on success or an error code on failure.
 */
-static ASMErrorDesc parse_arg(ASMInstArg *arg, const char *str, size_t size)
+static ASMErrorDesc parse_arg(
+    ASMInstArg *arg, const char *str, size_t size, ASMDefineTable *deftable)
 {
 #define TRY_PARSER(func, argtype, field)                                      \
-    if (argparse_##func(&arg->data.field, str, size)) {                       \
+    if (argparse_##func(&arg->data.field, info)) {                            \
         arg->type = argtype;                                                  \
         return ED_NONE;                                                       \
     }
 
+    ASMArgParseInfo info = {.arg = str, .size = size, .deftable = deftable};
     DEBUG("parse_arg(): -->%.*s<-- %zu", (int) size, str, size)
     TRY_PARSER(register, AT_REGISTER, reg)
     TRY_PARSER(immediate, AT_IMMEDIATE, imm)
@@ -164,22 +165,24 @@ static ASMErrorDesc parse_arg(ASMInstArg *arg, const char *str, size_t size)
 }
 
 /*
-    Parse an argument string int ASMInstArg objects.
+    Parse an argument string into ASMInstArg objects.
 
     Return ED_NONE (0) on success or an error code on failure.
 */
 static ASMErrorDesc parse_args(
-    ASMInstArg args[3], size_t *nargs, const char *str, size_t size)
+    ASMInstArg args[3], size_t *nargs, ASMArgParseInfo ap_info)
 {
     ASMErrorDesc err;
-    size_t start = 0, i = 0;
+    ASMDefineTable *dt = ap_info.deftable;
+    const char *str = ap_info.arg;
+    size_t size = ap_info.size, start = 0, i = 0;
 
     while (i < size) {
         char c = str[i];
         if (c == ',') {
             if (i == start)
                 return ED_PS_ARG_SYNTAX;
-            if ((err = parse_arg(&args[*nargs], str + start, i - start)))
+            if ((err = parse_arg(&args[*nargs], str + start, i - start, dt)))
                 return err;
             (*nargs)++;
 
@@ -202,7 +205,7 @@ static ASMErrorDesc parse_args(
     }
 
     if (i > start) {
-        if ((err = parse_arg(&args[*nargs], str + start, i - start)))
+        if ((err = parse_arg(&args[*nargs], str + start, i - start, dt)))
             return err;
         (*nargs)++;
     }

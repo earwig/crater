@@ -184,6 +184,16 @@ void asm_deftable_insert(ASMDefineTable *tab, ASMDefine *define)
     hash_table_insert(tab, (HashNode*) define);
 }
 
+/*
+    Remove an ASMDefine from the define table.
+
+    Return true if the node was removed, or false if it was not found.
+*/
+bool asm_deftable_remove(ASMDefineTable *tab, const char *key)
+{
+    return hash_table_remove(tab, key);
+}
+
 #ifdef DEBUG_MODE
 /*
     DEBUG FUNCTION: Print out an ASMLine list to stdout.

@@ -25,15 +25,15 @@
 */
 
 /*
-    Adjust *arg_ptr / *size_ptr for an indirect argument, like (hl) or (ix+*).
+    Adjust *ap_info for an indirect argument, like (hl) or (ix+*).
 
-    *size_ptr must be > 2 to begin with, and is assured to be > 0 on success.
-    The two arguments are not modified on failure.
+    ap_info->size must be > 2 to begin with, and will always be > 0 on success.
+    *ap_info is not modified on failure.
 */
-static bool adjust_for_indirection(const char **arg_ptr, ssize_t *size_ptr)
+static bool adjust_for_indirection(ASMArgParseInfo *ap_info)
 {
-    const char *arg = *arg_ptr;
-    ssize_t size = *size_ptr;
+    const char *arg = ap_info->arg;
+    ssize_t size = ap_info->size;
 
     if (arg[0] != '(' || arg[size - 1] != ')')
         return false;
@@ -50,8 +50,8 @@ static bool adjust_for_indirection(const char **arg_ptr, ssize_t *size_ptr)
             return false;
     }
 
-    *arg_ptr = arg;
-    *size_ptr = size;
+    ap_info->arg = arg;
+    ap_info->size = size;
     return true;
 }
 
@@ -208,19 +208,19 @@ bool parse_bytes(uint8_t **result, size_t *length, const char *arg, ssize_t size
 /*
     Read in a register argument and store it in *result.
 */
-bool argparse_register(ASMArgRegister *result, const char *arg, ssize_t size)
+bool argparse_register(ASMArgRegister *result, ASMArgParseInfo ai)
 {
-    if (size < 1 || size > 3)
+    if (ai.size < 1 || ai.size > 3)
         return false;
 
     char buf[3] = {'\0'};
-    switch (size) {
-        case 3: buf[2] = LCASE(arg[2]);
-        case 2: buf[1] = LCASE(arg[1]);
-        case 1: buf[0] = LCASE(arg[0]);
+    switch (ai.size) {
+        case 3: buf[2] = LCASE(ai.arg[2]);
+        case 2: buf[1] = LCASE(ai.arg[1]);
+        case 1: buf[0] = LCASE(ai.arg[0]);
     }
 
-    switch (size) {
+    switch (ai.size) {
         case 1:
             switch (buf[0]) {
                 case 'a': return (*result = REG_A), true;
@@ -263,18 +263,18 @@ bool argparse_register(ASMArgRegister *result, const char *arg, ssize_t size)
 /*
     Read in a condition argument and store it in *result.
 */
-bool argparse_condition(ASMArgCondition *result, const char *arg, ssize_t size)
+bool argparse_condition(ASMArgCondition *result, ASMArgParseInfo ai)
 {
-    if (size < 1 || size > 2)
+    if (ai.size < 1 || ai.size > 2)
         return false;
 
     char buf[2] = {'\0'};
-    switch (size) {
-        case 2: buf[1] = LCASE(arg[1]);
-        case 1: buf[0] = LCASE(arg[0]);
+    switch (ai.size) {
+        case 2: buf[1] = LCASE(ai.arg[1]);
+        case 1: buf[0] = LCASE(ai.arg[0]);
     }
 
-    switch (size) {
+    switch (ai.size) {
         case 1:
             switch (buf[0]) {
                 case 'n': return (*result = COND_N), true;
@@ -298,23 +298,25 @@ bool argparse_condition(ASMArgCondition *result, const char *arg, ssize_t size)
 /*
     Read in an immediate argument and store it in *result.
 */
-bool argparse_immediate(ASMArgImmediate *result, const char *arg, ssize_t size)
+bool argparse_immediate(ASMArgImmediate *result, ASMArgParseInfo ai)
 {
+    if (ai.size <= 0)
+        return false;
+
+    // TODO: lookup here for definition table
+
     bool negative = false;
     ssize_t i = 0;
 
-    if (size <= 0)
-        return false;
-
-    while (arg[i] == '-' || arg[i] == '+' || arg[i] == ' ') {
-        if (arg[i] == '-')
+    while (ai.arg[i] == '-' || ai.arg[i] == '+' || ai.arg[i] == ' ') {
+        if (ai.arg[i] == '-')
             negative = !negative;
-        if (++i >= size)
+        if (++i >= ai.size)
             return false;
     }
 
     uint32_t uval;
-    if (!parse_uint32_t(&uval, arg + i, size - i) || uval > UINT16_MAX)
+    if (!parse_uint32_t(&uval, ai.arg + i, ai.size - i) || uval > UINT16_MAX)
         return false;
 
     int32_t sval = negative ? -uval : uval;
@@ -351,20 +353,20 @@ bool argparse_immediate(ASMArgImmediate *result, const char *arg, ssize_t size)
 /*
     Read in an indirect argument and store it in *result.
 */
-bool argparse_indirect(ASMArgIndirect *result, const char *arg, ssize_t size)
+bool argparse_indirect(ASMArgIndirect *result, ASMArgParseInfo ai)
 {
-    if (size < 3 || !adjust_for_indirection(&arg, &size))
+    if (ai.size < 3 || !adjust_for_indirection(&ai))
         return false;
 
     ASMArgRegister reg;
     ASMArgImmediate imm;
-    if (argparse_register(&reg, arg, size)) {
+    if (argparse_register(&reg, ai)) {
         if (reg == REG_BC || reg == REG_DE || reg == REG_HL) {
             result->type = AT_REGISTER;
             result->addr.reg = reg;
             return true;
         }
-    } else if (argparse_immediate(&imm, arg, size)) {
+    } else if (argparse_immediate(&imm, ai)) {
         if (imm.mask & IMM_U16) {
             result->type = AT_IMMEDIATE;
             result->addr.imm = imm;
@@ -377,31 +379,31 @@ bool argparse_indirect(ASMArgIndirect *result, const char *arg, ssize_t size)
 /*
     Read in an indexed argument and store it in *result.
 */
-bool argparse_indexed(ASMArgIndexed *result, const char *arg, ssize_t size)
+bool argparse_indexed(ASMArgIndexed *result, ASMArgParseInfo ai)
 {
-    if (size < 4 || !adjust_for_indirection(&arg, &size) || size < 2)
+    if (ai.size < 4 || !adjust_for_indirection(&ai) || ai.size < 2)
         return false;
 
     ASMArgRegister reg;
-    if (arg[0] != 'i')
+    if (ai.arg[0] != 'i')
         return false;
-    if (arg[1] == 'x')
+    if (ai.arg[1] == 'x')
         reg = REG_IX;
-    else if (arg[1] == 'y')
+    else if (ai.arg[1] == 'y')
         reg = REG_IY;
     else
         return false;
 
-    arg += 2;
-    size -= 2;
-    if (size > 0 && arg[0] == ' ') {
-        arg++;
-        size--;
+    ai.arg += 2;
+    ai.size -= 2;
+    if (ai.size > 0 && ai.arg[0] == ' ') {
+        ai.arg++;
+        ai.size--;
     }
 
-    if (size > 0) {
+    if (ai.size > 0) {
         ASMArgImmediate imm;
-        if (!argparse_immediate(&imm, arg, size) || !(imm.mask & IMM_S8))
+        if (!argparse_immediate(&imm, ai) || !(imm.mask & IMM_S8))
             return false;
         result->offset = imm.sval;
     } else {
@@ -414,20 +416,22 @@ bool argparse_indexed(ASMArgIndexed *result, const char *arg, ssize_t size)
 /*
     Read in a label argument and store it in *result.
 */
-bool argparse_label(ASMArgLabel *result, const char *arg, ssize_t size)
+bool argparse_label(ASMArgLabel *result, ASMArgParseInfo ai)
 {
-    if (size >= MAX_SYMBOL_SIZE)
+    if (ai.size <= 0 || ai.size >= MAX_SYMBOL_SIZE)
         return false;
 
-    for (const char *i = arg; i < arg + size; i++) {
+    // TODO: check for deftable
+
+    for (const char *i = ai.arg; i < ai.arg + ai.size; i++) {
         char c = *i;
-        if (!((c >= 'a' && c <= 'z') || (i != arg && c >= '0' && c <= '9') ||
-              c == '_' || c == '.'))
+        if (!((c >= 'a' && c <= 'z') || c == '_' || c == '.' ||
+              (i != ai.arg && c >= '0' && c <= '9')))
             return false;
     }
 
-    strncpy(result->text, arg, size);
-    result->text[size] = '\0';
+    strncpy(result->text, ai.arg, ai.size);
+    result->text[ai.size] = '\0';
     return true;
 }
 

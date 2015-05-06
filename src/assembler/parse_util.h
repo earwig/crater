@@ -11,6 +11,14 @@
 
 #define dparse__Bool dparse_bool
 
+/* Structs */
+
+typedef struct {
+    const char *arg;
+    ssize_t size;
+    ASMDefineTable *deftable;
+} ASMArgParseInfo;
+
 /* Functions */
 
 /* General parsers */
@@ -20,12 +28,12 @@ bool parse_string(char**, size_t*, const char*, ssize_t);
 bool parse_bytes(uint8_t**, size_t*, const char*, ssize_t);
 
 /* Instruction argument parsers */
-bool argparse_register(ASMArgRegister*, const char*, ssize_t);
-bool argparse_condition(ASMArgCondition*, const char*, ssize_t);
-bool argparse_immediate(ASMArgImmediate*, const char*, ssize_t);
-bool argparse_indirect(ASMArgIndirect*, const char*, ssize_t);
-bool argparse_indexed(ASMArgIndexed*, const char*, ssize_t);
-bool argparse_label(ASMArgLabel*, const char*, ssize_t);
+bool argparse_register(ASMArgRegister*, ASMArgParseInfo);
+bool argparse_condition(ASMArgCondition*, ASMArgParseInfo);
+bool argparse_immediate(ASMArgImmediate*, ASMArgParseInfo);
+bool argparse_indirect(ASMArgIndirect*, ASMArgParseInfo);
+bool argparse_indexed(ASMArgIndexed*, ASMArgParseInfo);
+bool argparse_label(ASMArgLabel*, ASMArgParseInfo);
 
 /* Preprocessor directive parsers */
 bool dparse_bool(bool*, const ASMLine*, const char*);
