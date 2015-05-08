@@ -321,6 +321,166 @@ INST_FUNC(add)
     }
 }
 
+INST_FUNC(and)
+{
+    // TODO
+    INST_TAKES_NO_ARGS
+    INST_ERROR(ARG_SYNTAX)
+    INST_RETURN(1, 0xFF)
+}
+
+INST_FUNC(bit)
+{
+    // TODO
+    INST_TAKES_NO_ARGS
+    INST_ERROR(ARG_SYNTAX)
+    INST_RETURN(1, 0xFF)
+}
+
+INST_FUNC(call)
+{
+    // TODO
+    INST_TAKES_NO_ARGS
+    INST_ERROR(ARG_SYNTAX)
+    INST_RETURN(1, 0xFF)
+}
+
+INST_FUNC(ccf)
+{
+    // TODO
+    INST_TAKES_NO_ARGS
+    INST_ERROR(ARG_SYNTAX)
+    INST_RETURN(1, 0xFF)
+}
+
+INST_FUNC(cp)
+{
+    // TODO
+    INST_TAKES_NO_ARGS
+    INST_ERROR(ARG_SYNTAX)
+    INST_RETURN(1, 0xFF)
+}
+
+INST_FUNC(cpd)
+{
+    // TODO
+    INST_TAKES_NO_ARGS
+    INST_ERROR(ARG_SYNTAX)
+    INST_RETURN(1, 0xFF)
+}
+
+INST_FUNC(cpdr)
+{
+    // TODO
+    INST_TAKES_NO_ARGS
+    INST_ERROR(ARG_SYNTAX)
+    INST_RETURN(1, 0xFF)
+}
+
+INST_FUNC(cpi)
+{
+    // TODO
+    INST_TAKES_NO_ARGS
+    INST_ERROR(ARG_SYNTAX)
+    INST_RETURN(1, 0xFF)
+}
+
+INST_FUNC(cpir)
+{
+    // TODO
+    INST_TAKES_NO_ARGS
+    INST_ERROR(ARG_SYNTAX)
+    INST_RETURN(1, 0xFF)
+}
+
+INST_FUNC(cpl)
+{
+    // TODO
+    INST_TAKES_NO_ARGS
+    INST_ERROR(ARG_SYNTAX)
+    INST_RETURN(1, 0xFF)
+}
+
+INST_FUNC(daa)
+{
+    // TODO
+    INST_TAKES_NO_ARGS
+    INST_ERROR(ARG_SYNTAX)
+    INST_RETURN(1, 0xFF)
+}
+
+INST_FUNC(dec)
+{
+    // TODO
+    INST_TAKES_NO_ARGS
+    INST_ERROR(ARG_SYNTAX)
+    INST_RETURN(1, 0xFF)
+}
+
+INST_FUNC(di)
+{
+    // TODO
+    INST_TAKES_NO_ARGS
+    INST_ERROR(ARG_SYNTAX)
+    INST_RETURN(1, 0xFF)
+}
+
+INST_FUNC(djnz)
+{
+    // TODO
+    INST_TAKES_NO_ARGS
+    INST_ERROR(ARG_SYNTAX)
+    INST_RETURN(1, 0xFF)
+}
+
+INST_FUNC(ei)
+{
+    // TODO
+    INST_TAKES_NO_ARGS
+    INST_ERROR(ARG_SYNTAX)
+    INST_RETURN(1, 0xFF)
+}
+
+INST_FUNC(ex)
+{
+    // TODO
+    INST_TAKES_NO_ARGS
+    INST_ERROR(ARG_SYNTAX)
+    INST_RETURN(1, 0xFF)
+}
+
+INST_FUNC(exx)
+{
+    // TODO
+    INST_TAKES_NO_ARGS
+    INST_ERROR(ARG_SYNTAX)
+    INST_RETURN(1, 0xFF)
+}
+
+INST_FUNC(halt)
+{
+    // TODO
+    INST_TAKES_NO_ARGS
+    INST_ERROR(ARG_SYNTAX)
+    INST_RETURN(1, 0xFF)
+}
+
+INST_FUNC(im)
+{
+    // TODO
+    INST_TAKES_NO_ARGS
+    INST_ERROR(ARG_SYNTAX)
+    INST_RETURN(1, 0xFF)
+}
+
+INST_FUNC(in)
+{
+    // TODO
+    INST_TAKES_NO_ARGS
+    INST_ERROR(ARG_SYNTAX)
+    INST_RETURN(1, 0xFF)
+}
+
 INST_FUNC(inc)
 {
     INST_TAKES_ARGS(1, 1)
@@ -356,10 +516,186 @@ INST_FUNC(inc)
     }
 }
 
+INST_FUNC(ind)
+{
+    // TODO
+    INST_TAKES_NO_ARGS
+    INST_ERROR(ARG_SYNTAX)
+    INST_RETURN(1, 0xFF)
+}
+
+INST_FUNC(indr)
+{
+    // TODO
+    INST_TAKES_NO_ARGS
+    INST_ERROR(ARG_SYNTAX)
+    INST_RETURN(1, 0xFF)
+}
+
+INST_FUNC(ini)
+{
+    // TODO
+    INST_TAKES_NO_ARGS
+    INST_ERROR(ARG_SYNTAX)
+    INST_RETURN(1, 0xFF)
+}
+
+INST_FUNC(inir)
+{
+    // TODO
+    INST_TAKES_NO_ARGS
+    INST_ERROR(ARG_SYNTAX)
+    INST_RETURN(1, 0xFF)
+}
+
+INST_FUNC(jp)
+{
+    // TODO
+    INST_TAKES_NO_ARGS
+    INST_ERROR(ARG_SYNTAX)
+    INST_RETURN(1, 0xFF)
+}
+
+INST_FUNC(jr)
+{
+    // TODO
+    INST_TAKES_NO_ARGS
+    INST_ERROR(ARG_SYNTAX)
+    INST_RETURN(1, 0xFF)
+}
+
+INST_FUNC(ld)
+{
+    // TODO
+    INST_TAKES_NO_ARGS
+    INST_ERROR(ARG_SYNTAX)
+    INST_RETURN(1, 0xFF)
+}
+
+INST_FUNC(ldd)
+{
+    // TODO
+    INST_TAKES_NO_ARGS
+    INST_ERROR(ARG_SYNTAX)
+    INST_RETURN(1, 0xFF)
+}
+
+INST_FUNC(lddr)
+{
+    // TODO
+    INST_TAKES_NO_ARGS
+    INST_ERROR(ARG_SYNTAX)
+    INST_RETURN(1, 0xFF)
+}
+
+INST_FUNC(ldi)
+{
+    // TODO
+    INST_TAKES_NO_ARGS
+    INST_ERROR(ARG_SYNTAX)
+    INST_RETURN(1, 0xFF)
+}
+
+INST_FUNC(ldir)
+{
+    // TODO
+    INST_TAKES_NO_ARGS
+    INST_ERROR(ARG_SYNTAX)
+    INST_RETURN(1, 0xFF)
+}
+
+INST_FUNC(neg)
+{
+    // TODO
+    INST_TAKES_NO_ARGS
+    INST_ERROR(ARG_SYNTAX)
+    INST_RETURN(1, 0xFF)
+}
+
 INST_FUNC(nop)
 {
     INST_TAKES_NO_ARGS
     INST_RETURN(1, 0x00)
+}
+
+INST_FUNC(or)
+{
+    // TODO
+    INST_TAKES_NO_ARGS
+    INST_ERROR(ARG_SYNTAX)
+    INST_RETURN(1, 0xFF)
+}
+
+INST_FUNC(otdr)
+{
+    // TODO
+    INST_TAKES_NO_ARGS
+    INST_ERROR(ARG_SYNTAX)
+    INST_RETURN(1, 0xFF)
+}
+
+INST_FUNC(otir)
+{
+    // TODO
+    INST_TAKES_NO_ARGS
+    INST_ERROR(ARG_SYNTAX)
+    INST_RETURN(1, 0xFF)
+}
+
+INST_FUNC(out)
+{
+    // TODO
+    INST_TAKES_NO_ARGS
+    INST_ERROR(ARG_SYNTAX)
+    INST_RETURN(1, 0xFF)
+}
+
+INST_FUNC(outd)
+{
+    // TODO
+    INST_TAKES_NO_ARGS
+    INST_ERROR(ARG_SYNTAX)
+    INST_RETURN(1, 0xFF)
+}
+
+INST_FUNC(outi)
+{
+    // TODO
+    INST_TAKES_NO_ARGS
+    INST_ERROR(ARG_SYNTAX)
+    INST_RETURN(1, 0xFF)
+}
+
+INST_FUNC(pop)
+{
+    // TODO
+    INST_TAKES_NO_ARGS
+    INST_ERROR(ARG_SYNTAX)
+    INST_RETURN(1, 0xFF)
+}
+
+INST_FUNC(push)
+{
+    // TODO
+    INST_TAKES_NO_ARGS
+    INST_ERROR(ARG_SYNTAX)
+    INST_RETURN(1, 0xFF)
+}
+
+INST_FUNC(res)
+{
+    // TODO
+    INST_TAKES_NO_ARGS
+    INST_ERROR(ARG_SYNTAX)
+    INST_RETURN(1, 0xFF)
+}
+
+INST_FUNC(ret)
+{
+    // TODO
+    INST_TAKES_NO_ARGS
+    INST_ERROR(ARG_SYNTAX)
+    INST_RETURN(1, 0xFF)
 }
 
 INST_FUNC(reti)
@@ -372,6 +708,182 @@ INST_FUNC(retn)
 {
     INST_TAKES_NO_ARGS
     INST_RETURN(2, 0xED, 0x45)
+}
+
+INST_FUNC(rl)
+{
+    // TODO
+    INST_TAKES_NO_ARGS
+    INST_ERROR(ARG_SYNTAX)
+    INST_RETURN(1, 0xFF)
+}
+
+INST_FUNC(rla)
+{
+    // TODO
+    INST_TAKES_NO_ARGS
+    INST_ERROR(ARG_SYNTAX)
+    INST_RETURN(1, 0xFF)
+}
+
+INST_FUNC(rlc)
+{
+    // TODO
+    INST_TAKES_NO_ARGS
+    INST_ERROR(ARG_SYNTAX)
+    INST_RETURN(1, 0xFF)
+}
+
+INST_FUNC(rlca)
+{
+    // TODO
+    INST_TAKES_NO_ARGS
+    INST_ERROR(ARG_SYNTAX)
+    INST_RETURN(1, 0xFF)
+}
+
+INST_FUNC(rld)
+{
+    // TODO
+    INST_TAKES_NO_ARGS
+    INST_ERROR(ARG_SYNTAX)
+    INST_RETURN(1, 0xFF)
+}
+
+INST_FUNC(rr)
+{
+    // TODO
+    INST_TAKES_NO_ARGS
+    INST_ERROR(ARG_SYNTAX)
+    INST_RETURN(1, 0xFF)
+}
+
+INST_FUNC(rra)
+{
+    // TODO
+    INST_TAKES_NO_ARGS
+    INST_ERROR(ARG_SYNTAX)
+    INST_RETURN(1, 0xFF)
+}
+
+INST_FUNC(rrc)
+{
+    // TODO
+    INST_TAKES_NO_ARGS
+    INST_ERROR(ARG_SYNTAX)
+    INST_RETURN(1, 0xFF)
+}
+
+INST_FUNC(rrca)
+{
+    // TODO
+    INST_TAKES_NO_ARGS
+    INST_ERROR(ARG_SYNTAX)
+    INST_RETURN(1, 0xFF)
+}
+
+INST_FUNC(rrd)
+{
+    // TODO
+    INST_TAKES_NO_ARGS
+    INST_ERROR(ARG_SYNTAX)
+    INST_RETURN(1, 0xFF)
+}
+
+INST_FUNC(rst)
+{
+    // TODO
+    INST_TAKES_NO_ARGS
+    INST_ERROR(ARG_SYNTAX)
+    INST_RETURN(1, 0xFF)
+}
+
+INST_FUNC(sbc)
+{
+    // TODO
+    INST_TAKES_NO_ARGS
+    INST_ERROR(ARG_SYNTAX)
+    INST_RETURN(1, 0xFF)
+}
+
+INST_FUNC(scf)
+{
+    // TODO
+    INST_TAKES_NO_ARGS
+    INST_ERROR(ARG_SYNTAX)
+    INST_RETURN(1, 0xFF)
+}
+
+INST_FUNC(set)
+{
+    // TODO
+    INST_TAKES_NO_ARGS
+    INST_ERROR(ARG_SYNTAX)
+    INST_RETURN(1, 0xFF)
+}
+
+INST_FUNC(sl1)
+{
+    // TODO
+    INST_TAKES_NO_ARGS
+    INST_ERROR(ARG_SYNTAX)
+    INST_RETURN(1, 0xFF)
+}
+
+INST_FUNC(sla)
+{
+    // TODO
+    INST_TAKES_NO_ARGS
+    INST_ERROR(ARG_SYNTAX)
+    INST_RETURN(1, 0xFF)
+}
+
+INST_FUNC(sll)
+{
+    // TODO
+    INST_TAKES_NO_ARGS
+    INST_ERROR(ARG_SYNTAX)
+    INST_RETURN(1, 0xFF)
+}
+
+INST_FUNC(sls)
+{
+    // TODO
+    INST_TAKES_NO_ARGS
+    INST_ERROR(ARG_SYNTAX)
+    INST_RETURN(1, 0xFF)
+}
+
+INST_FUNC(sra)
+{
+    // TODO
+    INST_TAKES_NO_ARGS
+    INST_ERROR(ARG_SYNTAX)
+    INST_RETURN(1, 0xFF)
+}
+
+INST_FUNC(srl)
+{
+    // TODO
+    INST_TAKES_NO_ARGS
+    INST_ERROR(ARG_SYNTAX)
+    INST_RETURN(1, 0xFF)
+}
+
+INST_FUNC(sub)
+{
+    // TODO
+    INST_TAKES_NO_ARGS
+    INST_ERROR(ARG_SYNTAX)
+    INST_RETURN(1, 0xFF)
+}
+
+INST_FUNC(xor)
+{
+    // TODO
+    INST_TAKES_NO_ARGS
+    INST_ERROR(ARG_SYNTAX)
+    INST_RETURN(1, 0xFF)
 }
 
 /*
@@ -387,10 +899,74 @@ ASMInstParser get_inst_parser(char mstr[MAX_MNEMONIC_SIZE])
 
     HANDLE(adc)
     HANDLE(add)
+    HANDLE(and)
+    HANDLE(bit)
+    HANDLE(call)
+    HANDLE(ccf)
+    HANDLE(cp)
+    HANDLE(cpd)
+    HANDLE(cpdr)
+    HANDLE(cpi)
+    HANDLE(cpir)
+    HANDLE(cpl)
+    HANDLE(daa)
+    HANDLE(dec)
+    HANDLE(di)
+    HANDLE(djnz)
+    HANDLE(ei)
+    HANDLE(ex)
+    HANDLE(exx)
+    HANDLE(halt)
+    HANDLE(im)
+    HANDLE(in)
     HANDLE(inc)
+    HANDLE(ind)
+    HANDLE(indr)
+    HANDLE(ini)
+    HANDLE(inir)
+    HANDLE(jp)
+    HANDLE(jr)
+    HANDLE(ld)
+    HANDLE(ldd)
+    HANDLE(lddr)
+    HANDLE(ldi)
+    HANDLE(ldir)
+    HANDLE(neg)
     HANDLE(nop)
+    HANDLE(or)
+    HANDLE(otdr)
+    HANDLE(otir)
+    HANDLE(out)
+    HANDLE(outd)
+    HANDLE(outi)
+    HANDLE(pop)
+    HANDLE(push)
+    HANDLE(res)
+    HANDLE(ret)
     HANDLE(reti)
     HANDLE(retn)
+    HANDLE(rl)
+    HANDLE(rla)
+    HANDLE(rlc)
+    HANDLE(rlca)
+    HANDLE(rld)
+    HANDLE(rr)
+    HANDLE(rra)
+    HANDLE(rrc)
+    HANDLE(rrca)
+    HANDLE(rrd)
+    HANDLE(rst)
+    HANDLE(sbc)
+    HANDLE(scf)
+    HANDLE(set)
+    HANDLE(sl1)
+    HANDLE(sla)
+    HANDLE(sll)
+    HANDLE(sls)
+    HANDLE(sra)
+    HANDLE(srl)
+    HANDLE(sub)
+    HANDLE(xor)
 
     return NULL;
 }
