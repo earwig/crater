@@ -152,7 +152,6 @@ static ASMErrorDesc parse_arg(
     }
 
     ASMArgParseInfo info = {.arg = str, .size = size, .deftable = deftable};
-    DEBUG("parse_arg(): -->%.*s<-- %zu", (int) size, str, size)
     TRY_PARSER(register, AT_REGISTER, reg)
     TRY_PARSER(immediate, AT_IMMEDIATE, imm)
     TRY_PARSER(indirect, AT_INDIRECT, indirect)
@@ -214,42 +213,48 @@ static ASMErrorDesc parse_args(
 
 /* Instruction parser functions */
 
-INST_FUNC(nop)
+INST_FUNC(adc)
 {
-    INST_TAKES_NO_ARGS
-    INST_RETURN(1, 0x00)
-}
-
-INST_FUNC(inc)
-{
-    INST_TAKES_ARGS(1, 1)
-    switch (INST_TYPE(0)) {
-        case AT_REGISTER:
-            switch (INST_REG(0)) {
-                case REG_A:   INST_RETURN(1, 0x3C)
-                case REG_B:   INST_RETURN(1, 0x04)
-                case REG_C:   INST_RETURN(1, 0x0C)
-                case REG_D:   INST_RETURN(1, 0x14)
-                case REG_E:   INST_RETURN(1, 0x1C)
-                case REG_H:   INST_RETURN(1, 0x24)
-                case REG_L:   INST_RETURN(1, 0x2C)
-                case REG_BC:  INST_RETURN(1, 0x03)
-                case REG_DE:  INST_RETURN(1, 0x13)
-                case REG_HL:  INST_RETURN(1, 0x23)
-                case REG_SP:  INST_RETURN(1, 0x33)
-                case REG_IX:  INST_RETURN(2, 0xDD, 0x23)
-                case REG_IY:  INST_RETURN(2, 0xFD, 0x23)
-                case REG_IXH: INST_RETURN(2, 0xDD, 0x2C)
-                case REG_IXL: INST_RETURN(2, 0xFD, 0x2C)
-                case REG_IYH: INST_RETURN(2, 0xDD, 0x2C)
-                case REG_IYL: INST_RETURN(2, 0xFD, 0x2C)
-                default: INST_ERROR(ARG0_BAD_REG)
+    INST_TAKES_ARGS(2, 2)
+    INST_FORCE_TYPE(0, AT_REGISTER)
+    switch (INST_REG(0)) {
+        case REG_A:
+            switch (INST_TYPE(1)) {
+                case AT_REGISTER:
+                    switch (INST_REG(1)) {
+                        case REG_A:   INST_RETURN(1, 0x8F)
+                        case REG_B:   INST_RETURN(1, 0x88)
+                        case REG_C:   INST_RETURN(1, 0x89)
+                        case REG_D:   INST_RETURN(1, 0x8A)
+                        case REG_E:   INST_RETURN(1, 0x8B)
+                        case REG_H:   INST_RETURN(1, 0x8C)
+                        case REG_L:   INST_RETURN(1, 0x8D)
+                        case REG_IXH: INST_RETURN(2, 0xDD, 0x8C)
+                        case REG_IXL: INST_RETURN(2, 0xDD, 0x8D)
+                        case REG_IYH: INST_RETURN(2, 0xFD, 0x8C)
+                        case REG_IYL: INST_RETURN(2, 0xFD, 0x8D)
+                        default: INST_ERROR(ARG1_BAD_REG)
+                    }
+                case AT_IMMEDIATE:
+                    INST_CHECK_IMM(1, IMM_U8)
+                    INST_RETURN(2, 0xCE, INST_IMM(1).uval)
+                case AT_INDIRECT:
+                    INST_INDIRECT_HL_ONLY(1)
+                    INST_RETURN(1, 0x8E)
+                case AT_INDEXED:
+                    INST_RETURN(3, INST_INDEX_BYTES(1, 0x8E))
+                default:
+                    INST_ERROR(ARG1_TYPE)
             }
-        case AT_INDIRECT:
-            INST_INDIRECT_HL_ONLY(0)
-            INST_RETURN(1, 0x34)
-        case AT_INDEXED:
-            INST_RETURN(3, INST_INDEX_BYTES(0, 0x34))
+        case REG_HL:
+            INST_FORCE_TYPE(1, AT_REGISTER)
+            switch (INST_REG(1)) {
+                case REG_BC: INST_RETURN(2, 0xED, 0x4A)
+                case REG_DE: INST_RETURN(2, 0xED, 0x5A)
+                case REG_HL: INST_RETURN(2, 0xED, 0x6A)
+                case REG_SP: INST_RETURN(2, 0xED, 0x7A)
+                default: INST_ERROR(ARG1_BAD_REG)
+            }
         default:
             INST_ERROR(ARG0_TYPE)
     }
@@ -316,13 +321,46 @@ INST_FUNC(add)
     }
 }
 
-/*
-INST_FUNC(adc)
+INST_FUNC(inc)
 {
-    DEBUG("dispatched to -> ADC")
-    return ED_PS_TOO_FEW_ARGS;
+    INST_TAKES_ARGS(1, 1)
+    switch (INST_TYPE(0)) {
+        case AT_REGISTER:
+            switch (INST_REG(0)) {
+                case REG_A:   INST_RETURN(1, 0x3C)
+                case REG_B:   INST_RETURN(1, 0x04)
+                case REG_C:   INST_RETURN(1, 0x0C)
+                case REG_D:   INST_RETURN(1, 0x14)
+                case REG_E:   INST_RETURN(1, 0x1C)
+                case REG_H:   INST_RETURN(1, 0x24)
+                case REG_L:   INST_RETURN(1, 0x2C)
+                case REG_BC:  INST_RETURN(1, 0x03)
+                case REG_DE:  INST_RETURN(1, 0x13)
+                case REG_HL:  INST_RETURN(1, 0x23)
+                case REG_SP:  INST_RETURN(1, 0x33)
+                case REG_IX:  INST_RETURN(2, 0xDD, 0x23)
+                case REG_IY:  INST_RETURN(2, 0xFD, 0x23)
+                case REG_IXH: INST_RETURN(2, 0xDD, 0x2C)
+                case REG_IXL: INST_RETURN(2, 0xFD, 0x2C)
+                case REG_IYH: INST_RETURN(2, 0xDD, 0x2C)
+                case REG_IYL: INST_RETURN(2, 0xFD, 0x2C)
+                default: INST_ERROR(ARG0_BAD_REG)
+            }
+        case AT_INDIRECT:
+            INST_INDIRECT_HL_ONLY(0)
+            INST_RETURN(1, 0x34)
+        case AT_INDEXED:
+            INST_RETURN(3, INST_INDEX_BYTES(0, 0x34))
+        default:
+            INST_ERROR(ARG0_TYPE)
+    }
 }
-*/
+
+INST_FUNC(nop)
+{
+    INST_TAKES_NO_ARGS
+    INST_RETURN(1, 0x00)
+}
 
 INST_FUNC(reti)
 {
@@ -347,10 +385,10 @@ ASMInstParser get_inst_parser(char mstr[MAX_MNEMONIC_SIZE])
     // single 32-bit value to do fast lookups:
     uint32_t key = (mstr[0] << 24) + (mstr[1] << 16) + (mstr[2] << 8) + mstr[3];
 
-    HANDLE(nop)
-    HANDLE(inc)
+    HANDLE(adc)
     HANDLE(add)
-    // HANDLE(adc)
+    HANDLE(inc)
+    HANDLE(nop)
     HANDLE(reti)
     HANDLE(retn)
 
