@@ -12,6 +12,7 @@
 #include "../logging.h"
 #include "../mmu.h"
 #include "../rom.h"
+#include "../util.h"
 
 /* Internal structs */
 
@@ -124,6 +125,84 @@ static ErrorInfo* add_label_to_table(
     label->symbol = symbol;
     label->line = line;
     asm_symtable_insert(symtable, label);
+    return NULL;
+}
+
+/*
+    Handle a define directive by adding an entry to the define table.
+
+    Return NULL on success and an ErrorInfo object on failure.
+*/
+static ErrorInfo* handle_define_directive(
+    const ASMLine *line, ASMDefineTable *deftab)
+{
+    if (!DIRECTIVE_HAS_ARG(line, DIR_DEFINE))
+        return error_info_create(line, ET_PREPROC, ED_PP_NO_ARG);
+
+    size_t start = DIRECTIVE_OFFSET(line, DIR_DEFINE) + 1, i;
+    for (i = start; i < line->length; i++) {
+        if (!is_valid_symbol_char(line->data[i], i == start)) {
+            if (line->data[i] == ' ' && i > start) {
+                i++;
+                break;
+            }
+            return error_info_create(line, ET_PREPROC, ED_PP_BAD_ARG);
+        }
+    }
+
+    if (i >= line->length)  // Missing value for define
+        return error_info_create(line, ET_PREPROC, ED_PP_NO_ARG);
+
+    const char *key = line->data + start;
+    size_t keylen = i - start - 1;
+
+    const ASMDefine *current = asm_deftable_find(deftab, key, keylen);
+    if (current) {
+        ErrorInfo *ei = error_info_create(line, ET_PREPROC, ED_PP_DUPLICATE);
+        error_info_append(ei, current->line);
+        return ei;
+    }
+
+    ASMArgImmediate imm;
+    ASMArgParseInfo info = {
+        .arg = line->data + i, .size = line->length - i, .deftable = deftab};
+    if (!argparse_immediate(&imm, info))
+        return error_info_create(line, ET_PREPROC, ED_PP_BAD_ARG);
+
+    ASMDefine *define = malloc(sizeof(ASMDefine));
+    if (!define)
+        OUT_OF_MEMORY()
+
+    if (!(define->name = strndup(key, keylen)))
+        OUT_OF_MEMORY()
+
+    define->value = imm;
+    define->line = line;
+    asm_deftable_insert(deftab, define);
+    return NULL;
+}
+
+/*
+    Handle an undefine directive by remove an entry in the define table.
+
+    Return NULL on success and an ErrorInfo object on failure.
+*/
+static ErrorInfo* handle_undef_directive(
+    const ASMLine *line, ASMDefineTable *deftab)
+{
+    if (!DIRECTIVE_HAS_ARG(line, DIR_UNDEF))
+        return error_info_create(line, ET_PREPROC, ED_PP_NO_ARG);
+
+    size_t offset = DIRECTIVE_OFFSET(line, DIR_UNDEF) + 1;
+    const char *arg = line->data + offset;
+    size_t size = line->length - offset, i;
+
+    for (i = 0; i < size; i++) {
+        if (!is_valid_symbol_char(arg[i], i == 0))
+            return error_info_create(line, ET_PREPROC, ED_PP_BAD_ARG);
+    }
+
+    asm_deftable_remove(deftab, arg, size);
     return NULL;
 }
 
@@ -410,10 +489,12 @@ ErrorInfo* tokenize(AssemblerState *state)
         }
         else if (IS_LOCAL_DIRECTIVE(line)) {
             if (IS_DIRECTIVE(line, DIR_DEFINE)) {
-                // TODO
+                if ((ei = handle_define_directive(line, deftab)))
+                    goto cleanup;
             }
             else if (IS_DIRECTIVE(line, DIR_UNDEF)) {
-                // TODO
+                if ((ei = handle_undef_directive(line, deftab)))
+                    goto cleanup;
             }
             else if (IS_DIRECTIVE(line, DIR_ORIGIN)) {
                 if ((ei = handle_origin_directive(line, &offset)))

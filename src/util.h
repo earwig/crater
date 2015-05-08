@@ -3,6 +3,7 @@
 
 #pragma once
 
+#include <stdbool.h>
 #include <stdint.h>
 
 #define INVALID_SIZE_CODE 0x8
@@ -12,6 +13,7 @@
 uint8_t bcd_encode(uint8_t);
 uint8_t bcd_decode(uint8_t);
 uint64_t get_time_ns();
+bool is_valid_symbol_char(char, bool);
 const char* region_code_to_string(uint8_t);
 uint8_t region_string_to_code(const char*);
 size_t size_code_to_bytes(uint8_t);

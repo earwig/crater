@@ -56,6 +56,34 @@ static bool adjust_for_indirection(ASMArgParseInfo *ap_info)
 }
 
 /*
+    Calculate the mask field for an ASMArgImmediate based on its uval/sval.
+*/
+static void calculate_immediate_mask(ASMArgImmediate *imm)
+{
+    imm->mask = 0;
+    if (imm->sval < 0) {
+        if (imm->sval >= INT8_MIN)
+            imm->mask |= IMM_S8;
+        if (imm->sval >= INT8_MIN + 2)
+            imm->mask |= IMM_REL;
+    } else {
+        imm->mask = IMM_U16;
+        if (imm->uval <= UINT8_MAX)
+            imm->mask |= IMM_U8;
+        if (imm->uval <= INT8_MAX)
+            imm->mask |= IMM_S8;
+        if (imm->uval <= INT8_MAX + 2)
+            imm->mask |= IMM_REL;
+        if (imm->uval <= 7)
+            imm->mask |= IMM_BIT;
+        if (!(imm->uval & ~0x38))
+            imm->mask |= IMM_RST;
+        if (imm->uval <= 2)
+            imm->mask |= IMM_IM;
+    }
+}
+
+/*
     Read in a boolean value and store it in *result.
 */
 bool parse_bool(bool *result, const char *arg, ssize_t size)
@@ -303,12 +331,6 @@ bool argparse_immediate(ASMArgImmediate *result, ASMArgParseInfo ai)
     if (ai.size <= 0)
         return false;
 
-    const ASMDefine *define = asm_deftable_find(ai.deftable, ai.arg, ai.size);
-    if (define) {
-        *result = define->value;
-        return true;
-    }
-
     bool negative = false;
     ssize_t i = 0;
 
@@ -318,9 +340,23 @@ bool argparse_immediate(ASMArgImmediate *result, ASMArgParseInfo ai)
         if (++i >= ai.size)
             return false;
     }
+    ai.arg += i;
+    ai.size -= i;
+
+    const ASMDefine *define = asm_deftable_find(ai.deftable, ai.arg, ai.size);
+    if (define) {
+        if (negative) {
+            result->uval = define->value.uval;
+            result->sval = -define->value.sval;
+            calculate_immediate_mask(result);
+        } else {
+            *result = define->value;
+        }
+        return true;
+    }
 
     uint32_t uval;
-    if (!parse_uint32_t(&uval, ai.arg + i, ai.size - i) || uval > UINT16_MAX)
+    if (!parse_uint32_t(&uval, ai.arg, ai.size) || uval > UINT16_MAX)
         return false;
 
     int32_t sval = negative ? -uval : uval;
@@ -329,28 +365,7 @@ bool argparse_immediate(ASMArgImmediate *result, ASMArgParseInfo ai)
 
     result->uval = uval;
     result->sval = sval;
-    result->mask = 0;
-
-    if (sval < 0) {
-        if (sval >= INT8_MIN)
-            result->mask |= IMM_S8;
-        if (sval >= INT8_MIN + 2)
-            result->mask |= IMM_REL;
-    } else {
-        result->mask = IMM_U16;
-        if (uval <= UINT8_MAX)
-            result->mask |= IMM_U8;
-        if (uval <= INT8_MAX)
-            result->mask |= IMM_S8;
-        if (uval <= INT8_MAX + 2)
-            result->mask |= IMM_REL;
-        if (uval <= 7)
-            result->mask |= IMM_BIT;
-        if (!(uval & ~0x38))
-            result->mask |= IMM_RST;
-        if (uval <= 2)
-            result->mask |= IMM_IM;
-    }
+    calculate_immediate_mask(result);
     return true;
 }
 
@@ -425,11 +440,8 @@ bool argparse_label(ASMArgLabel *result, ASMArgParseInfo ai)
     if (ai.size <= 0 || ai.size >= MAX_SYMBOL_SIZE)
         return false;
 
-    // Validate the label characters:
     for (const char *i = ai.arg; i < ai.arg + ai.size; i++) {
-        char c = *i;
-        if (!((c >= 'a' && c <= 'z') || c == '_' || c == '.' ||
-              (i != ai.arg && c >= '0' && c <= '9')))
+        if (!is_valid_symbol_char(*i, i == ai.arg))
             return false;
     }
 

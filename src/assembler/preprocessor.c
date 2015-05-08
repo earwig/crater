@@ -85,15 +85,6 @@
     else FAIL_ON_COND_(true, ED_PP_UNKNOWN)
 
 /*
-    Return whether the given character is a valid label character.
-*/
-static inline bool is_valid_label_char(char c, bool first)
-{
-    return (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') ||
-           (!first && c >= '0' && c <= '9') || c == '_' || c == '.';
-}
-
-/*
     Functions similar memcpy, but lowercases the characters along the way.
 */
 static void memcpy_lc(char *restrict dst, const char *restrict src, size_t n)
@@ -121,7 +112,7 @@ static size_t read_labels(
         start++;
 
     i = start;
-    while (i < length && is_valid_label_char(source[i], i == start))
+    while (i < length && is_valid_symbol_char(source[i], i == start))
         i++;
 
     if (i == start || i == length || source[i] != ':') {

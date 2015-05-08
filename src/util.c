@@ -54,6 +54,15 @@ uint64_t get_time_ns()
 }
 
 /*
+    Return whether the given character is valid in a symbol (label, define).
+*/
+bool is_valid_symbol_char(char c, bool first)
+{
+    return (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') ||
+           (!first && c >= '0' && c <= '9') || c == '_' || c == '.';
+}
+
+/*
     Return the name of the region encoded by the given region code.
 
     The given code should not be larger than one nibble. NULL is returned if
