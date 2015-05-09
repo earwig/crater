@@ -533,10 +533,52 @@ INST_FUNC(jr)
 
 INST_FUNC(ld)
 {
-    // TODO
-    INST_TAKES_NO_ARGS
-    INST_ERROR(ARG_SYNTAX)
-    INST_RETURN(1, 0xFF)
+    INST_TAKES_ARGS(2, 2)
+    switch (INST_TYPE(0)) {
+        case AT_REGISTER:
+            switch (INST_REG(0)) {
+                case REG_A:   // TODO (20 cases)
+                case REG_B:   // TODO (15 cases)
+                case REG_C:   // TODO (15 cases)
+                case REG_D:   // TODO (15 cases)
+                case REG_E:   // TODO (15 cases)
+                case REG_H:   // TODO (11 cases)
+                case REG_L:   // TODO (11 cases)
+                case REG_I:   // TODO ( 1 case )
+                case REG_R:   // TODO ( 1 case )
+                case REG_BC:  // TODO ( 2 cases)
+                case REG_DE:  // TODO ( 2 cases)
+                case REG_HL:  // TODO ( 3 cases)
+                case REG_IX:  // TODO ( 2 cases)
+                case REG_IY:  // TODO ( 2 cases)
+                case REG_SP:  // TODO ( 5 cases)
+                case REG_IXH: // TODO ( 8 cases)
+                case REG_IXL: // TODO ( 8 cases)
+                case REG_IYH: // TODO ( 8 cases)
+                case REG_IYL: // TODO ( 8 cases)
+                default: INST_ERROR(ARG0_BAD_REG)
+            }
+        case AT_INDIRECT:
+            switch (INST_INDIRECT(0).type) {
+                case AT_REGISTER:
+                    switch (INST_INDIRECT(0).addr.reg) {
+                        case REG_BC: // TODO (1 case )
+                        case REG_DE: // TODO (1 case )
+                        case REG_HL: // TODO (8 cases)
+                        default: INST_ERROR(ARG0_BAD_REG)
+                    }
+                case AT_IMMEDIATE:
+                    // TODO (8 cases)
+                case AT_LABEL:
+                    // TODO (same 8 cases)
+                default:
+                    INST_ERROR(ARG0_TYPE)
+            }
+        case AT_INDEXED:
+            // TODO (16 cases)
+        default:
+            INST_ERROR(ARG0_TYPE)
+    }
 }
 
 INST_FUNC(ldd)
@@ -691,10 +733,8 @@ INST_FUNC(rlca)
 
 INST_FUNC(rld)
 {
-    // TODO
     INST_TAKES_NO_ARGS
-    INST_ERROR(ARG_SYNTAX)
-    INST_RETURN(1, 0xFF)
+    INST_RETURN(2, 0xED, 0x6F)
 }
 
 INST_FUNC(rr)

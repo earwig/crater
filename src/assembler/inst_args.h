@@ -40,10 +40,15 @@ typedef struct {
 } ASMArgImmediate;
 
 typedef struct {
+    char text[MAX_SYMBOL_SIZE];
+} ASMArgLabel;
+
+typedef struct {
     ASMArgType type;
     union {
         ASMArgRegister reg;
         ASMArgImmediate imm;
+        ASMArgLabel label;
     } addr;
 } ASMArgIndirect;
 
@@ -51,10 +56,6 @@ typedef struct {
     ASMArgRegister reg;
     int8_t offset;
 } ASMArgIndexed;
-
-typedef struct {
-    char text[MAX_SYMBOL_SIZE];
-} ASMArgLabel;
 
 typedef enum {
     COND_NZ, COND_N, COND_NC, COND_C, COND_PO, COND_PE, COND_P, COND_M

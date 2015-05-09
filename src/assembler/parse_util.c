@@ -374,6 +374,7 @@ bool argparse_indirect(ASMArgIndirect *result, ASMArgParseInfo ai)
 
     ASMArgRegister reg;
     ASMArgImmediate imm;
+    ASMArgLabel label;
     if (argparse_register(&reg, ai)) {
         if (reg == REG_BC || reg == REG_DE || reg == REG_HL) {
             result->type = AT_REGISTER;
@@ -386,6 +387,10 @@ bool argparse_indirect(ASMArgIndirect *result, ASMArgParseInfo ai)
             result->addr.imm = imm;
             return true;
         }
+    } else if (argparse_label(&label, ai)) {
+        result->type = AT_LABEL;
+        result->addr.label = label;
+        return true;
     }
     return false;
 }
