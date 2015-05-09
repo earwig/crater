@@ -5,7 +5,7 @@
 #include <string.h>
 
 #include "hash_table.h"
-#include "../logging.h"
+#include "../util.h"
 
 #define INITIAL_BUCKETS 127
 
@@ -61,13 +61,8 @@ static inline bool keyeq(const char *s1, const char *s2, ssize_t size)
 HashTable* hash_table_new(
     size_t key_offset, size_t next_offset, HashFreeCallback callback)
 {
-    HashTable *table;
-    if (!(table = malloc(sizeof(HashTable))))
-        OUT_OF_MEMORY()
-
-    if (!(table->nodes = calloc(INITIAL_BUCKETS, sizeof(HashNode*))))
-        OUT_OF_MEMORY()
-
+    HashTable *table = cr_malloc(sizeof(HashTable));
+    table->nodes = cr_calloc(INITIAL_BUCKETS, sizeof(HashNode*));
     table->buckets = INITIAL_BUCKETS;
     table->key_offset = key_offset;
     table->next_offset = next_offset;

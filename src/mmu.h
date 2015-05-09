@@ -22,7 +22,7 @@ typedef struct {
 
 /* Functions */
 
-bool mmu_init(MMU*);
+void mmu_init(MMU*);
 void mmu_free(MMU*);
 void mmu_load_rom(MMU*, const uint8_t*, size_t);
 void mmu_power(MMU*);

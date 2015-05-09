@@ -6,7 +6,7 @@
 #include "errors.h"
 #include "state.h"
 #include "../assembler.h"
-#include "../logging.h"
+#include "../util.h"
 
 /* Error strings */
 
@@ -82,27 +82,20 @@ struct ErrorInfo {
 */
 static ASMErrorLine* create_error_line(const ASMLine *line)
 {
-    ASMErrorLine *el = malloc(sizeof(ASMErrorLine));
-    if (!el)
-        OUT_OF_MEMORY()
-
+    ASMErrorLine *el = cr_malloc(sizeof(ASMErrorLine));
     const char *source = line->original->data;
     size_t length = line->original->length;
-    if (!(el->data = malloc(sizeof(char) * length)))
-        OUT_OF_MEMORY()
 
     // Ignore spaces at beginning:
     while (length > 0 && (*source == ' ' || *source == '\t'))
         source++, length--;
+
+    el->data = cr_malloc(sizeof(char) * length);
     memcpy(el->data, source, length);
 
     el->length = length;
     el->lineno = line->original->lineno;
-
-    el->filename = strdup(line->filename);
-    if (!el->filename)
-        OUT_OF_MEMORY()
-
+    el->filename = cr_strdup(line->filename);
     el->next = NULL;
     return el;
 }
@@ -119,10 +112,7 @@ static ASMErrorLine* create_error_line(const ASMLine *line)
 ErrorInfo* error_info_create(
     const ASMLine *line, ASMErrorType err_type, ASMErrorDesc err_desc)
 {
-    ErrorInfo *einfo = malloc(sizeof(ErrorInfo));
-    if (!einfo)
-        OUT_OF_MEMORY()
-
+    ErrorInfo *einfo = cr_malloc(sizeof(ErrorInfo));
     einfo->type = err_type;
     einfo->desc = err_desc;
     einfo->line = line ? create_error_line(line) : NULL;

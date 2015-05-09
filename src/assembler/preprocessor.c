@@ -121,14 +121,8 @@ static size_t read_labels(
         return 0;
     }
 
-    ASMLine *line = malloc(sizeof(ASMLine));
-    if (!line)
-        OUT_OF_MEMORY()
-
-    line->data = malloc(sizeof(char) * (i - start + 1));
-    if (!line->data)
-        OUT_OF_MEMORY()
-
+    ASMLine *line = cr_malloc(sizeof(ASMLine));
+    line->data = cr_malloc(sizeof(char) * (i - start + 1));
     memcpy_lc(line->data, source + start, i - start + 1);
     line->length = i - start + 1;
     line->is_label = true;
@@ -160,10 +154,7 @@ static ASMLine* normalize_line(const char *source, size_t length)
     source += offset;
     length -= offset;
 
-    char *data = malloc(sizeof(char) * length);
-    if (!data)
-        OUT_OF_MEMORY()
-
+    char *data = cr_malloc(sizeof(char) * length);
     size_t si, di, slashes = 0;
     bool has_content = false, space_pending = false, in_string = false;
     for (si = di = 0; si < length; si++) {
@@ -206,14 +197,8 @@ static ASMLine* normalize_line(const char *source, size_t length)
         return head;
     }
 
-    ASMLine *line = malloc(sizeof(ASMLine));
-    if (!line)
-        OUT_OF_MEMORY()
-
-    data = realloc(data, sizeof(char) * di);
-    if (!data)
-        OUT_OF_MEMORY()
-
+    ASMLine *line = cr_malloc(sizeof(ASMLine));
+    data = cr_realloc(data, sizeof(char) * di);
     line->data = data;
     line->length = di;
     line->is_label = false;
@@ -239,10 +224,7 @@ static char* read_include_path(const ASMLine *line)
     if (maxlen >= INT_MAX)  // Allows us to safely downcast to int later
         return NULL;
 
-    char *path = malloc(sizeof(char) * maxlen), *base, *dup;
-    if (!path)
-        OUT_OF_MEMORY()
-
+    char *path = cr_malloc(sizeof(char) * maxlen), *base, *dup;
     if (!(i = DIRECTIVE_OFFSET(line, DIR_INCLUDE)))
         goto error;
     if (line->length - i <= 3)  // Not long enough to hold a non-zero argument
@@ -252,8 +234,7 @@ static char* read_include_path(const ASMLine *line)
     if (!parse_string(&base, &baselen, line->data + i, line->length - i))
         goto error;
 
-    if (!(dup = strdup(line->filename)))
-        OUT_OF_MEMORY()
+    dup = cr_strdup(line->filename);
 
     // TODO: should normalize filenames in some way to prevent accidental dupes
     snprintf(path, maxlen, "%s/%.*s", dirname(dup), (int) baselen, base);
@@ -330,10 +311,7 @@ static ErrorInfo* build_asm_lines(
                 goto error;
             }
 
-            ASMInclude *include = malloc(sizeof(ASMInclude));
-            if (!include)
-                OUT_OF_MEMORY()
-
+            ASMInclude *include = cr_malloc(sizeof(ASMInclude));
             include->lines = incbuffer;
             include->next = *includes;
             *includes = include;

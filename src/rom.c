@@ -169,8 +169,7 @@ const char* rom_open(ROM **rom_ptr, const char *path)
         return (st.st_mode & S_IFDIR) ? rom_err_isdir : rom_err_notfile;
     }
 
-    if (!(rom = malloc(sizeof(ROM))))
-        OUT_OF_MEMORY()
+    rom = cr_malloc(sizeof(ROM));
 
     // Set defaults:
     rom->name = NULL;
@@ -183,8 +182,7 @@ const char* rom_open(ROM **rom_ptr, const char *path)
     rom->region_code = 0;
 
     // Set rom->name:
-    if (!(rom->name = malloc(sizeof(char) * (strlen(path) + 1))))
-        OUT_OF_MEMORY()
+    rom->name = cr_malloc(sizeof(char) * (strlen(path) + 1));
     strcpy(rom->name, path);
     DEBUG("Loading ROM %s:", rom->name)
 
@@ -198,8 +196,7 @@ const char* rom_open(ROM **rom_ptr, const char *path)
     rom->size = st.st_size;
 
     // Set rom->data:
-    if (!(rom->data = malloc(sizeof(uint8_t) * st.st_size)))
-        OUT_OF_MEMORY()
+    rom->data = cr_malloc(sizeof(uint8_t) * st.st_size);
     if (!(fread(rom->data, st.st_size, 1, fp))) {
         rom_close(rom);
         fclose(fp);

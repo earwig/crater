@@ -12,17 +12,11 @@
 
 /*
     Create and return a pointer to a new GameGear object.
-
-    If memory could not be allocated, OUT_OF_MEMORY() is triggered.
 */
 GameGear* gamegear_create()
 {
-    GameGear *gg = malloc(sizeof(GameGear));
-    if (!gg)
-        OUT_OF_MEMORY()
-
-    if (!mmu_init(&gg->mmu))
-        OUT_OF_MEMORY()
+    GameGear *gg = cr_malloc(sizeof(GameGear));
+    mmu_init(&gg->mmu);
     z80_init(&gg->cpu, &gg->mmu);
     gg->powered = false;
     gg->exc_buffer[0] = '\0';

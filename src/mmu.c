@@ -5,27 +5,21 @@
 #include <string.h>
 
 #include "logging.h"
+#include "util.h"
 #include "z80.h"
 
 /*
     Initialize a MMU object. This must be called before using the MMU.
-
-    Return true if initialization was successful, or false if the required
-    amount of memory could not be allocated.
 */
-bool mmu_init(MMU *mmu)
+void mmu_init(MMU *mmu)
 {
-    mmu->system_ram = malloc(sizeof(uint8_t) * MMU_SYSTEM_RAM_SIZE);
-    if (!mmu->system_ram)
-        return false;
+    mmu->system_ram = cr_malloc(sizeof(uint8_t) * MMU_SYSTEM_RAM_SIZE);
 
     for (size_t slot = 0; slot < MMU_NUM_SLOTS; slot++)
         mmu->map_slots[slot] = NULL;
 
     for (size_t bank = 0; bank < MMU_NUM_ROM_BANKS; bank++)
         mmu->rom_banks[bank] = NULL;
-
-    return true;
 }
 
 /*

@@ -9,6 +9,7 @@
 
 #include "io.h"
 #include "../logging.h"
+#include "../util.h"
 
 /*
     Deallocate a LineBuffer previously created with read_source_file().
@@ -59,14 +60,9 @@ LineBuffer* read_source_file(const char *path, bool print_errors)
         return NULL;
     }
 
-    LineBuffer *source = malloc(sizeof(LineBuffer));
-    if (!source)
-        OUT_OF_MEMORY()
-
+    LineBuffer *source = cr_malloc(sizeof(LineBuffer));
     source->lines = NULL;
-    source->filename = strdup(path);
-    if (!source->filename)
-        OUT_OF_MEMORY()
+    source->filename = cr_strdup(path);
 
     Line dummy = {.next = NULL};
     Line *line, *prev = &dummy;
@@ -90,10 +86,7 @@ LineBuffer* read_source_file(const char *path, bool print_errors)
             return NULL;
         }
 
-        line = malloc(sizeof(Line));
-        if (!line)
-            OUT_OF_MEMORY()
-
+        line = cr_malloc(sizeof(Line));
         line->data = data;
         line->length = feof(fp) ? len : (len - 1);
         line->lineno = lineno++;

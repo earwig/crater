@@ -9,7 +9,6 @@
 #include "instructions.h"
 #include "inst_args.h"
 #include "parse_util.h"
-#include "../logging.h"
 #include "../mmu.h"
 #include "../rom.h"
 #include "../util.h"
@@ -63,12 +62,8 @@ static void init_layout_info(ASMLayoutInfo *li, AssemblerState *state)
     li->origin = NULL;
     li->bank = 0;
     li->cross_blocks = state->cross_blocks;
-
-    if (!(li->overlap_table = calloc(li->size, sizeof(const ASMLine*))))
-        OUT_OF_MEMORY()
-
-    if (!(li->overlap_origins = calloc(li->size, sizeof(const ASMLine*))))
-        OUT_OF_MEMORY()
+    li->overlap_table = cr_calloc(li->size, sizeof(const ASMLine*));
+    li->overlap_origins = cr_calloc(li->size, sizeof(const ASMLine*));
 
     for (size_t i = 0; i < HEADER_SIZE; i++)
         li->overlap_table[state->header.offset + i] = &header_sentinel;
@@ -104,10 +99,7 @@ static ErrorInfo* add_label_to_table(
     if (argparse_condition(&cond, info))
         return error_info_create(line, ET_SYMBOL, ED_SYM_IS_CONDITION);
 
-    char *symbol = strndup(line->data, line->length - 1);
-    if (!symbol)
-        OUT_OF_MEMORY()
-
+    char *symbol = cr_strndup(line->data, line->length - 1);
     const ASMSymbol *current = asm_symtable_find(symtable, symbol);
     if (current) {
         ErrorInfo *ei = error_info_create(line, ET_SYMBOL, ED_SYM_DUPE_LABELS);
@@ -116,10 +108,7 @@ static ErrorInfo* add_label_to_table(
         return ei;
     }
 
-    ASMSymbol *label = malloc(sizeof(ASMSymbol));
-    if (!label)
-        OUT_OF_MEMORY()
-
+    ASMSymbol *label = cr_malloc(sizeof(ASMSymbol));
     label->offset = map_into_slot(offset,
         (slot >= 0) ? slot : default_bank_slot(offset / MMU_ROM_BANK_SIZE));
     label->symbol = symbol;
@@ -169,13 +158,8 @@ static ErrorInfo* handle_define_directive(
     if (!argparse_immediate(&imm, info))
         return error_info_create(line, ET_PREPROC, ED_PP_BAD_ARG);
 
-    ASMDefine *define = malloc(sizeof(ASMDefine));
-    if (!define)
-        OUT_OF_MEMORY()
-
-    if (!(define->name = strndup(key, keylen)))
-        OUT_OF_MEMORY()
-
+    ASMDefine *define = cr_malloc(sizeof(ASMDefine));
+    define->name = cr_strndup(key, keylen);
     define->value = imm;
     define->line = line;
     asm_deftable_insert(deftab, define);
@@ -285,9 +269,7 @@ static bool parse_space(
     }
 
     *length = bytes[0];
-    if (!(*result = malloc(sizeof(uint8_t) * (*length))))
-        OUT_OF_MEMORY()
-
+    *result = cr_malloc(sizeof(uint8_t) * (*length));
     memset(*result, nbytes == 2 ? bytes[1] : 0, *length);
     free(bytes);
     return true;
@@ -328,10 +310,7 @@ static ErrorInfo* parse_data(
     const char *arg = line->data + dir_offset;
     size_t arglen = line->length - dir_offset;
 
-    ASMData *data = malloc(sizeof(ASMData));
-    if (!data)
-        OUT_OF_MEMORY()
-
+    ASMData *data = cr_malloc(sizeof(ASMData));
     data->loc.offset = offset;
     data->next = NULL;
 
@@ -386,10 +365,7 @@ static ErrorInfo* parse_instruction(
     if (edesc != ED_NONE)
         return error_info_create(line, ET_PARSER, edesc);
 
-    ASMInstruction *inst = malloc(sizeof(ASMInstruction));
-    if (!inst)
-        OUT_OF_MEMORY()
-
+    ASMInstruction *inst = cr_malloc(sizeof(ASMInstruction));
     inst->loc.offset = offset;
     inst->loc.length = length;
     inst->bytes = bytes;

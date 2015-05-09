@@ -6,6 +6,8 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#include "util_alloc.h"
+
 #define INVALID_SIZE_CODE 0x8
 
 /* Functions */

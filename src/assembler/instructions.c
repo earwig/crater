@@ -7,7 +7,7 @@
 #include "instructions.h"
 #include "inst_args.h"
 #include "parse_util.h"
-#include "../logging.h"
+#include "../util.h"
 
 /* Helper macros for get_inst_parser() */
 
@@ -26,8 +26,7 @@
 
 #define INST_ALLOC_(len)                                                      \
     *length = len;                                                            \
-    if (!(*bytes = malloc(sizeof(uint8_t) * (len))))                          \
-        OUT_OF_MEMORY()
+    *bytes = cr_malloc(sizeof(uint8_t) * (len));
 
 #define INST_SET_(b, val) ((*bytes)[b] = val)
 #define INST_SET1_(b1) INST_SET_(0, b1)
@@ -55,7 +54,7 @@ static ASMErrorDesc parse_inst_##mnemonic(                                    \
 
 #define INST_TAKES_NO_ARGS                                                    \
     if (ap_info.arg)                                                          \
-        INST_ERROR(TOO_MANY_ARGS)                                             \
+        INST_ERROR(TOO_MANY_ARGS)
 
 #define INST_TAKES_ARGS(lo, hi)                                               \
     if (!ap_info.arg)                                                         \
@@ -104,9 +103,7 @@ static ASMErrorDesc parse_inst_##mnemonic(                                    \
     }
 
 #define INST_RETURN_WITH_SYMBOL(len, label, ...) {                            \
-        *symbol = strdup(label);                                              \
-        if (!(*symbol))                                                       \
-            OUT_OF_MEMORY()                                                   \
+        *symbol = cr_strdup(label);                                           \
         INST_ALLOC_(len)                                                      \
         INST_FILL_BYTES_(len - 2, __VA_ARGS__)                                \
         return ED_NONE;                                                       \

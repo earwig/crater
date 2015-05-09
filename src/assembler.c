@@ -201,10 +201,7 @@ size_t assemble(const LineBuffer *source, uint8_t **binary_ptr, ErrorInfo **ei_p
     if ((error_info = resolve_symbols(&state)))
         goto error;
 
-    uint8_t *binary = malloc(sizeof(uint8_t) * state.rom_size);
-    if (!binary)
-        OUT_OF_MEMORY()
-
+    uint8_t *binary = cr_malloc(sizeof(uint8_t) * state.rom_size);
     serialize_binary(&state, binary);
     *binary_ptr = binary;
     retval = state.rom_size;

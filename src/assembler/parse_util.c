@@ -7,7 +7,6 @@
 
 #include "parse_util.h"
 #include "directives.h"
-#include "../logging.h"
 #include "../util.h"
 
 #define MAX_REGION_SIZE 32
@@ -183,9 +182,7 @@ bool parse_string(char **result, size_t *length, const char *arg, ssize_t size)
         return false;
 
     *length = size - 2;
-    *result = malloc(sizeof(char) * (*length));
-    if (!*result)
-        OUT_OF_MEMORY()
+    *result = cr_malloc(sizeof(char) * (*length));
     memcpy(*result, arg + 1, *length);
     return true;
 }
@@ -217,9 +214,7 @@ bool parse_bytes(uint8_t **result, size_t *length, const char *arg, ssize_t size
         }
 
         nbytes++;
-        bytes = realloc(bytes, sizeof(uint8_t) * nbytes);
-        if (!bytes)
-            OUT_OF_MEMORY()
+        bytes = cr_realloc(bytes, sizeof(uint8_t) * nbytes);
         bytes[nbytes - 1] = temp;
 
         if (arg < end - 1 && *arg == ',' && *(arg + 1) == ' ')

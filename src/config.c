@@ -10,6 +10,7 @@
 
 #include "config.h"
 #include "logging.h"
+#include "util.h"
 #include "version.h"
 
 /*
@@ -73,21 +74,15 @@ static int get_rom_paths(char ***path_ptr)
 
     dirp = opendir(ROMS_DIR);
     if (dirp) {
-        paths = malloc(sizeof(char*) * psize);
-        if (!paths)
-            OUT_OF_MEMORY()
+        paths = cr_malloc(sizeof(char*) * psize);
         while ((entry = readdir(dirp))) {
             path = entry->d_name;
             if (ends_with(path, ".gg") || ends_with(path, ".bin")) {
                 if (npaths >= psize) {
-                    paths = realloc(paths, sizeof(char*) * (psize *= 2));
-                    if (!paths)
-                        OUT_OF_MEMORY()
+                    paths = cr_realloc(paths, sizeof(char*) * (psize *= 2));
                 }
-                paths[npaths] = malloc(sizeof(char*) *
+                paths[npaths] = cr_malloc(sizeof(char*) *
                         (strlen(path) + strlen(ROMS_DIR) + 1));
-                if (!paths[npaths])
-                    OUT_OF_MEMORY()
                 strcpy(paths[npaths], ROMS_DIR "/");
                 strcat(paths[npaths], path);
                 npaths++;
@@ -159,9 +154,7 @@ static int parse_args(Config *config, int argc, char *argv[])
                 return CONFIG_EXIT_FAILURE;
             }
 
-            path = malloc(sizeof(char) * (strlen(arg) + 1));
-            if (!path)
-                OUT_OF_MEMORY()
+            path = cr_malloc(sizeof(char) * (strlen(arg) + 1));
             strcpy(path, arg);
 
             if (paths_read == 1) {
@@ -264,9 +257,7 @@ static void guess_assembler_output_file(Config* config)
         }
     } while (ptr-- >= src);
 
-    config->dst_path = malloc(sizeof(char) * (until_ext + 5));
-    if (!config->dst_path)
-        OUT_OF_MEMORY()
+    config->dst_path = cr_malloc(sizeof(char) * (until_ext + 5));
     strcpy(stpncpy(config->dst_path, src, until_ext), ext);
 }
 
@@ -315,13 +306,8 @@ static bool sanity_check(Config* config)
 */
 int config_create(Config** config_ptr, int argc, char* argv[])
 {
-    Config *config;
+    Config *config = cr_malloc(sizeof(Config));
     int retval;
-
-    if (!(config = malloc(sizeof(Config)))) {
-        OUT_OF_MEMORY()
-        return CONFIG_EXIT_FAILURE;
-    }
 
     config->debug = false;
     config->assemble = false;
