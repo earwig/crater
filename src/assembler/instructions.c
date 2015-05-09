@@ -44,6 +44,13 @@
 #define INST_PREFIX_(reg)                                                     \
     (((reg) == REG_IX || (reg) == REG_IXH || (reg) == REG_IXL) ? 0xDD : 0xFD)
 
+#define INST_RETURN_WITH_SYMBOL_(len, label, ...) {                           \
+        *symbol = cr_strdup(label.text);                                      \
+        INST_ALLOC_(len)                                                      \
+        INST_FILL_BYTES_(len - 2, __VA_ARGS__)                                \
+        return ED_NONE;                                                       \
+    }
+
 /* Helper macros for instruction parsers */
 
 #define INST_FUNC(mnemonic)                                                   \
@@ -102,17 +109,17 @@ static ASMErrorDesc parse_inst_##mnemonic(                                    \
         return ED_NONE;                                                       \
     }
 
-#define INST_RETURN_WITH_SYMBOL(len, label, ...) {                            \
-        *symbol = cr_strdup(label);                                           \
-        INST_ALLOC_(len)                                                      \
-        INST_FILL_BYTES_(len - 2, __VA_ARGS__)                                \
-        return ED_NONE;                                                       \
-    }
-
 #define INST_INDEX_PREFIX(n) INST_PREFIX_(INST_INDEX(n).reg)
 
 #define INST_INDEX_BYTES(n, b)                                                \
     INST_INDEX_PREFIX(n), b, INST_INDEX(n).offset
+
+#define INST_INDIRECT_IMM(n)                                                  \
+    INST_INDIRECT(n).addr.imm.uval >> 8,                                      \
+    INST_INDIRECT(n).addr.imm.uval & 0xFF
+
+#define INST_RETURN_INDIRECT_LABEL(n, len, ...)                               \
+    INST_RETURN_WITH_SYMBOL_(len, INST_INDIRECT(n).addr.label, __VA_ARGS__)
 
 /*
     Fill an instruction's byte array with the given data.
@@ -537,7 +544,49 @@ INST_FUNC(ld)
     switch (INST_TYPE(0)) {
         case AT_REGISTER:
             switch (INST_REG(0)) {
-                case REG_A:   // TODO (20 cases)
+                case REG_A:
+                    switch (INST_TYPE(1)) {
+                        case AT_REGISTER:
+                            switch (INST_REG(1)) {
+                                case REG_A:   INST_RETURN(1, 0x7F)
+                                case REG_B:   INST_RETURN(1, 0x78)
+                                case REG_C:   INST_RETURN(1, 0x79)
+                                case REG_D:   INST_RETURN(1, 0x7A)
+                                case REG_E:   INST_RETURN(1, 0x7B)
+                                case REG_H:   INST_RETURN(1, 0x7C)
+                                case REG_L:   INST_RETURN(1, 0x7D)
+                                case REG_I:   INST_RETURN(2, 0xED, 0x57)
+                                case REG_R:   INST_RETURN(2, 0xED, 0x5F)
+                                case REG_IXH: INST_RETURN(2, 0xDD, 0x7C)
+                                case REG_IXL: INST_RETURN(2, 0xDD, 0x7D)
+                                case REG_IYH: INST_RETURN(2, 0xFD, 0x7C)
+                                case REG_IYL: INST_RETURN(2, 0xFD, 0x7D)
+                                default: INST_ERROR(ARG1_BAD_REG)
+                            }
+                        case AT_IMMEDIATE:
+                            INST_CHECK_IMM(1, IMM_U8)
+                            INST_RETURN(2, 0x3E, INST_IMM(1).uval)
+                        case AT_INDIRECT:
+                            switch (INST_INDIRECT(1).type) {
+                                case AT_REGISTER:
+                                    switch (INST_INDIRECT(1).addr.reg) {
+                                        case REG_BC: INST_RETURN(1, 0x0A)
+                                        case REG_DE: INST_RETURN(1, 0x1A)
+                                        case REG_HL: INST_RETURN(1, 0x7E)
+                                        default: INST_ERROR(ARG0_BAD_REG)
+                                    }
+                                case AT_IMMEDIATE:
+                                    INST_RETURN(3, 0x3A, INST_INDIRECT_IMM(1))
+                                case AT_LABEL:
+                                    INST_RETURN_INDIRECT_LABEL(1, 3, 0x3A)
+                                default:
+                                    INST_ERROR(ARG0_TYPE)
+                            }
+                        case AT_INDEXED:
+                            INST_RETURN(3, INST_INDEX_BYTES(1, 0x7E))
+                        default:
+                            INST_ERROR(ARG1_TYPE)
+                    }
                 case REG_B:   // TODO (15 cases)
                 case REG_C:   // TODO (15 cases)
                 case REG_D:   // TODO (15 cases)
