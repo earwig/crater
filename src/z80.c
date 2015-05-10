@@ -90,7 +90,7 @@ static inline uint16_t get_pair(Z80 *z80, uint8_t pair)
         case REG_BC: return (z80->regfile.b << 8) + z80->regfile.c;
         case REG_DE: return (z80->regfile.d << 8) + z80->regfile.e;
         case REG_HL: return (z80->regfile.h << 8) + z80->regfile.l;
-        default: FATAL("Invalid call: get_pair(z80, %u)", pair)
+        default: FATAL("invalid call: get_pair(z80, %u)", pair)
     }
 }
 
@@ -104,7 +104,7 @@ static inline void set_pair(Z80 *z80, uint8_t pair, uint16_t value)
         case REG_BC: z80->regfile.b = value >> 8; z80->regfile.c = value; break;
         case REG_DE: z80->regfile.d = value >> 8; z80->regfile.e = value; break;
         case REG_HL: z80->regfile.h = value >> 8; z80->regfile.l = value; break;
-        default: FATAL("Invalid call: set_pair(z80, %u, 0x%04X)", pair, value)
+        default: FATAL("invalid call: set_pair(z80, %u, 0x%04X)", pair, value)
     }
 }
 
