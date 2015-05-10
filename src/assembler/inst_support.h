@@ -24,7 +24,7 @@
 
 #define HANDLE(m) if (key == MAKE_CMP_(#m)) return parse_inst_##m;
 
-/* Internal helper macros for instruction parsers */
+/* Internal helper macros */
 
 #define INST_ALLOC_(len)                                                      \
     *length = len;                                                            \
@@ -43,8 +43,12 @@
     INST_DISPATCH_(__VA_ARGS__, INST_SET4_, INST_SET3_, INST_SET2_,           \
                    INST_SET1_, __VA_ARGS__)(__VA_ARGS__));
 
+#define INST_IX_PREFIX_ 0xDD
+#define INST_IY_PREFIX_ 0xFD
+
 #define INST_PREFIX_(reg)                                                     \
-    (((reg) == REG_IX || (reg) == REG_IXH || (reg) == REG_IXL) ? 0xDD : 0xFD)
+    (((reg) == REG_IX || (reg) == REG_IXH || (reg) == REG_IXL) ?              \
+     INST_IX_PREFIX_ : INST_IY_PREFIX_)
 
 #define INST_RETURN_WITH_SYMBOL_(len, label, ...) {                           \
         *symbol = cr_strdup(label.text);                                      \
@@ -53,7 +57,7 @@
         return ED_NONE;                                                       \
     }
 
-/* Helper macros for instruction parsers */
+/* Essential/basic helper macros */
 
 #define INST_FUNC(mnemonic)                                                   \
 static ASMErrorDesc parse_inst_##mnemonic(                                    \
@@ -87,6 +91,15 @@ static ASMErrorDesc parse_inst_##mnemonic(                                    \
 #define INST_LABEL(n) args[n].data.label
 #define INST_COND(n) args[n].data.cond
 
+#define INST_RETURN(len, ...) {                                               \
+        (void) symbol;                                                        \
+        INST_ALLOC_(len)                                                      \
+        INST_FILL_BYTES_(len, __VA_ARGS__)                                    \
+        return ED_NONE;                                                       \
+    }
+
+/* Convenience macros */
+
 #define INST_FORCE_TYPE(n, t) {                                               \
         if (INST_TYPE(n) != t)                                                \
             INST_ERROR(ARG##n##_TYPE)                                         \
@@ -97,18 +110,18 @@ static ASMErrorDesc parse_inst_##mnemonic(                                    \
             INST_ERROR(ARG##n##_RANGE)                                        \
     }
 
+#define INST_REG_ONLY(n, reg) {                                               \
+        if (INST_TYPE(n) != AT_REGISTER)                                      \
+            INST_ERROR(ARG##n##_TYPE)                                         \
+        if (INST_REG(n) != reg)                                               \
+            INST_ERROR(ARG##n##_BAD_REG)                                      \
+    }
+
 #define INST_INDIRECT_HL_ONLY(n) {                                            \
         if (INST_INDIRECT(n).type != AT_REGISTER)                             \
             INST_ERROR(ARG##n##_TYPE)                                         \
         if (INST_INDIRECT(n).addr.reg != REG_HL)                              \
             INST_ERROR(ARG##n##_BAD_REG)                                      \
-    }
-
-#define INST_RETURN(len, ...) {                                               \
-        (void) symbol;                                                        \
-        INST_ALLOC_(len)                                                      \
-        INST_FILL_BYTES_(len, __VA_ARGS__)                                    \
-        return ED_NONE;                                                       \
     }
 
 #define INST_INDEX_PREFIX(n) INST_PREFIX_(INST_INDEX(n).reg)
@@ -123,7 +136,20 @@ static ASMErrorDesc parse_inst_##mnemonic(                                    \
 #define INST_RETURN_INDIRECT_LABEL(n, len, ...)                               \
     INST_RETURN_WITH_SYMBOL_(len, INST_INDIRECT(n).addr.label, __VA_ARGS__)
 
-/* Functions */
+#define INST_HANDLE_MAIN_8_BIT_REGS(base)                                     \
+    case REG_A:   INST_RETURN(1, base + 7)                                    \
+    case REG_B:   INST_RETURN(1, base)                                        \
+    case REG_C:   INST_RETURN(1, base + 1)                                    \
+    case REG_D:   INST_RETURN(1, base + 2)                                    \
+    case REG_E:   INST_RETURN(1, base + 3)                                    \
+    case REG_H:   INST_RETURN(1, base + 4)                                    \
+    case REG_L:   INST_RETURN(1, base + 5)                                    \
+    case REG_IXH: INST_RETURN(2, INST_IX_PREFIX_, base + 4)                   \
+    case REG_IXL: INST_RETURN(2, INST_IX_PREFIX_, base + 5)                   \
+    case REG_IYH: INST_RETURN(2, INST_IY_PREFIX_, base + 4)                   \
+    case REG_IYL: INST_RETURN(2, INST_IY_PREFIX_, base + 5)                   \
+
+/* Internal functions */
 
 uint8_t fill_bytes_variadic(uint8_t*, size_t, ...);
 ASMErrorDesc parse_args(ASMInstArg args[3], size_t*, ASMArgParseInfo);

@@ -15,17 +15,7 @@ INST_FUNC(adc)
             switch (INST_TYPE(1)) {
                 case AT_REGISTER:
                     switch (INST_REG(1)) {
-                        case REG_A:   INST_RETURN(1, 0x8F)
-                        case REG_B:   INST_RETURN(1, 0x88)
-                        case REG_C:   INST_RETURN(1, 0x89)
-                        case REG_D:   INST_RETURN(1, 0x8A)
-                        case REG_E:   INST_RETURN(1, 0x8B)
-                        case REG_H:   INST_RETURN(1, 0x8C)
-                        case REG_L:   INST_RETURN(1, 0x8D)
-                        case REG_IXH: INST_RETURN(2, 0xDD, 0x8C)
-                        case REG_IXL: INST_RETURN(2, 0xDD, 0x8D)
-                        case REG_IYH: INST_RETURN(2, 0xFD, 0x8C)
-                        case REG_IYL: INST_RETURN(2, 0xFD, 0x8D)
+                        INST_HANDLE_MAIN_8_BIT_REGS(0x88)
                         default: INST_ERROR(ARG1_BAD_REG)
                     }
                 case AT_IMMEDIATE:
@@ -62,17 +52,7 @@ INST_FUNC(add)
             switch (INST_TYPE(1)) {
                 case AT_REGISTER:
                     switch (INST_REG(1)) {
-                        case REG_A:   INST_RETURN(1, 0x87)
-                        case REG_B:   INST_RETURN(1, 0x80)
-                        case REG_C:   INST_RETURN(1, 0x81)
-                        case REG_D:   INST_RETURN(1, 0x82)
-                        case REG_E:   INST_RETURN(1, 0x83)
-                        case REG_H:   INST_RETURN(1, 0x84)
-                        case REG_L:   INST_RETURN(1, 0x85)
-                        case REG_IXH: INST_RETURN(2, 0xDD, 0x84)
-                        case REG_IXL: INST_RETURN(2, 0xDD, 0x85)
-                        case REG_IYH: INST_RETURN(2, 0xFD, 0x84)
-                        case REG_IYL: INST_RETURN(2, 0xFD, 0x85)
+                        INST_HANDLE_MAIN_8_BIT_REGS(0x80)
                         default: INST_ERROR(ARG1_BAD_REG)
                     }
                 case AT_IMMEDIATE:
@@ -329,6 +309,7 @@ INST_FUNC(jr)
 
 INST_FUNC(ld)
 {
+    uint8_t base;
     INST_TAKES_ARGS(2, 2)
     switch (INST_TYPE(0)) {
         case AT_REGISTER:
@@ -337,19 +318,9 @@ INST_FUNC(ld)
                     switch (INST_TYPE(1)) {
                         case AT_REGISTER:
                             switch (INST_REG(1)) {
-                                case REG_A:   INST_RETURN(1, 0x7F)
-                                case REG_B:   INST_RETURN(1, 0x78)
-                                case REG_C:   INST_RETURN(1, 0x79)
-                                case REG_D:   INST_RETURN(1, 0x7A)
-                                case REG_E:   INST_RETURN(1, 0x7B)
-                                case REG_H:   INST_RETURN(1, 0x7C)
-                                case REG_L:   INST_RETURN(1, 0x7D)
+                                INST_HANDLE_MAIN_8_BIT_REGS(0x78)
                                 case REG_I:   INST_RETURN(2, 0xED, 0x57)
                                 case REG_R:   INST_RETURN(2, 0xED, 0x5F)
-                                case REG_IXH: INST_RETURN(2, 0xDD, 0x7C)
-                                case REG_IXL: INST_RETURN(2, 0xDD, 0x7D)
-                                case REG_IYH: INST_RETURN(2, 0xFD, 0x7C)
-                                case REG_IYL: INST_RETURN(2, 0xFD, 0x7D)
                                 default: INST_ERROR(ARG1_BAD_REG)
                             }
                         case AT_IMMEDIATE:
@@ -369,21 +340,46 @@ INST_FUNC(ld)
                                 case AT_LABEL:
                                     INST_RETURN_INDIRECT_LABEL(1, 3, 0x3A)
                                 default:
-                                    INST_ERROR(ARG0_TYPE)
+                                    INST_ERROR(ARG1_TYPE)
                             }
                         case AT_INDEXED:
                             INST_RETURN(3, INST_INDEX_BYTES(1, 0x7E))
                         default:
                             INST_ERROR(ARG1_TYPE)
                     }
-                case REG_B:   // TODO (15 cases)
-                case REG_C:   // TODO (15 cases)
-                case REG_D:   // TODO (15 cases)
-                case REG_E:   // TODO (15 cases)
+                case REG_B:
+                    base = 0x00;
+                case REG_C:
+                    base = 0x08;
+                case REG_D:
+                    base = 0x10;
+                case REG_E:
+                    base = 0x18;
+                    switch (INST_TYPE(1)) {
+                        case AT_REGISTER:
+                            switch (INST_REG(1)) {
+                                INST_HANDLE_MAIN_8_BIT_REGS(base + 0x40)
+                                default: INST_ERROR(ARG1_BAD_REG)
+                            }
+                        case AT_IMMEDIATE:
+                            INST_CHECK_IMM(1, IMM_U8)
+                            INST_RETURN(2, base + 0x06, INST_IMM(1).uval)
+                        case AT_INDIRECT:
+                            INST_INDIRECT_HL_ONLY(1)
+                            INST_RETURN(1, base + 0x46)
+                        case AT_INDEXED:
+                            INST_RETURN(3, INST_INDEX_BYTES(1, base + 0x46))
+                        default:
+                            INST_ERROR(ARG1_TYPE)
+                    }
                 case REG_H:   // TODO (11 cases)
                 case REG_L:   // TODO (11 cases)
-                case REG_I:   // TODO ( 1 case )
-                case REG_R:   // TODO ( 1 case )
+                case REG_I:
+                    INST_REG_ONLY(1, REG_A)
+                    INST_RETURN(2, 0xED, 0x47)
+                case REG_R:
+                    INST_REG_ONLY(1, REG_A)
+                    INST_RETURN(2, 0xED, 0x4F)
                 case REG_BC:  // TODO ( 2 cases)
                 case REG_DE:  // TODO ( 2 cases)
                 case REG_HL:  // TODO ( 3 cases)
