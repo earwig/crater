@@ -8,12 +8,14 @@
 #define MAX_SYMBOL_SIZE 256
 
 typedef enum {
-    AT_REGISTER,
-    AT_IMMEDIATE,
-    AT_INDIRECT,
-    AT_INDEXED,
-    AT_LABEL,
-    AT_CONDITION
+    AT_NONE      = 0x00,
+    AT_OPTIONAL  = 0x01,
+    AT_REGISTER  = 0x02,
+    AT_IMMEDIATE = 0x04,
+    AT_INDIRECT  = 0x08,
+    AT_INDEXED   = 0x10,
+    AT_CONDITION = 0x20,
+    AT_PORT      = 0x40
 } ASMArgType;
 
 typedef enum {
@@ -35,20 +37,17 @@ typedef enum {
 
 typedef struct {
     ASMArgImmType mask;
+    bool is_label;
     uint16_t uval;
     int16_t sval;
+    char label[MAX_SYMBOL_SIZE];
 } ASMArgImmediate;
-
-typedef struct {
-    char text[MAX_SYMBOL_SIZE];
-} ASMArgLabel;
 
 typedef struct {
     ASMArgType type;
     union {
         ASMArgRegister reg;
         ASMArgImmediate imm;
-        ASMArgLabel label;
     } addr;
 } ASMArgIndirect;
 
@@ -66,9 +65,17 @@ typedef struct {
     union {
         ASMArgRegister reg;
         ASMArgImmediate imm;
+    } port;
+} ASMArgPort;
+
+typedef struct {
+    ASMArgType type;
+    union {
+        ASMArgRegister reg;
+        ASMArgImmediate imm;
         ASMArgIndirect indirect;
         ASMArgIndexed index;
-        ASMArgLabel label;
         ASMArgCondition cond;
+        ASMArgPort port;
     } data;
 } ASMInstArg;

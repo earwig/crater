@@ -155,7 +155,7 @@ static ErrorInfo* handle_define_directive(
     ASMArgImmediate imm;
     ASMArgParseInfo info = {
         .arg = line->data + i, .size = line->length - i, .deftable = deftab};
-    if (!argparse_immediate(&imm, info))
+    if (!argparse_immediate(&imm, info) || imm->is_label)
         return error_info_create(line, ET_PREPROC, ED_PP_BAD_ARG);
 
     ASMDefine *define = cr_malloc(sizeof(ASMDefine));

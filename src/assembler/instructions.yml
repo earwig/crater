@@ -1,0 +1,323 @@
+# Copyright (C) 2014-2015 Ben Kurtovic <ben.kurtovic@gmail.com>
+# Released under the terms of the MIT License. See LICENSE for details.
+
+# *** ASM Instruction Description File ***
+
+# This file is used to generate 'instructions.inc.c'.
+
+# `make` should trigger a rebuild when this file is modified; if not, use:
+# `python scripts/update_asm_instructions.py`.
+
+---
+
+adc:
+    args: yes
+    cases:
+        - type: [register, register]
+          cases:
+            - cond:   [a, a]
+              return: [0x8F]
+            - cond:   [a, b]
+              return: [0x88]
+            - cond:   [a, c]
+              return: [0x89]
+            - cond:   [a, d]
+              return: [0x8A]
+            - cond:   [a, e]
+              return: [0x8B]
+            - cond:   [a, h|ih]
+              return: [0x8C]
+            - cond:   [a, l|il]
+              return: [0x8D]
+            - cond:   [hl, bc]
+              return: [0xED, 0x4A]
+            - cond:   [hl, de]
+              return: [0xED, 0x5A]
+            - cond:   [hl, hl]
+              return: [0xED, 0x6A]
+            - cond:   [hl, sp]
+              return: [0xED, 0x7A]
+        - type: [register, immediate]
+          cases:
+            - cond:   [a, u8]
+              return: [0xCE, u8]
+        - type: [register, indexed]
+          cases:
+            - cond:   [a, _]
+              return: [0x8E]
+
+add:
+    args: no
+    return: error
+
+and:
+    args: no
+    return: error
+
+bit:
+    args: no
+    return: error
+
+call:
+    args: no
+    return: error
+
+ccf:
+    args: no
+    return: error
+
+cp:
+    args: no
+    return: error
+
+cpd:
+    args: no
+    return: error
+
+cpdr:
+    args: no
+    return: error
+
+cpi:
+    args: no
+    return: error
+
+cpir:
+    args: no
+    return: error
+
+cpl:
+    args: no
+    return: error
+
+daa:
+    args: no
+    return: error
+
+dec:
+    args: no
+    return: error
+
+di:
+    args: no
+    return: error
+
+djnz:
+    args: no
+    return: error
+
+ei:
+    args: no
+    return: error
+
+ex:
+    args: no
+    return: error
+
+exx:
+    args: no
+    return: error
+
+halt:
+    args: no
+    return: error
+
+im:
+    args: no
+    return: error
+
+in:
+    args: no
+    return: error
+
+inc:
+    args: no
+    return: error
+
+ind:
+    args: no
+    return: error
+
+indr:
+    args: no
+    return: error
+
+ini:
+    args: no
+    return: [0xED, 0xA2]
+
+inir:
+    args: no
+    return: error
+
+jp:
+    args: no
+    return: error
+
+jr:
+    args: no
+    return: error
+
+ld:
+    args: no
+    return: error
+
+ldd:
+    args: no
+    return: error
+
+lddr:
+    args: no
+    return: error
+
+ldi:
+    args: no
+    return: error
+
+ldir:
+    args: no
+    return: error
+
+neg:
+    args: no
+    return: error
+
+nop:
+    args: no
+    return: error
+
+or:
+    args: no
+    return: error
+
+otdr:
+    args: no
+    return: error
+
+otir:
+    args: no
+    return: error
+
+out:
+    args: no
+    return: error
+
+outd:
+    args: no
+    return: error
+
+outi:
+    args: no
+    return: error
+
+pop:
+    args: no
+    return: error
+
+push:
+    args: no
+    return: error
+
+res:
+    args: no
+    return: error
+
+ret:
+    args: no
+    return: error
+
+reti:
+    args: no
+    return: error
+
+retn:
+    args: no
+    return: error
+
+rl:
+    args: no
+    return: error
+
+rla:
+    args: no
+    return: error
+
+rlc:
+    args: no
+    return: error
+
+rlca:
+    args: no
+    return: error
+
+rld:
+    args: no
+    return: error
+
+rr:
+    args: no
+    return: error
+
+rra:
+    args: no
+    return: error
+
+rrc:
+    args: no
+    return: error
+
+rrca:
+    args: no
+    return: error
+
+rrd:
+    args: no
+    return: error
+
+rst:
+    args: no
+    return: error
+
+sbc:
+    args: no
+    return: error
+
+scf:
+    args: no
+    return: error
+
+set:
+    args: no
+    return: error
+
+sl1:
+    args: no
+    return: error
+
+sla:
+    args: no
+    return: error
+
+sll:
+    args: no
+    return: error
+
+sls:
+    args: no
+    return: error
+
+sra:
+    args: no
+    return: error
+
+srl:
+    args: no
+    return: error
+
+sub:
+    args: no
+    return: error
+
+xor:
+    args: no
+    return: error

@@ -53,11 +53,8 @@ static const char *error_descs[] = {
     [ED_PS_TOO_FEW_ARGS]  = "too few arguments for opcode",
     [ED_PS_TOO_MANY_ARGS] = "too many arguments for opcode",
     [ED_PS_ARG_SYNTAX]    = "invalid syntax in argument(s)",
-    [ED_PS_ARG0_TYPE]     = "invalid type for first argument",
-    [ED_PS_ARG0_BAD_REG]  = "unsupported register as first argument",
-    [ED_PS_ARG1_TYPE]     = "invalid type for second argument",
-    [ED_PS_ARG1_BAD_REG]  = "unsupported register as second argument",
-    [ED_PS_ARG1_RANGE]    = "second argument out of range"
+    [ED_PS_ARG_TYPE]      = "ED_PS_ARG_TYPE",  // TODO
+    [ED_PS_ARG_VALUE]     = "ED_PS_ARG_VALUE" // TODO
 };
 
 /* Internal structs */

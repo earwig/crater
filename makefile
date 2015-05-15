@@ -47,6 +47,9 @@ $(BUILD)/$(MODE)/%.o: %.c
 
 -include $(DEPS)
 
+$(SOURCES)/assembler/instructions.inc.c: $(SOURCES)/assembler/instructions.yml
+	python scripts/update_asm_instructions.py
+
 test: test-all test-z80 test-asm test-dasm
 
 test-all:
