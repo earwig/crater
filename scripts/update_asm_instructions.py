@@ -36,18 +36,92 @@ re_lookup = re.compile(
     r"(/\* @AUTOGEN_LOOKUP_BLOCK_START \*/\n*)(.*?)"
     r"(\n*/\* @AUTOGEN_LOOKUP_BLOCK_END \*/)", re.S)
 
-def build_inst(name, data):
+class Instruction(object):
     """
-    Convert data for an individual instruction into a C parse function.
+    Represent a single ASM instruction mnemonic.
     """
-    # TODO
-    return "INST_FUNC({0})\n{{\n}}".format(name)
+    ARG_TYPES = {
+        "register": "AT_REGISTER",
+        "immediate": "AT_IMMEDIATE",
+        "indirect": "AT_INDIRECT",
+        "indexed": "AT_INDEXED|AT_INDIRECT",
+        "condition": "AT_CONDITION",
+        "port": "AT_PORT"
+    }
+
+    def __init__(self, name, data):
+        self._name = name
+        self._data = data
+
+    def _get_arg_parse_mask(self, num):
+        """
+        Return the appropriate mask to parse_args() for the num-th argument.
+        """
+        types = set()
+        optional = False
+        for case in self._data["cases"]:
+            if num < len(case["type"]):
+                types.add(self.ARG_TYPES[case["type"][num]])
+            else:
+                optional = True
+
+        if not types:
+            return "AT_NONE"
+        if optional:
+            types.add("AT_OPTIONAL")
+        return "|".join(types)
+
+    def _handle_return(self, arg, indent=1):
+        """
+        Return code to handle an instruction return statement.
+        """
+        tabs = TAB * indent
+        if arg == "error":
+            return tabs + "INST_ERROR(ARG_SYNTAX)"
+        else:
+            data = ", ".join("0x%02X" % byte for byte in arg)
+            return tabs + "INST_RETURN({0}, {1})".format(len(arg), data)
+
+    def _handle_case(self, case):
+        """
+        TODO
+        """
+        return [TAB + "// " + str(case)]
+
+    def render(self):
+        """
+        Convert data for an individual instruction into a C parse function.
+        """
+        lines = []
+
+        if self._data["args"]:
+            lines.append("{tab}INST_TAKES_ARGS(\n{tab2}{0}, \n{tab2}{1}, "
+                         "\n{tab2}{2}\n{tab})".format(
+                self._get_arg_parse_mask(0), self._get_arg_parse_mask(1),
+                self._get_arg_parse_mask(2), tab=TAB, tab2=TAB * 2))
+        else:
+            lines.append(TAB + "INST_TAKES_NO_ARGS")
+
+        if "return" in self._data:
+            lines.append(self._handle_return(self._data["return"]))
+        elif "cases" in self._data:
+            for case in self._data["cases"]:
+                lines.extend(self._handle_case(case))
+            lines.append(TAB + "INST_ERROR(ARG_TYPE)")
+        else:
+            msg = "Missing return or case block for {0} instruction"
+            raise RuntimeError(msg.format(self._name))
+
+        contents = "\n".join(lines)
+        return "INST_FUNC({0})\n{{\n{1}\n}}".format(self._name, contents)
+
 
 def build_inst_block(data):
     """
     Return the instruction parser block, given instruction data.
     """
-    return "\n\n".join(build_inst(k, v) for k, v in sorted(data.items()))
+    return "\n\n".join(
+        Instruction(k, v).render() for k, v in sorted(data.items()))
 
 def build_lookup_block(data):
     """
