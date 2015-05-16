@@ -84,6 +84,7 @@ static ASMErrorDesc parse_inst_##mnemonic(                                    \
     if (err)                                                                  \
         return err;                                                           \
 
+#define INST_NARGS nargs
 #define INST_TYPE(n) args[n].type
 #define INST_REG(n) args[n].data.reg
 #define INST_IMM(n) args[n].data.imm

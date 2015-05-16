@@ -12,6 +12,7 @@ when the latter is modified, but can also be run manually.
 
 from __future__ import print_function
 
+from itertools import product
 import re
 import time
 
@@ -44,9 +45,12 @@ class Instruction(object):
         "register": "AT_REGISTER",
         "immediate": "AT_IMMEDIATE",
         "indirect": "AT_INDIRECT",
-        "indexed": "AT_INDEXED|AT_INDIRECT",
+        "indexed": "AT_INDEXED",
         "condition": "AT_CONDITION",
         "port": "AT_PORT"
+    }
+    ARG_EXTRA = {
+        "indexed": ["AT_INDIRECT"]
     }
 
     def __init__(self, name, data):
@@ -61,7 +65,10 @@ class Instruction(object):
         optional = False
         for case in self._data["cases"]:
             if num < len(case["type"]):
-                types.add(self.ARG_TYPES[case["type"][num]])
+                atype = case["type"][num]
+                types.add(self.ARG_TYPES[atype])
+                if atype in self.ARG_EXTRA:
+                    types.update(self.ARG_EXTRA[atype])
             else:
                 optional = True
 
@@ -71,22 +78,123 @@ class Instruction(object):
             types.add("AT_OPTIONAL")
         return "|".join(types)
 
-    def _handle_return(self, arg, indent=1):
+    def _handle_return(self, ret, indent=1):
         """
         Return code to handle an instruction return statement.
         """
-        tabs = TAB * indent
-        if arg == "error":
-            return tabs + "INST_ERROR(ARG_SYNTAX)"
-        else:
-            data = ", ".join("0x%02X" % byte for byte in arg)
-            return tabs + "INST_RETURN({0}, {1})".format(len(arg), data)
+        data = ", ".join("0x%02X" % byte if isinstance(byte, int) else byte
+                         for byte in ret)
+        return TAB * indent + "INST_RETURN({0}, {1})".format(len(ret), data)
+
+    def _build_case_type_check(self, args):
+        """
+        Return the test part of an if statement for an instruction case.
+        """
+        conds = ["INST_TYPE({0}) == {1}".format(i, self.ARG_TYPES[cond])
+                 for i, cond in enumerate(args)]
+        return "INST_NARGS == {0} && {1}".format(len(args), " && ".join(conds))
+
+    def _build_register_check(self, num, cond):
+        """
+        Return an expression to check for a particular register value.
+        """
+        return "INST_REG({0}) == REG_{1}".format(num, cond.upper())
+
+    def _build_immediate_check(self, num, cond):
+        """
+        Return an expression to check for a particular immediate value.
+        """
+        return "INST_IMM({0}).mask & IMM_{1}".format(num, cond.upper())
+
+    def _build_indirect_check(self, num, cond):
+        """
+        Return an expression to check for a particular indirect value.
+        """
+        # TODO
+        return cond
+
+    def _build_indexed_check(self, num, cond):
+        """
+        Return an expression to check for a particular indexed value.
+        """
+        # TODO
+        return cond
+
+    def _build_condition_check(self, num, cond):
+        """
+        Return an expression to check for a particular condition value.
+        """
+        return "INST_COND({0}) == COND_{1}".format(num, cond.upper())
+
+    def _build_port_check(self, num, cond):
+        """
+        Return an expression to check for a particular port value.
+        """
+        # TODO
+        return cond
+
+    _SUBCASE_LOOKUP_TABLE = {
+        "register": _build_register_check,
+        "immediate": _build_immediate_check,
+        "indirect": _build_indirect_check,
+        "indexed": _build_indexed_check,
+        "condition": _build_condition_check,
+        "port": _build_port_check
+    }
+
+    def _build_subcase_check(self, types, conds):
+        """
+        Return the test part of an if statement for an instruction subcase.
+        """
+        return " && ".join(self._SUBCASE_LOOKUP_TABLE[types[i]](self, i, cond)
+                           for i, cond in enumerate(conds) if cond != "_")
+
+    def _iter_permutations(self, types, conds):
+        """
+        Iterate over all permutations of the given subcase conditions.
+        """
+        def split(typ, cond):
+            if "|" in cond:
+                sets = [split(typ, c) for c in cond.split("|")]
+                return {choice for s in sets for choice in s}
+            if typ == "register" and cond == "ih":
+                return {"ixh", "iyh"}
+            if typ == "register" and cond == "il":
+                return {"ixl", "iyl"}
+            return {cond}
+
+        return product(*(split(types[i], cond)
+                         for i, cond in enumerate(conds)))
+
+    def _adapt_return(self, types, conds, ret):
+        """
+        Return a modified byte list to accomodate for prefixes and immediates.
+        """
+        for i, cond in enumerate(conds):
+            if types[i] == "register" and cond.startswith("ix"):
+                ret = ["INST_IX_PREFIX"] + ret
+            elif types[i] == "register" and cond.startswith("iy"):
+                ret = ["INST_IY_PREFIX"] + ret
+        return ret
 
     def _handle_case(self, case):
         """
-        TODO
+        Return code to handle an instruction case.
         """
-        return [TAB + "// " + str(case)]
+        lines = []
+        cond = self._build_case_type_check(case["type"])
+        lines.append(TAB + "if ({0}) {{".format(cond))
+
+        for subcase in case["cases"]:
+            for perm in self._iter_permutations(case["type"], subcase["cond"]):
+                cond = self._build_subcase_check(case["type"], perm)
+                ret = self._adapt_return(case["type"], perm, subcase["return"])
+                lines.append(TAB * 2 + "if ({0})".format(cond))
+                lines.append(self._handle_return(ret, 3))
+
+        lines.append(TAB * 2 + "INST_ERROR(ARG_VALUE)")
+        lines.append(TAB + "}")
+        return lines
 
     def render(self):
         """

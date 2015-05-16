@@ -12,6 +12,7 @@ CFLAGS = $(shell sdl2-config --cflags)
 LIBS   = $(shell sdl2-config --libs)
 MKDIR  = mkdir -p
 RM     = rm -rf
+ASM_UP = scripts/update_asm_instructions.py
 
 MODE = release
 BNRY = $(PROGRAM)
@@ -47,8 +48,9 @@ $(BUILD)/$(MODE)/%.o: %.c
 
 -include $(DEPS)
 
-$(SOURCES)/assembler/instructions.inc.c: $(SOURCES)/assembler/instructions.yml
-	python scripts/update_asm_instructions.py
+ASM_INST = $(SOURCES)/assembler/instructions
+$(ASM_INST).inc.c: $(ASM_INST).yml $(ASM_UP)
+	python $(ASM_UP)
 
 test: test-all test-z80 test-asm test-dasm
 
