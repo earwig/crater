@@ -162,9 +162,37 @@ halt:
 #     args: no
 #     return: error
 
-# inc:
-#     args: no
-#     return: error
+inc:
+    args: yes
+    cases:
+        - type: [register]
+          cases:
+            - cond:   [a]
+              return: [0x3C]
+            - cond:   [b]
+              return: [0x04]
+            - cond:   [c]
+              return: [0x0C]
+            - cond:   [d]
+              return: [0x14]
+            - cond:   [e]
+              return: [0x1C]
+            - cond:   [h|ih]
+              return: [0x24]
+            - cond:   [l|il]
+              return: [0x2C]
+            - cond:   [bc]
+              return: [0x03]
+            - cond:   [de]
+              return: [0x13]
+            - cond:   [hl|i]
+              return: [0x23]
+            - cond:   [sp]
+              return: [0x33]
+        - type: [indirect_hl_or_indexed]
+          cases:
+            - cond:   [_]
+              return: [0x34]
 
 ind:
     args: no

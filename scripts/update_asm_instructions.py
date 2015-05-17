@@ -158,8 +158,9 @@ class Instruction(object):
         """
         Return the test part of an if statement for an instruction subcase.
         """
-        return " && ".join(self._SUBCASE_LOOKUP_TABLE[types[i]](self, i, cond)
-                           for i, cond in enumerate(conds) if cond != "_")
+        conds = [self._SUBCASE_LOOKUP_TABLE[types[i]](self, i, cond)
+                 for i, cond in enumerate(conds) if cond != "_"]
+        return " && ".join(conds) if conds else "1"
 
     def _iter_permutations(self, types, conds):
         """
@@ -261,7 +262,7 @@ class Instruction(object):
         lines = []
 
         if self._data["args"]:
-            lines.append("{tab}INST_TAKES_ARGS(\n{tab2}{0}, \n{tab2}{1}, "
+            lines.append("{tab}INST_TAKES_ARGS(\n{tab2}{0},\n{tab2}{1},"
                          "\n{tab2}{2}\n{tab})".format(
                 self._get_arg_parse_mask(0), self._get_arg_parse_mask(1),
                 self._get_arg_parse_mask(2), tab=TAB, tab2=TAB * 2))
@@ -321,9 +322,8 @@ def main():
     data = yaml.load(text)
     result = process(template, data)
 
-    # with open(DEST, "w") as fp:
-    #     fp.write(result.encode(ENCODING))
-    print(result)  # TODO: remove me!
+    with open(DEST, "w") as fp:
+        fp.write(result.encode(ENCODING))
 
 if __name__ == "__main__":
     main()

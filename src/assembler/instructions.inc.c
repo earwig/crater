@@ -7,7 +7,7 @@
     `make` should trigger a rebuild when it is modified; if not, use:
     `python scripts/update_asm_instructions.py`.
 
-    @AUTOGEN_DATE Sun May 10 21:02:28 2015
+    @AUTOGEN_DATE Sun May 17 03:37:44 2015 UTC
 */
 
 /* @AUTOGEN_INST_BLOCK_START */
@@ -16,37 +16,55 @@ INST_FUNC(adc)
 {
     INST_TAKES_ARGS(
         AT_REGISTER,
-        AT_REGISTER|AT_IMMEDIATE|AT_INDEXED|AT_INDIRECT,
+        AT_IMMEDIATE|AT_INDIRECT|AT_INDEXED|AT_REGISTER,
         AT_NONE
     )
-    if (INST_TYPE(0) == AT_REGISTER && INST_TYPE(1) == AT_REGISTER) {
+    if (INST_NARGS == 2 && INST_TYPE(0) == AT_REGISTER && INST_TYPE(1) == AT_REGISTER) {
         if (INST_REG(0) == REG_A && INST_REG(1) == REG_A)
             INST_RETURN(1, 0x8F)
         if (INST_REG(0) == REG_A && INST_REG(1) == REG_B)
             INST_RETURN(1, 0x88)
-        //
+        if (INST_REG(0) == REG_A && INST_REG(1) == REG_C)
+            INST_RETURN(1, 0x89)
+        if (INST_REG(0) == REG_A && INST_REG(1) == REG_D)
+            INST_RETURN(1, 0x8A)
+        if (INST_REG(0) == REG_A && INST_REG(1) == REG_E)
+            INST_RETURN(1, 0x8B)
         if (INST_REG(0) == REG_A && INST_REG(1) == REG_H)
             INST_RETURN(1, 0x8C)
         if (INST_REG(0) == REG_A && INST_REG(1) == REG_IXH)
             INST_RETURN(2, INST_IX_PREFIX, 0x8C)
-        //
+        if (INST_REG(0) == REG_A && INST_REG(1) == REG_IYH)
+            INST_RETURN(2, INST_IY_PREFIX, 0x8C)
+        if (INST_REG(0) == REG_A && INST_REG(1) == REG_IYL)
+            INST_RETURN(2, INST_IY_PREFIX, 0x8D)
+        if (INST_REG(0) == REG_A && INST_REG(1) == REG_L)
+            INST_RETURN(1, 0x8D)
+        if (INST_REG(0) == REG_A && INST_REG(1) == REG_IXL)
+            INST_RETURN(2, INST_IX_PREFIX, 0x8D)
+        if (INST_REG(0) == REG_HL && INST_REG(1) == REG_BC)
+            INST_RETURN(2, 0xED, 0x4A)
+        if (INST_REG(0) == REG_HL && INST_REG(1) == REG_DE)
+            INST_RETURN(2, 0xED, 0x5A)
+        if (INST_REG(0) == REG_HL && INST_REG(1) == REG_HL)
+            INST_RETURN(2, 0xED, 0x6A)
+        if (INST_REG(0) == REG_HL && INST_REG(1) == REG_SP)
+            INST_RETURN(2, 0xED, 0x7A)
         INST_ERROR(ARG_VALUE)
     }
-    if (INST_TYPE(0) == AT_REGISTER && INST_TYPE(1) == AT_IMMEDIATE) {
+    if (INST_NARGS == 2 && INST_TYPE(0) == AT_REGISTER && INST_TYPE(1) == AT_IMMEDIATE) {
         if (INST_REG(0) == REG_A && INST_IMM(1).mask & IMM_U8)
             INST_RETURN(2, 0xCE, INST_IMM(1).uval)
         INST_ERROR(ARG_VALUE)
     }
-    if (INST_TYPE(0) == AT_REGISTER && INST_TYPE(1) == AT_INDEXED) {
-        if (INST_REG(0) == REG_A)
-            INST_RETURN(3, INST_INDEX_PREFIX(1), 0x8E, INST_INDEX(1).offset)
+    if (INST_NARGS == 2 && INST_TYPE(0) == AT_REGISTER && INST_TYPE(1) == AT_INDIRECT) {
+        if (INST_REG(0) == REG_A && (INST_INDIRECT(1).type == AT_REGISTER && INST_INDIRECT(1).addr.reg == REG_HL))
+            INST_RETURN(1, 0x8E)
         INST_ERROR(ARG_VALUE)
     }
-    if (INST_TYPE(0) == AT_REGISTER && INST_TYPE(1) == AT_INDIRECT &&
-            INST_INDIRECT(1).type == AT_REGISTER &&
-            INST_INDIRECT(1).addr.reg == REG_HL) {
+    if (INST_NARGS == 2 && INST_TYPE(0) == AT_REGISTER && INST_TYPE(1) == AT_INDEXED) {
         if (INST_REG(0) == REG_A)
-            INST_RETURN(1, 0x8E)
+            INST_RETURN(3, INST_INDEX_PREFIX(1), 0x8E, INST_INDEX(1).offset)
         INST_ERROR(ARG_VALUE)
     }
     INST_ERROR(ARG_TYPE)
@@ -54,84 +72,82 @@ INST_FUNC(adc)
 
 INST_FUNC(add)
 {
-    INST_TAKES_NO_ARGS
-    INST_ERROR(ARG_SYNTAX)
-    INST_RETURN(1, 0xFF)
-
-    // INST_TAKES_ARGS(2, 2)
-    // INST_FORCE_TYPE(0, AT_REGISTER)
-    // switch (INST_REG(0)) {
-    //     case REG_A:
-    //         switch (INST_TYPE(1)) {
-    //             INST_CASE_REGS(1, INST_CASE_ALL_8_BIT_REGS(0x80))
-    //             INST_CASE_IMM_U8(1, 2, 0xC6)
-    //             INST_CASE_INDIRECT_HL_IX_IY(1, 1, 0x86)
-    //             default: INST_ERROR(ARG1_TYPE)
-    //         }
-    //     case REG_HL:
-    //         INST_FORCE_TYPE(1, AT_REGISTER)
-    //         switch (INST_REG(1)) {
-    //             case REG_BC: INST_RETURN(1, 0x09)
-    //             case REG_DE: INST_RETURN(1, 0x19)
-    //             case REG_HL: INST_RETURN(1, 0x29)
-    //             case REG_SP: INST_RETURN(1, 0x39)
-    //             default: INST_ERROR(ARG1_BAD_REG)
-    //         }
-    //     case REG_IX:
-    //     case REG_IY:
-    //         INST_FORCE_TYPE(1, AT_REGISTER)
-    //         switch (INST_REG(1)) {
-    //             case REG_BC: INST_RETURN(2, INST_INDEX_PREFIX(1), 0x09)  // TODO: wrong prefix
-    //             case REG_DE: INST_RETURN(2, INST_INDEX_PREFIX(1), 0x19)
-    //             case REG_IX:
-    //             case REG_IY:
-    //                 if (INST_REG(0) != INST_REG(1))
-    //                     INST_ERROR(ARG1_BAD_REG)
-    //                 INST_RETURN(2, INST_INDEX_PREFIX(1), 0x29)
-    //             case REG_SP: INST_RETURN(2, INST_INDEX_PREFIX(1), 0x39)
-    //             default: INST_ERROR(ARG1_BAD_REG)
-    //         }
-    //     default:
-    //         INST_ERROR(ARG0_TYPE)
-    // }
-}
-
-INST_FUNC(and)
-{
-    // TODO
-    INST_TAKES_NO_ARGS
-    INST_ERROR(ARG_SYNTAX)
-    INST_RETURN(1, 0xFF)
-}
-
-INST_FUNC(bit)
-{
-    // TODO
-    INST_TAKES_NO_ARGS
-    INST_ERROR(ARG_SYNTAX)
-    INST_RETURN(1, 0xFF)
-}
-
-INST_FUNC(call)
-{
-    // TODO
-    INST_TAKES_NO_ARGS
-    INST_ERROR(ARG_SYNTAX)
-    INST_RETURN(1, 0xFF)
+    INST_TAKES_ARGS(
+        AT_REGISTER,
+        AT_IMMEDIATE|AT_INDIRECT|AT_INDEXED|AT_REGISTER,
+        AT_NONE
+    )
+    if (INST_NARGS == 2 && INST_TYPE(0) == AT_REGISTER && INST_TYPE(1) == AT_REGISTER) {
+        if (INST_REG(0) == REG_A && INST_REG(1) == REG_A)
+            INST_RETURN(1, 0x87)
+        if (INST_REG(0) == REG_A && INST_REG(1) == REG_B)
+            INST_RETURN(1, 0x80)
+        if (INST_REG(0) == REG_A && INST_REG(1) == REG_C)
+            INST_RETURN(1, 0x81)
+        if (INST_REG(0) == REG_A && INST_REG(1) == REG_D)
+            INST_RETURN(1, 0x82)
+        if (INST_REG(0) == REG_A && INST_REG(1) == REG_E)
+            INST_RETURN(1, 0x83)
+        if (INST_REG(0) == REG_A && INST_REG(1) == REG_H)
+            INST_RETURN(1, 0x84)
+        if (INST_REG(0) == REG_A && INST_REG(1) == REG_IXH)
+            INST_RETURN(2, INST_IX_PREFIX, 0x84)
+        if (INST_REG(0) == REG_A && INST_REG(1) == REG_IYH)
+            INST_RETURN(2, INST_IY_PREFIX, 0x84)
+        if (INST_REG(0) == REG_A && INST_REG(1) == REG_IYL)
+            INST_RETURN(2, INST_IY_PREFIX, 0x85)
+        if (INST_REG(0) == REG_A && INST_REG(1) == REG_L)
+            INST_RETURN(1, 0x85)
+        if (INST_REG(0) == REG_A && INST_REG(1) == REG_IXL)
+            INST_RETURN(2, INST_IX_PREFIX, 0x85)
+        if (INST_REG(0) == REG_IY && INST_REG(1) == REG_BC)
+            INST_RETURN(2, INST_IY_PREFIX, 0x09)
+        if (INST_REG(0) == REG_IX && INST_REG(1) == REG_BC)
+            INST_RETURN(2, INST_IX_PREFIX, 0x09)
+        if (INST_REG(0) == REG_HL && INST_REG(1) == REG_BC)
+            INST_RETURN(1, 0x09)
+        if (INST_REG(0) == REG_IY && INST_REG(1) == REG_DE)
+            INST_RETURN(2, INST_IY_PREFIX, 0x19)
+        if (INST_REG(0) == REG_IX && INST_REG(1) == REG_DE)
+            INST_RETURN(2, INST_IX_PREFIX, 0x19)
+        if (INST_REG(0) == REG_HL && INST_REG(1) == REG_DE)
+            INST_RETURN(1, 0x19)
+        if (INST_REG(0) == REG_IY && INST_REG(1) == REG_HL)
+            INST_RETURN(2, INST_IY_PREFIX, 0x29)
+        if (INST_REG(0) == REG_IX && INST_REG(1) == REG_HL)
+            INST_RETURN(2, INST_IX_PREFIX, 0x29)
+        if (INST_REG(0) == REG_HL && INST_REG(1) == REG_HL)
+            INST_RETURN(1, 0x29)
+        if (INST_REG(0) == REG_IY && INST_REG(1) == REG_SP)
+            INST_RETURN(2, INST_IY_PREFIX, 0x39)
+        if (INST_REG(0) == REG_IX && INST_REG(1) == REG_SP)
+            INST_RETURN(2, INST_IX_PREFIX, 0x39)
+        if (INST_REG(0) == REG_HL && INST_REG(1) == REG_SP)
+            INST_RETURN(1, 0x39)
+        INST_ERROR(ARG_VALUE)
+    }
+    if (INST_NARGS == 2 && INST_TYPE(0) == AT_REGISTER && INST_TYPE(1) == AT_IMMEDIATE) {
+        if (INST_REG(0) == REG_A && INST_IMM(1).mask & IMM_U8)
+            INST_RETURN(2, 0xC6, INST_IMM(1).uval)
+        INST_ERROR(ARG_VALUE)
+    }
+    if (INST_NARGS == 2 && INST_TYPE(0) == AT_REGISTER && INST_TYPE(1) == AT_INDIRECT) {
+        if (INST_REG(0) == REG_A && (INST_INDIRECT(1).type == AT_REGISTER && INST_INDIRECT(1).addr.reg == REG_HL))
+            INST_RETURN(1, 0x86)
+        INST_ERROR(ARG_VALUE)
+    }
+    if (INST_NARGS == 2 && INST_TYPE(0) == AT_REGISTER && INST_TYPE(1) == AT_INDEXED) {
+        if (INST_REG(0) == REG_A)
+            INST_RETURN(3, INST_INDEX_PREFIX(1), 0x86, INST_INDEX(1).offset)
+        INST_ERROR(ARG_VALUE)
+    }
+    INST_ERROR(ARG_TYPE)
 }
 
 INST_FUNC(ccf)
 {
     INST_TAKES_NO_ARGS
     INST_RETURN(1, 0x3F)
-}
-
-INST_FUNC(cp)
-{
-    // TODO
-    INST_TAKES_NO_ARGS
-    INST_ERROR(ARG_SYNTAX)
-    INST_RETURN(1, 0xFF)
 }
 
 INST_FUNC(cpd)
@@ -170,40 +186,16 @@ INST_FUNC(daa)
     INST_RETURN(1, 0x27)
 }
 
-INST_FUNC(dec)
-{
-    // TODO
-    INST_TAKES_NO_ARGS
-    INST_ERROR(ARG_SYNTAX)
-    INST_RETURN(1, 0xFF)
-}
-
 INST_FUNC(di)
 {
     INST_TAKES_NO_ARGS
     INST_RETURN(1, 0xF3)
 }
 
-INST_FUNC(djnz)
-{
-    // TODO
-    INST_TAKES_NO_ARGS
-    INST_ERROR(ARG_SYNTAX)
-    INST_RETURN(1, 0xFF)
-}
-
 INST_FUNC(ei)
 {
     INST_TAKES_NO_ARGS
     INST_RETURN(1, 0xFB)
-}
-
-INST_FUNC(ex)
-{
-    // TODO
-    INST_TAKES_NO_ARGS
-    INST_ERROR(ARG_SYNTAX)
-    INST_RETURN(1, 0xFF)
 }
 
 INST_FUNC(exx)
@@ -218,55 +210,61 @@ INST_FUNC(halt)
     INST_RETURN(1, 0x76)
 }
 
-INST_FUNC(im)
-{
-    // TODO
-    INST_TAKES_NO_ARGS
-    INST_ERROR(ARG_SYNTAX)
-    INST_RETURN(1, 0xFF)
-}
-
-INST_FUNC(in)
-{
-    // TODO
-    INST_TAKES_NO_ARGS
-    INST_ERROR(ARG_SYNTAX)
-    INST_RETURN(1, 0xFF)
-}
-
 INST_FUNC(inc)
 {
-    INST_TAKES_NO_ARGS
-    INST_ERROR(ARG_SYNTAX)
-    INST_RETURN(1, 0xFF)
-
-    // INST_TAKES_ARGS(1, 1)
-    // switch (INST_TYPE(0)) {
-    //     case AT_REGISTER:
-    //         switch (INST_REG(0)) {
-    //             case REG_A:   INST_RETURN(1, 0x3C)
-    //             case REG_B:   INST_RETURN(1, 0x04)
-    //             case REG_C:   INST_RETURN(1, 0x0C)
-    //             case REG_D:   INST_RETURN(1, 0x14)
-    //             case REG_E:   INST_RETURN(1, 0x1C)
-    //             case REG_H:   INST_RETURN(1, 0x24)
-    //             case REG_L:   INST_RETURN(1, 0x2C)
-    //             case REG_BC:  INST_RETURN(1, 0x03)
-    //             case REG_DE:  INST_RETURN(1, 0x13)
-    //             case REG_HL:  INST_RETURN(1, 0x23)
-    //             case REG_SP:  INST_RETURN(1, 0x33)
-    //             case REG_IX:  INST_RETURN(2, 0xDD, 0x23)
-    //             case REG_IY:  INST_RETURN(2, 0xFD, 0x23)
-    //             case REG_IXH: INST_RETURN(2, 0xDD, 0x2C)
-    //             case REG_IXL: INST_RETURN(2, 0xFD, 0x2C)
-    //             case REG_IYH: INST_RETURN(2, 0xDD, 0x2C)
-    //             case REG_IYL: INST_RETURN(2, 0xFD, 0x2C)
-    //             default: INST_ERROR(ARG0_BAD_REG)
-    //         }
-    //     INST_CASE_INDIRECT_HL_IX_IY(0, 1, 0x34)
-    //     default:
-    //         INST_ERROR(ARG0_TYPE)
-    // }
+    INST_TAKES_ARGS(
+        AT_INDEXED|AT_INDIRECT|AT_REGISTER,
+        AT_NONE,
+        AT_NONE
+    )
+    if (INST_NARGS == 1 && INST_TYPE(0) == AT_REGISTER) {
+        if (INST_REG(0) == REG_A)
+            INST_RETURN(1, 0x3C)
+        if (INST_REG(0) == REG_B)
+            INST_RETURN(1, 0x04)
+        if (INST_REG(0) == REG_C)
+            INST_RETURN(1, 0x0C)
+        if (INST_REG(0) == REG_D)
+            INST_RETURN(1, 0x14)
+        if (INST_REG(0) == REG_E)
+            INST_RETURN(1, 0x1C)
+        if (INST_REG(0) == REG_H)
+            INST_RETURN(1, 0x24)
+        if (INST_REG(0) == REG_IXH)
+            INST_RETURN(2, INST_IX_PREFIX, 0x24)
+        if (INST_REG(0) == REG_IYH)
+            INST_RETURN(2, INST_IY_PREFIX, 0x24)
+        if (INST_REG(0) == REG_IYL)
+            INST_RETURN(2, INST_IY_PREFIX, 0x2C)
+        if (INST_REG(0) == REG_L)
+            INST_RETURN(1, 0x2C)
+        if (INST_REG(0) == REG_IXL)
+            INST_RETURN(2, INST_IX_PREFIX, 0x2C)
+        if (INST_REG(0) == REG_BC)
+            INST_RETURN(1, 0x03)
+        if (INST_REG(0) == REG_DE)
+            INST_RETURN(1, 0x13)
+        if (INST_REG(0) == REG_IY)
+            INST_RETURN(2, INST_IY_PREFIX, 0x23)
+        if (INST_REG(0) == REG_IX)
+            INST_RETURN(2, INST_IX_PREFIX, 0x23)
+        if (INST_REG(0) == REG_HL)
+            INST_RETURN(1, 0x23)
+        if (INST_REG(0) == REG_SP)
+            INST_RETURN(1, 0x33)
+        INST_ERROR(ARG_VALUE)
+    }
+    if (INST_NARGS == 1 && INST_TYPE(0) == AT_INDIRECT) {
+        if ((INST_INDIRECT(0).type == AT_REGISTER && INST_INDIRECT(0).addr.reg == REG_HL))
+            INST_RETURN(1, 0x34)
+        INST_ERROR(ARG_VALUE)
+    }
+    if (INST_NARGS == 1 && INST_TYPE(0) == AT_INDEXED) {
+        if (1)
+            INST_RETURN(3, INST_INDEX_PREFIX(0), 0x34, INST_INDEX(0).offset)
+        INST_ERROR(ARG_VALUE)
+    }
+    INST_ERROR(ARG_TYPE)
 }
 
 INST_FUNC(ind)
@@ -291,146 +289,6 @@ INST_FUNC(inir)
 {
     INST_TAKES_NO_ARGS
     INST_RETURN(2, 0xED, 0xB2)
-}
-
-INST_FUNC(jp)
-{
-    // TODO
-    INST_TAKES_NO_ARGS
-    INST_ERROR(ARG_SYNTAX)
-    INST_RETURN(1, 0xFF)
-}
-
-INST_FUNC(jr)
-{
-    // TODO
-    INST_TAKES_NO_ARGS
-    INST_ERROR(ARG_SYNTAX)
-    INST_RETURN(1, 0xFF)
-}
-
-INST_FUNC(ld)
-{
-    INST_TAKES_NO_ARGS
-    INST_ERROR(ARG_SYNTAX)
-    INST_RETURN(1, 0xFF)
-
-    // INST_TAKES_ARGS(2, 2)
-    // switch (INST_TYPE(0)) {
-    //     case AT_REGISTER:
-    //         switch (INST_REG(0)) {
-    //             case REG_A:
-    //                 switch (INST_TYPE(1)) {
-    //                     case AT_REGISTER:
-    //                         switch (INST_REG(1)) {
-    //                             INST_CASE_ALL_8_BIT_REGS(0x78)
-    //                             case REG_I:   INST_RETURN(2, 0xED, 0x57)
-    //                             case REG_R:   INST_RETURN(2, 0xED, 0x5F)
-    //                             default: INST_ERROR(ARG1_BAD_REG)
-    //                         }
-    //                     INST_CASE_IMM_U8(1, 2, 0x3E)
-    //                     case AT_INDIRECT:
-    //                         switch (INST_INDIRECT(1).type) {
-    //                             case AT_REGISTER:
-    //                                 switch (INST_INDIRECT(1).addr.reg) {
-    //                                     case REG_BC: INST_RETURN(1, 0x0A)
-    //                                     case REG_DE: INST_RETURN(1, 0x1A)
-    //                                     case REG_HL: INST_RETURN(1, 0x7E)
-    //                                     default: INST_ERROR(ARG0_BAD_REG)
-    //                                 }
-    //                             case AT_IMMEDIATE:
-    //                                 INST_RETURN(3, 0x3A, INST_INDIRECT_IMM(1))
-    //                             case AT_LABEL:
-    //                                 INST_RETURN_INDIRECT_LABEL(1, 3, 0x3A)
-    //                             default:
-    //                                 INST_ERROR(ARG1_TYPE)
-    //                         }
-    //                     case AT_INDEXED:
-    //                         INST_RETURN(3, INST_INDEX_BYTES(1, 0x7E))
-    //                     default:
-    //                         INST_ERROR(ARG1_TYPE)
-    //                 }
-    //             case REG_B:
-    //                 switch (INST_TYPE(1)) {
-    //                     INST_CASE_REGS(1, INST_CASE_ALL_8_BIT_REGS(0x40))
-    //                     INST_CASE_IMM_U8(1, 2, 0x06)
-    //                     INST_CASE_INDIRECT_HL_IX_IY(1, 1, 0x46)
-    //                     default: INST_ERROR(ARG1_TYPE)
-    //                 }
-    //             case REG_C:
-    //                 switch (INST_TYPE(1)) {
-    //                     INST_CASE_REGS(1, INST_CASE_ALL_8_BIT_REGS(0x48))
-    //                     INST_CASE_IMM_U8(1, 2, 0x0E)
-    //                     INST_CASE_INDIRECT_HL_IX_IY(1, 1, 0x4E)
-    //                     default: INST_ERROR(ARG1_TYPE)
-    //                 }
-    //             case REG_D:
-    //                 switch (INST_TYPE(1)) {
-    //                     INST_CASE_REGS(1, INST_CASE_ALL_8_BIT_REGS(0x50))
-    //                     INST_CASE_IMM_U8(1, 2, 0x16)
-    //                     INST_CASE_INDIRECT_HL_IX_IY(1, 1, 0x56)
-    //                     default: INST_ERROR(ARG1_TYPE)
-    //                 }
-    //             case REG_E:
-    //                 switch (INST_TYPE(1)) {
-    //                     INST_CASE_REGS(1, INST_CASE_ALL_8_BIT_REGS(0x58))
-    //                     INST_CASE_IMM_U8(1, 2, 0x1E)
-    //                     INST_CASE_INDIRECT_HL_IX_IY(1, 1, 0x5E)
-    //                     default: INST_ERROR(ARG1_TYPE)
-    //                 }
-    //             case REG_H:
-    //                 switch (INST_TYPE(1)) {
-    //                     INST_CASE_REGS(1, INST_CASE_MAIN_8_BIT_REGS(0x60))
-    //                     INST_CASE_IMM_U8(1, 2, 0x26)
-    //                     INST_CASE_INDIRECT_HL_IX_IY(1, 1, 0x66)
-    //                     default: INST_ERROR(ARG1_TYPE)
-    //                 }
-    //             case REG_L:
-    //                 switch (INST_TYPE(1)) {
-    //                     INST_CASE_REGS(1, INST_CASE_MAIN_8_BIT_REGS(0x68))
-    //                     INST_CASE_IMM_U8(1, 2, 0x2E)
-    //                     INST_CASE_INDIRECT_HL_IX_IY(1, 1, 0x6E)
-    //                     default: INST_ERROR(ARG1_TYPE)
-    //                 }
-    //             case REG_I:
-    //                 INST_REG_ONLY(1, REG_A)
-    //                 INST_RETURN(2, 0xED, 0x47)
-    //             case REG_R:
-    //                 INST_REG_ONLY(1, REG_A)
-    //                 INST_RETURN(2, 0xED, 0x4F)
-    //             case REG_BC:  // TODO ( 2 cases)
-    //             case REG_DE:  // TODO ( 2 cases)
-    //             case REG_HL:  // TODO ( 3 cases)
-    //             case REG_IX:  // TODO ( 2 cases)
-    //             case REG_IY:  // TODO ( 2 cases)
-    //             case REG_SP:  // TODO ( 5 cases)
-    //             case REG_IXH: // TODO ( 8 cases)
-    //             case REG_IXL: // TODO ( 8 cases)
-    //             case REG_IYH: // TODO ( 8 cases)
-    //             case REG_IYL: // TODO ( 8 cases)
-    //             default: INST_ERROR(ARG0_BAD_REG)
-    //         }
-    //     case AT_INDIRECT:
-    //         switch (INST_INDIRECT(0).type) {
-    //             case AT_REGISTER:
-    //                 switch (INST_INDIRECT(0).addr.reg) {
-    //                     case REG_BC: // TODO (1 case )
-    //                     case REG_DE: // TODO (1 case )
-    //                     case REG_HL: // TODO (8 cases)
-    //                     default: INST_ERROR(ARG0_BAD_REG)
-    //                 }
-    //             case AT_IMMEDIATE:
-    //                 // TODO (8 cases)
-    //             case AT_LABEL:
-    //                 // TODO (same 8 cases)
-    //             default:
-    //                 INST_ERROR(ARG0_TYPE)
-    //         }
-    //     case AT_INDEXED:
-    //         // TODO (16 cases)
-    //     default:
-    //         INST_ERROR(ARG0_TYPE)
-    // }
 }
 
 INST_FUNC(ldd)
@@ -469,14 +327,6 @@ INST_FUNC(nop)
     INST_RETURN(1, 0x00)
 }
 
-INST_FUNC(or)
-{
-    // TODO
-    INST_TAKES_NO_ARGS
-    INST_ERROR(ARG_SYNTAX)
-    INST_RETURN(1, 0xFF)
-}
-
 INST_FUNC(otdr)
 {
     INST_TAKES_NO_ARGS
@@ -487,14 +337,6 @@ INST_FUNC(otir)
 {
     INST_TAKES_NO_ARGS
     INST_RETURN(2, 0xED, 0xB3)
-}
-
-INST_FUNC(out)
-{
-    // TODO
-    INST_TAKES_NO_ARGS
-    INST_ERROR(ARG_SYNTAX)
-    INST_RETURN(1, 0xFF)
 }
 
 INST_FUNC(outd)
@@ -509,38 +351,6 @@ INST_FUNC(outi)
     INST_RETURN(2, 0xED, 0xA3)
 }
 
-INST_FUNC(pop)
-{
-    // TODO
-    INST_TAKES_NO_ARGS
-    INST_ERROR(ARG_SYNTAX)
-    INST_RETURN(1, 0xFF)
-}
-
-INST_FUNC(push)
-{
-    // TODO
-    INST_TAKES_NO_ARGS
-    INST_ERROR(ARG_SYNTAX)
-    INST_RETURN(1, 0xFF)
-}
-
-INST_FUNC(res)
-{
-    // TODO
-    INST_TAKES_NO_ARGS
-    INST_ERROR(ARG_SYNTAX)
-    INST_RETURN(1, 0xFF)
-}
-
-INST_FUNC(ret)
-{
-    // TODO
-    INST_TAKES_NO_ARGS
-    INST_ERROR(ARG_SYNTAX)
-    INST_RETURN(1, 0xFF)
-}
-
 INST_FUNC(reti)
 {
     INST_TAKES_NO_ARGS
@@ -553,26 +363,10 @@ INST_FUNC(retn)
     INST_RETURN(2, 0xED, 0x45)
 }
 
-INST_FUNC(rl)
-{
-    // TODO
-    INST_TAKES_NO_ARGS
-    INST_ERROR(ARG_SYNTAX)
-    INST_RETURN(1, 0xFF)
-}
-
 INST_FUNC(rla)
 {
     INST_TAKES_NO_ARGS
     INST_RETURN(1, 0x17)
-}
-
-INST_FUNC(rlc)
-{
-    // TODO
-    INST_TAKES_NO_ARGS
-    INST_ERROR(ARG_SYNTAX)
-    INST_RETURN(1, 0xFF)
 }
 
 INST_FUNC(rlca)
@@ -587,26 +381,10 @@ INST_FUNC(rld)
     INST_RETURN(2, 0xED, 0x6F)
 }
 
-INST_FUNC(rr)
-{
-    // TODO
-    INST_TAKES_NO_ARGS
-    INST_ERROR(ARG_SYNTAX)
-    INST_RETURN(1, 0xFF)
-}
-
 INST_FUNC(rra)
 {
     INST_TAKES_NO_ARGS
     INST_RETURN(1, 0x1F)
-}
-
-INST_FUNC(rrc)
-{
-    // TODO
-    INST_TAKES_NO_ARGS
-    INST_ERROR(ARG_SYNTAX)
-    INST_RETURN(1, 0xFF)
 }
 
 INST_FUNC(rrca)
@@ -615,106 +393,10 @@ INST_FUNC(rrca)
     INST_RETURN(1, 0x0F)
 }
 
-INST_FUNC(rrd)
-{
-    // TODO
-    INST_TAKES_NO_ARGS
-    INST_ERROR(ARG_SYNTAX)
-    INST_RETURN(1, 0xFF)
-}
-
-INST_FUNC(rst)
-{
-    // TODO
-    INST_TAKES_NO_ARGS
-    INST_ERROR(ARG_SYNTAX)
-    INST_RETURN(1, 0xFF)
-}
-
-INST_FUNC(sbc)
-{
-    // TODO
-    INST_TAKES_NO_ARGS
-    INST_ERROR(ARG_SYNTAX)
-    INST_RETURN(1, 0xFF)
-}
-
 INST_FUNC(scf)
 {
     INST_TAKES_NO_ARGS
     INST_RETURN(1, 0x37)
-}
-
-INST_FUNC(set)
-{
-    // TODO
-    INST_TAKES_NO_ARGS
-    INST_ERROR(ARG_SYNTAX)
-    INST_RETURN(1, 0xFF)
-}
-
-INST_FUNC(sl1)
-{
-    // TODO
-    INST_TAKES_NO_ARGS
-    INST_ERROR(ARG_SYNTAX)
-    INST_RETURN(1, 0xFF)
-}
-
-INST_FUNC(sla)
-{
-    // TODO
-    INST_TAKES_NO_ARGS
-    INST_ERROR(ARG_SYNTAX)
-    INST_RETURN(1, 0xFF)
-}
-
-INST_FUNC(sll)
-{
-    // TODO
-    INST_TAKES_NO_ARGS
-    INST_ERROR(ARG_SYNTAX)
-    INST_RETURN(1, 0xFF)
-}
-
-INST_FUNC(sls)
-{
-    // TODO
-    INST_TAKES_NO_ARGS
-    INST_ERROR(ARG_SYNTAX)
-    INST_RETURN(1, 0xFF)
-}
-
-INST_FUNC(sra)
-{
-    // TODO
-    INST_TAKES_NO_ARGS
-    INST_ERROR(ARG_SYNTAX)
-    INST_RETURN(1, 0xFF)
-}
-
-INST_FUNC(srl)
-{
-    // TODO
-    INST_TAKES_NO_ARGS
-    INST_ERROR(ARG_SYNTAX)
-    INST_RETURN(1, 0xFF)
-}
-
-INST_FUNC(sub)
-{
-    // TODO
-    INST_TAKES_NO_ARGS
-    INST_ERROR(ARG_SYNTAX)
-    INST_RETURN(1, 0xFF)
-}
-
-INST_FUNC(xor)
-{
-    // TODO
-    INST_TAKES_NO_ARGS
-    INST_ERROR(ARG_SYNTAX)
-    INST_RETURN(1, 0xFF)
 }
 
 /* @AUTOGEN_INST_BLOCK_END */
@@ -727,7 +409,40 @@ static ASMInstParser lookup_parser(uint32_t key)
 /* @AUTOGEN_LOOKUP_BLOCK_START */
     HANDLE(adc)
     HANDLE(add)
-    HANDLE(and)
+    HANDLE(ccf)
+    HANDLE(cpd)
+    HANDLE(cpdr)
+    HANDLE(cpi)
+    HANDLE(cpir)
+    HANDLE(cpl)
+    HANDLE(daa)
+    HANDLE(di)
+    HANDLE(ei)
+    HANDLE(exx)
+    HANDLE(halt)
+    HANDLE(inc)
+    HANDLE(ind)
+    HANDLE(indr)
+    HANDLE(ini)
+    HANDLE(inir)
+    HANDLE(ldd)
+    HANDLE(lddr)
+    HANDLE(ldi)
+    HANDLE(ldir)
+    HANDLE(neg)
+    HANDLE(nop)
+    HANDLE(otdr)
+    HANDLE(otir)
+    HANDLE(outd)
+    HANDLE(outi)
+    HANDLE(reti)
+    HANDLE(retn)
+    HANDLE(rla)
+    HANDLE(rlca)
+    HANDLE(rld)
+    HANDLE(rra)
+    HANDLE(rrca)
+    HANDLE(scf)
 /* @AUTOGEN_LOOKUP_BLOCK_END */
     return NULL;
 }
