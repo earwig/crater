@@ -49,8 +49,8 @@ class Instruction(object):
         "condition": "AT_CONDITION",
         "port": "AT_PORT"
     }
-    ARG_EXTRA = {
-        "indexed": ["AT_INDIRECT"]
+    PSEUDO_TYPES = {
+        "indirect_hl_or_indexed": ["AT_INDIRECT", "AT_INDEXED"]
     }
 
     def __init__(self, name, data):
@@ -66,9 +66,10 @@ class Instruction(object):
         for case in self._data["cases"]:
             if num < len(case["type"]):
                 atype = case["type"][num]
-                types.add(self.ARG_TYPES[atype])
-                if atype in self.ARG_EXTRA:
-                    types.update(self.ARG_EXTRA[atype])
+                if atype in self.ARG_TYPES:
+                    types.add(self.ARG_TYPES[atype])
+                else:
+                    types.update(self.PSEUDO_TYPES[atype])
             else:
                 optional = True
 
@@ -104,21 +105,29 @@ class Instruction(object):
         """
         Return an expression to check for a particular immediate value.
         """
+        # TODO: also allow direct value comparisons here
         return "INST_IMM({0}).mask & IMM_{1}".format(num, cond.upper())
 
     def _build_indirect_check(self, num, cond):
         """
         Return an expression to check for a particular indirect value.
         """
+        if cond.startswith("reg."):
+            test1 = "INST_INDIRECT({0}).type == AT_REGISTER".format(num)
+            test2 = "INST_INDIRECT({0}).addr.reg == REG_{1}".format(
+                num, cond[len("reg."):].upper())
+            return "({0} && {1})".format(test1, test2)
+
         # TODO
-        return cond
+
+        err = "Unknown condition for indirect argument: {0}"
+        return RuntimeError(err.format(cond))
 
     def _build_indexed_check(self, num, cond):
         """
         Return an expression to check for a particular indexed value.
         """
-        # TODO
-        return cond
+        raise RuntimeError("The indexed arg type does not support conditions")
 
     def _build_condition_check(self, num, cond):
         """
@@ -131,7 +140,9 @@ class Instruction(object):
         Return an expression to check for a particular port value.
         """
         # TODO
-        return cond
+
+        err = "Unknown condition for port argument: {0}"
+        return RuntimeError(err.format(cond))
 
     _SUBCASE_LOOKUP_TABLE = {
         "register": _build_register_check,
@@ -170,17 +181,60 @@ class Instruction(object):
         """
         Return a modified byte list to accomodate for prefixes and immediates.
         """
+        ret = ret[:]
+        for i, byte in enumerate(ret):
+            if not isinstance(byte, int):
+                if byte == "u8":
+                    imm = types.index("immediate")
+                    ret[i] = "INST_IMM({0}).uval".format(imm)
+                else:
+                    msg = "Unsupported return byte: {0}"
+                    raise RuntimeError(msg.format(byte))
+
         for i, cond in enumerate(conds):
             if types[i] == "register" and cond.startswith("ix"):
-                ret = ["INST_IX_PREFIX"] + ret
+                ret.insert(0, "INST_IX_PREFIX")
             elif types[i] == "register" and cond.startswith("iy"):
-                ret = ["INST_IY_PREFIX"] + ret
+                ret.insert(0, "INST_IY_PREFIX")
+            elif types[i] == "indexed":
+                ret.insert(0, "INST_INDEX_PREFIX({0})".format(i))
+                ret.append("INST_INDEX({0}).offset".format(i))
+
         return ret
+
+    def _handle_pseudo_case(self, pseudo, case):
+        """
+        Return code to handle an instruction pseudo-case.
+
+        Pseudo-cases are cases that have pseudo-types as arguments. This means
+        they are expanded to cover multiple "real" argument types.
+        """
+        index = case["type"].index(pseudo)
+
+        if pseudo == "indirect_hl_or_indexed":
+            case["type"][index] = "indexed"
+            indexed = self._handle_case(case)
+
+            case["type"][index] = "indirect"
+            for subcase in case["cases"]:
+                if subcase["cond"][index] != "_":
+                    raise RuntimeError(
+                        "indirect_hl_or_indexed pseudo-type requires a "
+                        "wildcard (_) in all corresponding conditionals")
+                subcase["cond"][index] = "reg.hl"
+
+            return self._handle_case(case) + indexed
+
+        raise RuntimeError("Unknown pseudo-type: {0}".format(pseudo))
 
     def _handle_case(self, case):
         """
         Return code to handle an instruction case.
         """
+        for pseudo in self.PSEUDO_TYPES:
+            if pseudo in case["type"]:
+                return self._handle_pseudo_case(pseudo, case)
+
         lines = []
         cond = self._build_case_type_check(case["type"])
         lines.append(TAB + "if ({0}) {{".format(cond))

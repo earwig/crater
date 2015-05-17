@@ -48,9 +48,6 @@
     INST_DISPATCH_(__VA_ARGS__, INST_SET4_, INST_SET3_, INST_SET2_,           \
                    INST_SET1_, __VA_ARGS__)(__VA_ARGS__));
 
-#define INST_IX_PREFIX 0xDD
-#define INST_IY_PREFIX 0xFD
-
 #define INST_PREFIX_(reg)                                                     \
     (((reg) == REG_IX || (reg) == REG_IXH || (reg) == REG_IXL) ?              \
      INST_IX_PREFIX : INST_IY_PREFIX)
@@ -99,6 +96,9 @@ static ASMErrorDesc parse_inst_##mnemonic(                                    \
         INST_FILL_BYTES_(len, __VA_ARGS__)                                    \
         return ED_NONE;                                                       \
     }
+
+#define INST_IX_PREFIX 0xDD
+#define INST_IY_PREFIX 0xFD
 
 #define INST_INDEX_PREFIX(n) INST_PREFIX_(INST_INDEX(n).reg)
 

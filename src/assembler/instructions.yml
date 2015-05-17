@@ -41,7 +41,7 @@ adc:
           cases:
             - cond:   [a, u8]
               return: [0xCE, u8]
-        - type: [register, indexed]
+        - type: [register, indirect_hl_or_indexed]
           cases:
             - cond:   [a, _]
               return: [0x8E]
