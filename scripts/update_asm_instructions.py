@@ -118,7 +118,8 @@ class Instruction(object):
                 num, cond[len("reg."):].upper())
             return "({0} && {1})".format(test1, test2)
 
-        # TODO
+        if cond == "imm" or cond == "immediate":
+            return "INST_INDIRECT({0}).type == AT_IMMEDIATE".format(num)
 
         err = "Unknown condition for indirect argument: {0}"
         return RuntimeError(err.format(cond))
@@ -168,10 +169,13 @@ class Instruction(object):
             if "|" in cond:
                 sets = [split(typ, c) for c in cond.split("|")]
                 return {choice for s in sets for choice in s}
-            if typ == "register" and cond == "ih":
-                return {"ixh", "iyh"}
-            if typ == "register" and cond == "il":
-                return {"ixl", "iyl"}
+            if typ == "register":
+                if cond == "i":
+                    return {"ix", "iy"}
+                if cond == "ih":
+                    return {"ixh", "iyh"}
+                if cond == "il":
+                    return {"ixl", "iyl"}
             return {cond}
 
         return product(*(split(types[i], cond)

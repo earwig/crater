@@ -46,9 +46,41 @@ adc:
             - cond:   [a, _]
               return: [0x8E]
 
-# add:
-#     args: no
-#     return: error
+add:
+    args: yes
+    cases:
+        - type: [register, register]
+          cases:
+            - cond:   [a, a]
+              return: [0x87]
+            - cond:   [a, b]
+              return: [0x80]
+            - cond:   [a, c]
+              return: [0x81]
+            - cond:   [a, d]
+              return: [0x82]
+            - cond:   [a, e]
+              return: [0x83]
+            - cond:   [a, h|ih]
+              return: [0x84]
+            - cond:   [a, l|il]
+              return: [0x85]
+            - cond:   [hl|i, bc]
+              return: [0x09]
+            - cond:   [hl|i, de]
+              return: [0x19]
+            - cond:   [hl|i, hl]
+              return: [0x29]
+            - cond:   [hl|i, sp]
+              return: [0x39]
+        - type: [register, immediate]
+          cases:
+            - cond:   [a, u8]
+              return: [0xC6, u8]
+        - type: [register, indirect_hl_or_indexed]
+          cases:
+            - cond:   [a, _]
+              return: [0x86]
 
 # and:
 #     args: no
@@ -62,65 +94,65 @@ adc:
 #     args: no
 #     return: error
 
-# ccf:
-#     args: no
-#     return: error
+ccf:
+    args: no
+    return: [0x3F]
 
 # cp:
 #     args: no
 #     return: error
 
-# cpd:
-#     args: no
-#     return: error
+cpd:
+    args: no
+    return: [0xED, 0xA9]
 
-# cpdr:
-#     args: no
-#     return: error
+cpdr:
+    args: no
+    return: [0xED, 0xB9]
 
-# cpi:
-#     args: no
-#     return: error
+cpi:
+    args: no
+    return: [0xED, 0xA1]
 
-# cpir:
-#     args: no
-#     return: error
+cpir:
+    args: no
+    return: [0xED, 0xB1]
 
-# cpl:
-#     args: no
-#     return: error
+cpl:
+    args: no
+    return: [0x2F]
 
-# daa:
-#     args: no
-#     return: error
+daa:
+    args: no
+    return: [0x27]
 
 # dec:
 #     args: no
 #     return: error
 
-# di:
-#     args: no
-#     return: error
+di:
+    args: no
+    return: [0xF3]
 
 # djnz:
 #     args: no
 #     return: error
 
-# ei:
-#     args: no
-#     return: error
+ei:
+    args: no
+    return: [0xFB]
 
 # ex:
 #     args: no
 #     return: error
 
-# exx:
-#     args: no
-#     return: error
+exx:
+    args: no
+    return: [0xD9]
 
-# halt:
-#     args: no
-#     return: error
+halt:
+    args: no
+    return: [0x76]
 
 # im:
 #     args: no
@@ -134,21 +166,21 @@ adc:
 #     args: no
 #     return: error
 
-# ind:
-#     args: no
-#     return: error
+ind:
+    args: no
+    return: [0xED, 0xAA]
 
-# indr:
-#     args: no
-#     return: error
+indr:
+    args: no
+    return: [0xED, 0xBA]
 
 ini:
     args: no
     return: [0xED, 0xA2]
 
-# inir:
-#     args: no
-#     return: error
+inir:
+    args: no
+    return: [0xED, 0xB2]
 
 # jp:
 #     args: no
@@ -162,53 +194,53 @@ ini:
 #     args: no
 #     return: error
 
-# ldd:
-#     args: no
-#     return: error
+ldd:
+    args: no
+    return: [0xED, 0xA8]
 
-# lddr:
-#     args: no
-#     return: error
+lddr:
+    args: no
+    return: [0xED, 0xB8]
 
-# ldi:
-#     args: no
-#     return: error
+ldi:
+    args: no
+    return: [0xED, 0xA0]
 
-# ldir:
-#     args: no
-#     return: error
+ldir:
+    args: no
+    return: [0xED, 0xB0]
 
-# neg:
-#     args: no
-#     return: error
+neg:
+    args: no
+    return: [0xED, 0x44]
 
-# nop:
-#     args: no
-#     return: error
+nop:
+    args: no
+    return: [0x00]
 
 # or:
 #     args: no
 #     return: error
 
-# otdr:
-#     args: no
-#     return: error
+otdr:
+    args: no
+    return: [0xED, 0xBB]
 
-# otir:
-#     args: no
-#     return: error
+otir:
+    args: no
+    return: [0xED, 0xB3]
 
 # out:
 #     args: no
 #     return: error
 
-# outd:
-#     args: no
-#     return: error
+outd:
+    args: no
+    return: [0xED, 0xAB]
 
-# outi:
-#     args: no
-#     return: error
+outi:
+    args: no
+    return: [0xED, 0xA3]
 
 # pop:
 #     args: no
@@ -226,49 +258,49 @@ ini:
 #     args: no
 #     return: error
 
-# reti:
-#     args: no
-#     return: error
+reti:
+    args: no
+    return: [0xED, 0x4D]
 
-# retn:
-#     args: no
-#     return: error
+retn:
+    args: no
+    return: [0xED, 0x45]
 
 # rl:
 #     args: no
 #     return: error
 
-# rla:
-#     args: no
-#     return: error
+rla:
+    args: no
+    return: [0x17]
 
 # rlc:
 #     args: no
 #     return: error
 
-# rlca:
-#     args: no
-#     return: error
+rlca:
+    args: no
+    return: [0x07]
 
-# rld:
-#     args: no
-#     return: error
+rld:
+    args: no
+    return: [0xED, 0x6F]
 
 # rr:
 #     args: no
 #     return: error
 
-# rra:
-#     args: no
-#     return: error
+rra:
+    args: no
+    return: [0x1F]
 
 # rrc:
 #     args: no
 #     return: error
 
-# rrca:
-#     args: no
-#     return: error
+rrca:
+    args: no
+    return: [0x0F]
 
 # rrd:
 #     args: no
@@ -282,9 +314,9 @@ ini:
 #     args: no
 #     return: error
 
-# scf:
-#     args: no
-#     return: error
+scf:
+    args: no
+    return: [0x37]
 
 # set:
 #     args: no
