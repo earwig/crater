@@ -362,10 +362,10 @@ bool argparse_immediate(ASMArgImmediate *result, ASMArgParseInfo ai)
     const ASMDefine *define = asm_deftable_find(ai.deftable, ai.arg, ai.size);
     if (define) {
         if (negative) {
-            calculate_immediate_mask(result);
             result->is_label = false;
             result->uval = define->value.uval;
             result->sval = -define->value.sval;
+            calculate_immediate_mask(result);
         } else {
             *result = define->value;
         }
@@ -386,10 +386,10 @@ bool argparse_immediate(ASMArgImmediate *result, ASMArgParseInfo ai)
     if (sval < INT16_MIN)
         return false;
 
-    calculate_immediate_mask(result);
     result->is_label = false;
     result->uval = uval;
     result->sval = sval;
+    calculate_immediate_mask(result);
     return true;
 }
 
