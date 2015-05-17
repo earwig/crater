@@ -460,7 +460,7 @@ bool argparse_indexed(ASMArgIndexed *result, ASMArgParseInfo ai)
 /*
     Read in a port argument and store it in *result.
 */
-bool argparse_port(ASMArgPort*, ASMArgParseInfo)
+bool argparse_port(ASMArgPort *result, ASMArgParseInfo ai)
 {
     if (ai.size < 3 || !adjust_for_indirection(&ai))
         return false;
@@ -470,13 +470,13 @@ bool argparse_port(ASMArgPort*, ASMArgParseInfo)
     if (argparse_register(&reg, ai)) {
         if (reg == REG_C) {
             result->type = AT_REGISTER;
-            result->addr.reg = reg;
+            result->port.reg = reg;
             return true;
         }
     } else if (argparse_immediate(&imm, ai)) {
         if (imm.mask & IMM_U8) {
             result->type = AT_IMMEDIATE;
-            result->addr.imm = imm;
+            result->port.imm = imm;
             return true;
         }
     }

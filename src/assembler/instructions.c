@@ -24,7 +24,7 @@
 /* Helper macro for parse_arg() */
 
 #define TRY_PARSER(func, argtype, field)                                      \
-    if (argparse_##func(&arg->data.field, info)) {                            \
+    if (mask & argtype && argparse_##func(&arg->data.field, info)) {          \
         arg->type = argtype;                                                  \
         return ED_NONE;                                                       \
     }
@@ -52,13 +52,6 @@
     (((reg) == REG_IX || (reg) == REG_IXH || (reg) == REG_IXL) ?              \
      INST_IX_PREFIX : INST_IY_PREFIX)
 
-#define INST_RETURN_WITH_SYMBOL_(len, label, ...) {                           \     // TODO
-        *symbol = cr_strdup(label.text);                                      \
-        INST_ALLOC_(len)                                                      \
-        INST_FILL_BYTES_(len - 2, __VA_ARGS__)                                \
-        return ED_NONE;                                                       \
-    }
-
 /* Helper macros for instruction parsers */
 
 #define INST_FUNC(mnemonic)                                                   \
@@ -75,8 +68,8 @@ static ASMErrorDesc parse_inst_##mnemonic(                                    \
     if (!ap_info.arg)                                                         \
         INST_ERROR(TOO_FEW_ARGS)                                              \
     ASMInstArg args[3];                                                       \
-    size_t nargs = 0;                                                         \
-    ASMArgType masks = {a0, a1, a2};                                          \
+    size_t nargs;                                                             \
+    ASMArgType masks[] = {a0, a1, a2};                                        \
     ASMErrorDesc err = parse_args(args, &nargs, ap_info, masks);              \
     if (err)                                                                  \
         return err;                                                           \
@@ -102,7 +95,10 @@ static ASMErrorDesc parse_inst_##mnemonic(                                    \
 
 #define INST_INDEX_PREFIX(n) INST_PREFIX_(INST_INDEX(n).reg)
 
-#define INST_INDIRECT_IMM(n)                                                  \     // TODO
+// TODO: must check for imm actually using symbol...
+// - hint: *symbol = cr_strdup(label.text);
+// - hint: INST_FILL_BYTES_(len - 2, __VA_ARGS__)
+#define INST_INDIRECT_IMM(n)                                                  \
     INST_INDIRECT(n).addr.imm.uval >> 8,                                      \
     INST_INDIRECT(n).addr.imm.uval & 0xFF
 
@@ -134,13 +130,15 @@ static uint8_t fill_bytes_variadic(uint8_t *bytes, size_t len, ...)
     Return ED_NONE (0) on success or an error code on failure.
 */
 static ASMErrorDesc parse_arg(
-    ASMInstArg *arg, const char *str, size_t size, ASMDefineTable *deftable)
+    ASMInstArg *arg, const char *str, size_t size, ASMDefineTable *deftable,
+    ASMArgType mask)
 {
     ASMArgParseInfo info = {.arg = str, .size = size, .deftable = deftable};
     TRY_PARSER(register, AT_REGISTER, reg)
     TRY_PARSER(condition, AT_CONDITION, cond)
-    TRY_PARSER(indirect, AT_INDIRECT, indirect)
     TRY_PARSER(indexed, AT_INDEXED, index)
+    TRY_PARSER(indirect, AT_INDIRECT, indirect)
+    TRY_PARSER(port, AT_PORT, port)
     TRY_PARSER(immediate, AT_IMMEDIATE, imm)
     return ED_PS_ARG_SYNTAX;
 }
@@ -151,21 +149,25 @@ static ASMErrorDesc parse_arg(
     Return ED_NONE (0) on success or an error code on failure.
 */
 static ASMErrorDesc parse_args(
-    ASMInstArg args[3], size_t *nargs, ASMArgParseInfo ap_info, ASMArgType masks[3])    // TODO
+    ASMInstArg args[3], size_t *nargs, ASMArgParseInfo ap_info,
+    ASMArgType masks[3])
 {
     ASMErrorDesc err;
     ASMDefineTable *dt = ap_info.deftable;
     const char *str = ap_info.arg;
-    size_t size = ap_info.size, start = 0, i = 0;
+    size_t size = ap_info.size, start = 0, i = 0, n = 0;
 
     while (i < size) {
         char c = str[i];
         if (c == ',') {
             if (i == start)
                 return ED_PS_ARG_SYNTAX;
-            if ((err = parse_arg(&args[*nargs], str + start, i - start, dt)))
+            if (masks[n] == AT_NONE)
+                return ED_PS_TOO_MANY_ARGS;
+            err = parse_arg(&args[n], str + start, i - start, dt, masks[n]);
+            if (err)
                 return err;
-            (*nargs)++;
+            n++;
 
             i++;
             if (i < size && str[i] == ' ')
@@ -173,7 +175,7 @@ static ASMErrorDesc parse_args(
             start = i;
             if (i == size)
                 return ED_PS_ARG_SYNTAX;
-            if (*nargs >= 3)
+            if (n >= 3)
                 return ED_PS_TOO_MANY_ARGS;
         } else {
             if ((c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') ||
@@ -186,10 +188,16 @@ static ASMErrorDesc parse_args(
     }
 
     if (i > start) {
-        if ((err = parse_arg(&args[*nargs], str + start, i - start, dt)))
+        if (masks[n] == AT_NONE)
+            return ED_PS_TOO_MANY_ARGS;
+        if ((err = parse_arg(&args[n], str + start, i - start, dt, masks[n])))
             return err;
-        (*nargs)++;
+        n++;
     }
+
+    if (n < 3 && masks[n] != AT_NONE && !(masks[n] & AT_OPTIONAL))
+        return ED_PS_TOO_FEW_ARGS;
+    *nargs = n;
     return ED_NONE;
 }
 
