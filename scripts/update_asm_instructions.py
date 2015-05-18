@@ -244,10 +244,10 @@ class Instruction(object):
                     raise RuntimeError(msg.format(byte))
 
         for i, cond in enumerate(conds):
-            if types[i] == "register" and cond.startswith("ix"):
-                ret.insert(0, "INST_IX_PREFIX")
-            elif types[i] == "register" and cond.startswith("iy"):
-                ret.insert(0, "INST_IY_PREFIX")
+            if types[i] == "register" and cond[0] == "i":
+                prefix = "INST_I{0}_PREFIX".format(cond[1].upper())
+                if ret[0] != prefix:
+                    ret.insert(0, prefix)
             elif types[i] == "indexed":
                 ret.insert(0, "INST_INDEX_PREFIX({0})".format(i))
                 ret.append("INST_INDEX({0}).offset".format(i))
