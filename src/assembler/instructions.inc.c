@@ -7,7 +7,7 @@
     `make` should trigger a rebuild when it is modified; if not, use:
     `python scripts/update_asm_instructions.py`.
 
-    @AUTOGEN_DATE Mon May 18 05:16:08 2015 UTC
+    @AUTOGEN_DATE Mon May 18 05:31:58 2015 UTC
 */
 
 /* @AUTOGEN_INST_BLOCK_START */
@@ -57,8 +57,9 @@ INST_FUNC(adc)
             INST_RETURN(2, 0xCE, INST_IMM(1).uval)
         INST_ERROR(ARG_VALUE)
     }
-    if (INST_NARGS == 2 && INST_TYPE(0) == AT_REGISTER && INST_TYPE(1) == AT_INDIRECT) {
-        if (INST_REG(0) == REG_A && (INST_INDIRECT(1).type == AT_REGISTER && INST_INDIRECT(1).addr.reg == REG_HL))
+    if (INST_NARGS == 2 && INST_TYPE(0) == AT_REGISTER && INST_TYPE(1) == AT_INDIRECT &&
+            (INST_INDIRECT(1).type == AT_REGISTER && INST_INDIRECT(1).addr.reg == REG_HL)) {
+        if (INST_REG(0) == REG_A)
             INST_RETURN(1, 0x8E)
         INST_ERROR(ARG_VALUE)
     }
@@ -131,8 +132,9 @@ INST_FUNC(add)
             INST_RETURN(2, 0xC6, INST_IMM(1).uval)
         INST_ERROR(ARG_VALUE)
     }
-    if (INST_NARGS == 2 && INST_TYPE(0) == AT_REGISTER && INST_TYPE(1) == AT_INDIRECT) {
-        if (INST_REG(0) == REG_A && (INST_INDIRECT(1).type == AT_REGISTER && INST_INDIRECT(1).addr.reg == REG_HL))
+    if (INST_NARGS == 2 && INST_TYPE(0) == AT_REGISTER && INST_TYPE(1) == AT_INDIRECT &&
+            (INST_INDIRECT(1).type == AT_REGISTER && INST_INDIRECT(1).addr.reg == REG_HL)) {
+        if (INST_REG(0) == REG_A)
             INST_RETURN(1, 0x86)
         INST_ERROR(ARG_VALUE)
     }
@@ -254,8 +256,9 @@ INST_FUNC(inc)
             INST_RETURN(1, 0x33)
         INST_ERROR(ARG_VALUE)
     }
-    if (INST_NARGS == 1 && INST_TYPE(0) == AT_INDIRECT) {
-        if ((INST_INDIRECT(0).type == AT_REGISTER && INST_INDIRECT(0).addr.reg == REG_HL))
+    if (INST_NARGS == 1 && INST_TYPE(0) == AT_INDIRECT &&
+            (INST_INDIRECT(0).type == AT_REGISTER && INST_INDIRECT(0).addr.reg == REG_HL)) {
+        if (1)
             INST_RETURN(1, 0x34)
         INST_ERROR(ARG_VALUE)
     }
@@ -550,20 +553,21 @@ INST_FUNC(ld)
             INST_RETURN(3, 0x31, INST_IMM_U16_B1(INST_IMM(1)), INST_IMM_U16_B2(INST_IMM(1)))
         INST_ERROR(ARG_VALUE)
     }
-    if (INST_NARGS == 2 && INST_TYPE(0) == AT_REGISTER && INST_TYPE(1) == AT_INDIRECT) {
-        if (INST_REG(0) == REG_A && (INST_INDIRECT(1).type == AT_REGISTER && INST_INDIRECT(1).addr.reg == REG_HL))
+    if (INST_NARGS == 2 && INST_TYPE(0) == AT_REGISTER && INST_TYPE(1) == AT_INDIRECT &&
+            (INST_INDIRECT(1).type == AT_REGISTER && INST_INDIRECT(1).addr.reg == REG_HL)) {
+        if (INST_REG(0) == REG_A)
             INST_RETURN(1, 0x7E)
-        if (INST_REG(0) == REG_B && (INST_INDIRECT(1).type == AT_REGISTER && INST_INDIRECT(1).addr.reg == REG_HL))
+        if (INST_REG(0) == REG_B)
             INST_RETURN(1, 0x46)
-        if (INST_REG(0) == REG_C && (INST_INDIRECT(1).type == AT_REGISTER && INST_INDIRECT(1).addr.reg == REG_HL))
+        if (INST_REG(0) == REG_C)
             INST_RETURN(1, 0x4E)
-        if (INST_REG(0) == REG_D && (INST_INDIRECT(1).type == AT_REGISTER && INST_INDIRECT(1).addr.reg == REG_HL))
+        if (INST_REG(0) == REG_D)
             INST_RETURN(1, 0x56)
-        if (INST_REG(0) == REG_E && (INST_INDIRECT(1).type == AT_REGISTER && INST_INDIRECT(1).addr.reg == REG_HL))
+        if (INST_REG(0) == REG_E)
             INST_RETURN(1, 0x5E)
-        if (INST_REG(0) == REG_H && (INST_INDIRECT(1).type == AT_REGISTER && INST_INDIRECT(1).addr.reg == REG_HL))
+        if (INST_REG(0) == REG_H)
             INST_RETURN(1, 0x66)
-        if (INST_REG(0) == REG_L && (INST_INDIRECT(1).type == AT_REGISTER && INST_INDIRECT(1).addr.reg == REG_HL))
+        if (INST_REG(0) == REG_L)
             INST_RETURN(1, 0x6E)
         INST_ERROR(ARG_VALUE)
     }
@@ -605,20 +609,21 @@ INST_FUNC(ld)
             INST_RETURN(4, 0xED, 0x7B, INST_IMM_U16_B1(INST_INDIRECT(1).addr.imm), INST_IMM_U16_B2(INST_INDIRECT(1).addr.imm))
         INST_ERROR(ARG_VALUE)
     }
-    if (INST_NARGS == 2 && INST_TYPE(0) == AT_INDIRECT && INST_TYPE(1) == AT_REGISTER) {
-        if ((INST_INDIRECT(0).type == AT_REGISTER && INST_INDIRECT(0).addr.reg == REG_HL) && INST_REG(1) == REG_A)
+    if (INST_NARGS == 2 && INST_TYPE(0) == AT_INDIRECT && INST_TYPE(1) == AT_REGISTER &&
+            (INST_INDIRECT(0).type == AT_REGISTER && INST_INDIRECT(0).addr.reg == REG_HL)) {
+        if (INST_REG(1) == REG_A)
             INST_RETURN(1, 0x77)
-        if ((INST_INDIRECT(0).type == AT_REGISTER && INST_INDIRECT(0).addr.reg == REG_HL) && INST_REG(1) == REG_B)
+        if (INST_REG(1) == REG_B)
             INST_RETURN(1, 0x70)
-        if ((INST_INDIRECT(0).type == AT_REGISTER && INST_INDIRECT(0).addr.reg == REG_HL) && INST_REG(1) == REG_C)
+        if (INST_REG(1) == REG_C)
             INST_RETURN(1, 0x71)
-        if ((INST_INDIRECT(0).type == AT_REGISTER && INST_INDIRECT(0).addr.reg == REG_HL) && INST_REG(1) == REG_D)
+        if (INST_REG(1) == REG_D)
             INST_RETURN(1, 0x72)
-        if ((INST_INDIRECT(0).type == AT_REGISTER && INST_INDIRECT(0).addr.reg == REG_HL) && INST_REG(1) == REG_E)
+        if (INST_REG(1) == REG_E)
             INST_RETURN(1, 0x73)
-        if ((INST_INDIRECT(0).type == AT_REGISTER && INST_INDIRECT(0).addr.reg == REG_HL) && INST_REG(1) == REG_H)
+        if (INST_REG(1) == REG_H)
             INST_RETURN(1, 0x74)
-        if ((INST_INDIRECT(0).type == AT_REGISTER && INST_INDIRECT(0).addr.reg == REG_HL) && INST_REG(1) == REG_L)
+        if (INST_REG(1) == REG_L)
             INST_RETURN(1, 0x75)
         INST_ERROR(ARG_VALUE)
     }
@@ -639,8 +644,9 @@ INST_FUNC(ld)
             INST_RETURN(3, INST_INDEX_PREFIX(0), 0x75, INST_INDEX(0).offset)
         INST_ERROR(ARG_VALUE)
     }
-    if (INST_NARGS == 2 && INST_TYPE(0) == AT_INDIRECT && INST_TYPE(1) == AT_IMMEDIATE) {
-        if ((INST_INDIRECT(0).type == AT_REGISTER && INST_INDIRECT(0).addr.reg == REG_HL) && INST_IMM(1).mask & IMM_U8)
+    if (INST_NARGS == 2 && INST_TYPE(0) == AT_INDIRECT && INST_TYPE(1) == AT_IMMEDIATE &&
+            (INST_INDIRECT(0).type == AT_REGISTER && INST_INDIRECT(0).addr.reg == REG_HL)) {
+        if (INST_IMM(1).mask & IMM_U8)
             INST_RETURN(2, 0x36, INST_IMM(1).uval)
         INST_ERROR(ARG_VALUE)
     }

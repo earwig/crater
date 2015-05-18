@@ -268,14 +268,12 @@ class Instruction(object):
             indexed = self._handle_case(case)
 
             case["type"][index] = "indirect"
-            for subcase in case["cases"]:
-                if subcase["cond"][index] != "_":
-                    raise RuntimeError(
-                        "indirect_hl_or_indexed pseudo-type requires a "
-                        "wildcard (_) in all corresponding conditionals")
-                subcase["cond"][index] = "reg.hl"
+            indirect = self._handle_case(case)
+            base_cond = self._build_case_type_check(case["type"])
+            hl_reg = TAB * 3 + self._build_indirect_check(index, "reg.hl")
+            indirect[0] = TAB + "if ({0} &&\n{1}) {{".format(base_cond, hl_reg)
 
-            return self._handle_case(case) + indexed
+            return indirect + indexed
 
         raise RuntimeError("Unknown pseudo-type: {0}".format(pseudo))
 

@@ -84,15 +84,15 @@ add:
 
 # and:
 #     args: yes
-#     return: error
+#     return: TODO
 
 # bit:
 #     args: yes
-#     return: error
+#     return: TODO
 
 # call:
 #     args: yes
-#     return: error
+#     return: TODO
 
 ccf:
     args: no
@@ -100,7 +100,7 @@ ccf:
 
 # cp:
 #     args: yes
-#     return: error
+#     return: TODO
 
 cpd:
     args: no
@@ -128,7 +128,7 @@ daa:
 
 # dec:
 #     args: yes
-#     return: error
+#     return: TODO
 
 di:
     args: no
@@ -136,7 +136,7 @@ di:
 
 # djnz:
 #     args: yes
-#     return: error
+#     return: TODO
 
 ei:
     args: no
@@ -144,7 +144,7 @@ ei:
 
 # ex:
 #     args: yes
-#     return: error
+#     return: TODO
 
 exx:
     args: no
@@ -156,11 +156,11 @@ halt:
 
 # im:
 #     args: yes
-#     return: error
+#     return: TODO
 
 # in:
 #     args: yes
-#     return: error
+#     return: TODO
 
 inc:
     args: yes
@@ -212,11 +212,11 @@ inir:
 
 # jp:
 #     args: yes
-#     return: error
+#     return: TODO
 
 # jr:
 #     args: yes
-#     return: error
+#     return: TODO
 
 ld:
     args: yes
@@ -387,7 +387,7 @@ ld:
               return: [0xED, 0x5B, u16]
             - cond:   [sp, imm]
               return: [0xED, 0x7B, u16]
-        - type: [indirect_hl_or_indexed, register]                                  # TODO, support both this and regular indirect
+        - type: [indirect_hl_or_indexed, register]
           cases:
             - cond:   [_, a]
               return: [0x77]
@@ -450,7 +450,7 @@ nop:
 
 # or:
 #     args: yes
-#     return: error
+#     return: TODO
 
 otdr:
     args: no
@@ -462,7 +462,7 @@ otir:
 
 # out:
 #     args: yes
-#     return: error
+#     return: TODO
 
 outd:
     args: no
@@ -474,19 +474,19 @@ outi:
 
 # pop:
 #     args: yes
-#     return: error
+#     return: TODO
 
 # push:
 #     args: yes
-#     return: error
+#     return: TODO
 
 # res:
 #     args: yes
-#     return: error
+#     return: TODO
 
 # ret:
 #     args: yes
-#     return: error
+#     return: TODO
 
 reti:
     args: no
@@ -498,7 +498,7 @@ retn:
 
 # rl:
 #     args: yes
-#     return: error
+#     return: TODO
 
 rla:
     args: no
@@ -506,7 +506,7 @@ rla:
 
 # rlc:
 #     args: yes
-#     return: error
+#     return: TODO
 
 rlca:
     args: no
@@ -518,7 +518,7 @@ rld:
 
 # rr:
 #     args: yes
-#     return: error
+#     return: TODO
 
 rra:
     args: no
@@ -526,7 +526,7 @@ rra:
 
 # rrc:
 #     args: yes
-#     return: error
+#     return: TODO
 
 rrca:
     args: no
@@ -534,15 +534,15 @@ rrca:
 
 # rrd:
 #     args: yes
-#     return: error
+#     return: TODO
 
 # rst:
 #     args: yes
-#     return: error
+#     return: TODO
 
 # sbc:
 #     args: yes
-#     return: error
+#     return: TODO
 
 scf:
     args: no
@@ -550,36 +550,36 @@ scf:
 
 # set:
 #     args: yes
-#     return: error
+#     return: TODO
 
 # sl1:
 #     args: yes
-#     return: error
+#     return: TODO
 
 # sla:
 #     args: yes
-#     return: error
+#     return: TODO
 
 # sll:
 #     args: yes
-#     return: error
+#     return: TODO
 
 # sls:
 #     args: yes
-#     return: error
+#     return: TODO
 
 # sra:
 #     args: yes
-#     return: error
+#     return: TODO
 
 # srl:
 #     args: yes
-#     return: error
+#     return: TODO
 
 # sub:
 #     args: yes
-#     return: error
+#     return: TODO
 
 # xor:
 #     args: yes
-#     return: error
+#     return: TODO
