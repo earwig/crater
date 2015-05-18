@@ -114,9 +114,10 @@ class Instruction(object):
             vtype = "sval" if itype.upper() in ["S8", "REL"] else "uval"
 
             test1 = "INST_IMM({0}).mask & IMM_{1}".format(num, itype.upper())
-            test2 = "!INST_IMM({0}).is_label".format(num)
-            test3 = "INST_IMM({0}).{1} == {2}".format(num, vtype, value)
-            return "({0} && {1} && {2})".format(test1, test2, test3)
+            if (itype.upper() == "U16"):
+                test1 += " && !INST_IMM({0}).is_label".format(num)
+            test2 = "INST_IMM({0}).{1} == {2}".format(num, vtype, value)
+            return "({0} && {1})".format(test1, test2)
 
         return "INST_IMM({0}).mask & IMM_{1}".format(num, cond.upper())
 
