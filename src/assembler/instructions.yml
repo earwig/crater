@@ -246,9 +246,31 @@ bit:
             - cond:   [bit.7, _]
               return: [0xCB, 0x7E]
 
-# call:
-#     args: yes
-#     return: TODO
+call:
+    args: yes
+    cases:
+        - type: [immediate]
+          cases:
+            - cond:   [u16]
+              return: [0xCD, u16]
+        - type: [condition, immediate]
+          cases:
+            - cond:   [nz, u16]
+              return: [0xC4, u16]
+            - cond:   [z, u16]
+              return: [0xCC, u16]
+            - cond:   [nc, u16]
+              return: [0xD4, u16]
+            - cond:   [c, u16]
+              return: [0xDC, u16]
+            - cond:   [po, u16]
+              return: [0xE4, u16]
+            - cond:   [pe, u16]
+              return: [0xEC, u16]
+            - cond:   [p, u16]
+              return: [0xF4, u16]
+            - cond:   [m, u16]
+              return: [0xFC, u16]
 
 ccf:
     args: no

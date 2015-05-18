@@ -7,7 +7,7 @@
     `make` should trigger a rebuild when it is modified; if not, use:
     `python scripts/update_asm_instructions.py`.
 
-    @AUTOGEN_DATE Mon May 18 08:43:46 2015 UTC
+    @AUTOGEN_DATE Mon May 18 08:55:31 2015 UTC
 */
 
 /* @AUTOGEN_INST_BLOCK_START */
@@ -352,6 +352,40 @@ INST_FUNC(bit)
             INST_RETURN(4, INST_INDEX_PREFIX(1), 0xCB, INST_INDEX(1).offset, 0x76)
         if ((INST_IMM(0).mask & IMM_BIT && INST_IMM(0).uval == 7))
             INST_RETURN(4, INST_INDEX_PREFIX(1), 0xCB, INST_INDEX(1).offset, 0x7E)
+        INST_ERROR(ARG_VALUE)
+    }
+    INST_ERROR(ARG_TYPE)
+}
+
+INST_FUNC(call)
+{
+    INST_TAKES_ARGS(
+        AT_CONDITION|AT_IMMEDIATE,
+        AT_IMMEDIATE|AT_OPTIONAL,
+        AT_NONE
+    )
+    if (INST_NARGS == 1 && INST_TYPE(0) == AT_IMMEDIATE) {
+        if (INST_IMM(0).mask & IMM_U16)
+            INST_RETURN(3, 0xCD, INST_IMM_U16_B1(INST_IMM(0)), INST_IMM_U16_B2(INST_IMM(0)))
+        INST_ERROR(ARG_VALUE)
+    }
+    if (INST_NARGS == 2 && INST_TYPE(0) == AT_CONDITION && INST_TYPE(1) == AT_IMMEDIATE) {
+        if (INST_COND(0) == COND_NZ && INST_IMM(1).mask & IMM_U16)
+            INST_RETURN(3, 0xC4, INST_IMM_U16_B1(INST_IMM(1)), INST_IMM_U16_B2(INST_IMM(1)))
+        if (INST_COND(0) == COND_Z && INST_IMM(1).mask & IMM_U16)
+            INST_RETURN(3, 0xCC, INST_IMM_U16_B1(INST_IMM(1)), INST_IMM_U16_B2(INST_IMM(1)))
+        if (INST_COND(0) == COND_NC && INST_IMM(1).mask & IMM_U16)
+            INST_RETURN(3, 0xD4, INST_IMM_U16_B1(INST_IMM(1)), INST_IMM_U16_B2(INST_IMM(1)))
+        if (INST_COND(0) == COND_C && INST_IMM(1).mask & IMM_U16)
+            INST_RETURN(3, 0xDC, INST_IMM_U16_B1(INST_IMM(1)), INST_IMM_U16_B2(INST_IMM(1)))
+        if (INST_COND(0) == COND_PO && INST_IMM(1).mask & IMM_U16)
+            INST_RETURN(3, 0xE4, INST_IMM_U16_B1(INST_IMM(1)), INST_IMM_U16_B2(INST_IMM(1)))
+        if (INST_COND(0) == COND_PE && INST_IMM(1).mask & IMM_U16)
+            INST_RETURN(3, 0xEC, INST_IMM_U16_B1(INST_IMM(1)), INST_IMM_U16_B2(INST_IMM(1)))
+        if (INST_COND(0) == COND_P && INST_IMM(1).mask & IMM_U16)
+            INST_RETURN(3, 0xF4, INST_IMM_U16_B1(INST_IMM(1)), INST_IMM_U16_B2(INST_IMM(1)))
+        if (INST_COND(0) == COND_M && INST_IMM(1).mask & IMM_U16)
+            INST_RETURN(3, 0xFC, INST_IMM_U16_B1(INST_IMM(1)), INST_IMM_U16_B2(INST_IMM(1)))
         INST_ERROR(ARG_VALUE)
     }
     INST_ERROR(ARG_TYPE)
@@ -1006,6 +1040,7 @@ static ASMInstParser lookup_parser(uint32_t key)
     HANDLE(add)
     HANDLE(and)
     HANDLE(bit)
+    HANDLE(call)
     HANDLE(ccf)
     HANDLE(cpd)
     HANDLE(cpdr)

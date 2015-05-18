@@ -302,7 +302,7 @@ bool argparse_condition(ASMArgCondition *result, ASMArgParseInfo ai)
     switch (ai.size) {
         case 1:
             switch (buf[0]) {
-                case 'n': return (*result = COND_N), true;
+                case 'z': return (*result = COND_Z), true;
                 case 'c': return (*result = COND_C), true;
                 case 'p': return (*result = COND_P), true;
                 case 'm': return (*result = COND_M), true;

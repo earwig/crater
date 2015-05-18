@@ -57,7 +57,7 @@ typedef struct {
 } ASMArgIndexed;
 
 typedef enum {
-    COND_NZ, COND_N, COND_NC, COND_C, COND_PO, COND_PE, COND_P, COND_M
+    COND_NZ, COND_Z, COND_NC, COND_C, COND_PO, COND_PE, COND_P, COND_M
 } ASMArgCondition;
 
 typedef struct {
