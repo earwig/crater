@@ -56,6 +56,7 @@ class Instruction(object):
     def __init__(self, name, data):
         self._name = name
         self._data = data
+        self._has_optional_args = False
 
     def _get_arg_parse_mask(self, num):
         """
@@ -77,6 +78,7 @@ class Instruction(object):
             return "AT_NONE"
         if optional:
             types.add("AT_OPTIONAL")
+            self._has_optional_args = True
         return "|".join(sorted(types))
 
     def _handle_return(self, ret, indent=1):
@@ -93,7 +95,11 @@ class Instruction(object):
         """
         conds = ["INST_TYPE({0}) == {1}".format(i, self.ARG_TYPES[cond])
                  for i, cond in enumerate(args)]
-        return "INST_NARGS == {0} && {1}".format(len(args), " && ".join(conds))
+        check = " && ".join(conds)
+
+        if self._has_optional_args:
+            return "INST_NARGS == {0} && ".format(len(args)) + check
+        return check
 
     def _build_register_check(self, num, cond):
         """

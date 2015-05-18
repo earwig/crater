@@ -7,7 +7,7 @@
     `make` should trigger a rebuild when it is modified; if not, use:
     `python scripts/update_asm_instructions.py`.
 
-    @AUTOGEN_DATE Mon May 18 08:55:31 2015 UTC
+    @AUTOGEN_DATE Mon May 18 09:04:07 2015 UTC
 */
 
 /* @AUTOGEN_INST_BLOCK_START */
@@ -19,7 +19,7 @@ INST_FUNC(adc)
         AT_IMMEDIATE|AT_INDEXED|AT_INDIRECT|AT_REGISTER,
         AT_NONE
     )
-    if (INST_NARGS == 2 && INST_TYPE(0) == AT_REGISTER && INST_TYPE(1) == AT_REGISTER) {
+    if (INST_TYPE(0) == AT_REGISTER && INST_TYPE(1) == AT_REGISTER) {
         if (INST_REG(0) == REG_A && INST_REG(1) == REG_A)
             INST_RETURN(1, 0x8F)
         if (INST_REG(0) == REG_A && INST_REG(1) == REG_B)
@@ -52,18 +52,18 @@ INST_FUNC(adc)
             INST_RETURN(2, 0xED, 0x7A)
         INST_ERROR(ARG_VALUE)
     }
-    if (INST_NARGS == 2 && INST_TYPE(0) == AT_REGISTER && INST_TYPE(1) == AT_IMMEDIATE) {
+    if (INST_TYPE(0) == AT_REGISTER && INST_TYPE(1) == AT_IMMEDIATE) {
         if (INST_REG(0) == REG_A && INST_IMM(1).mask & IMM_U8)
             INST_RETURN(2, 0xCE, INST_IMM(1).uval)
         INST_ERROR(ARG_VALUE)
     }
-    if (INST_NARGS == 2 && INST_TYPE(0) == AT_REGISTER && INST_TYPE(1) == AT_INDIRECT &&
+    if (INST_TYPE(0) == AT_REGISTER && INST_TYPE(1) == AT_INDIRECT &&
             (INST_INDIRECT(1).type == AT_REGISTER && INST_INDIRECT(1).addr.reg == REG_HL)) {
         if (INST_REG(0) == REG_A)
             INST_RETURN(1, 0x8E)
         INST_ERROR(ARG_VALUE)
     }
-    if (INST_NARGS == 2 && INST_TYPE(0) == AT_REGISTER && INST_TYPE(1) == AT_INDEXED) {
+    if (INST_TYPE(0) == AT_REGISTER && INST_TYPE(1) == AT_INDEXED) {
         if (INST_REG(0) == REG_A)
             INST_RETURN(3, INST_INDEX_PREFIX(1), 0x8E, INST_INDEX(1).offset)
         INST_ERROR(ARG_VALUE)
@@ -78,7 +78,7 @@ INST_FUNC(add)
         AT_IMMEDIATE|AT_INDEXED|AT_INDIRECT|AT_REGISTER,
         AT_NONE
     )
-    if (INST_NARGS == 2 && INST_TYPE(0) == AT_REGISTER && INST_TYPE(1) == AT_REGISTER) {
+    if (INST_TYPE(0) == AT_REGISTER && INST_TYPE(1) == AT_REGISTER) {
         if (INST_REG(0) == REG_A && INST_REG(1) == REG_A)
             INST_RETURN(1, 0x87)
         if (INST_REG(0) == REG_A && INST_REG(1) == REG_B)
@@ -127,18 +127,18 @@ INST_FUNC(add)
             INST_RETURN(2, INST_IY_PREFIX, 0x39)
         INST_ERROR(ARG_VALUE)
     }
-    if (INST_NARGS == 2 && INST_TYPE(0) == AT_REGISTER && INST_TYPE(1) == AT_IMMEDIATE) {
+    if (INST_TYPE(0) == AT_REGISTER && INST_TYPE(1) == AT_IMMEDIATE) {
         if (INST_REG(0) == REG_A && INST_IMM(1).mask & IMM_U8)
             INST_RETURN(2, 0xC6, INST_IMM(1).uval)
         INST_ERROR(ARG_VALUE)
     }
-    if (INST_NARGS == 2 && INST_TYPE(0) == AT_REGISTER && INST_TYPE(1) == AT_INDIRECT &&
+    if (INST_TYPE(0) == AT_REGISTER && INST_TYPE(1) == AT_INDIRECT &&
             (INST_INDIRECT(1).type == AT_REGISTER && INST_INDIRECT(1).addr.reg == REG_HL)) {
         if (INST_REG(0) == REG_A)
             INST_RETURN(1, 0x86)
         INST_ERROR(ARG_VALUE)
     }
-    if (INST_NARGS == 2 && INST_TYPE(0) == AT_REGISTER && INST_TYPE(1) == AT_INDEXED) {
+    if (INST_TYPE(0) == AT_REGISTER && INST_TYPE(1) == AT_INDEXED) {
         if (INST_REG(0) == REG_A)
             INST_RETURN(3, INST_INDEX_PREFIX(1), 0x86, INST_INDEX(1).offset)
         INST_ERROR(ARG_VALUE)
@@ -153,7 +153,7 @@ INST_FUNC(and)
         AT_NONE,
         AT_NONE
     )
-    if (INST_NARGS == 1 && INST_TYPE(0) == AT_REGISTER) {
+    if (INST_TYPE(0) == AT_REGISTER) {
         if (INST_REG(0) == REG_A)
             INST_RETURN(1, 0xA7)
         if (INST_REG(0) == REG_B)
@@ -178,16 +178,16 @@ INST_FUNC(and)
             INST_RETURN(2, INST_IY_PREFIX, 0xA5)
         INST_ERROR(ARG_VALUE)
     }
-    if (INST_NARGS == 1 && INST_TYPE(0) == AT_IMMEDIATE) {
+    if (INST_TYPE(0) == AT_IMMEDIATE) {
         if (INST_IMM(0).mask & IMM_U8)
             INST_RETURN(2, 0xE6, INST_IMM(0).uval)
         INST_ERROR(ARG_VALUE)
     }
-    if (INST_NARGS == 1 && INST_TYPE(0) == AT_INDIRECT &&
+    if (INST_TYPE(0) == AT_INDIRECT &&
             (INST_INDIRECT(0).type == AT_REGISTER && INST_INDIRECT(0).addr.reg == REG_HL)) {
         INST_RETURN(1, 0xA6)
     }
-    if (INST_NARGS == 1 && INST_TYPE(0) == AT_INDEXED) {
+    if (INST_TYPE(0) == AT_INDEXED) {
         INST_RETURN(3, INST_INDEX_PREFIX(0), 0xA6, INST_INDEX(0).offset)
     }
     INST_ERROR(ARG_TYPE)
@@ -200,7 +200,7 @@ INST_FUNC(bit)
         AT_INDEXED|AT_INDIRECT|AT_REGISTER,
         AT_NONE
     )
-    if (INST_NARGS == 2 && INST_TYPE(0) == AT_IMMEDIATE && INST_TYPE(1) == AT_REGISTER) {
+    if (INST_TYPE(0) == AT_IMMEDIATE && INST_TYPE(1) == AT_REGISTER) {
         if ((INST_IMM(0).mask & IMM_BIT && INST_IMM(0).uval == 0) && INST_REG(1) == REG_A)
             INST_RETURN(2, 0xCB, 0x47)
         if ((INST_IMM(0).mask & IMM_BIT && INST_IMM(0).uval == 0) && INST_REG(1) == REG_B)
@@ -315,7 +315,7 @@ INST_FUNC(bit)
             INST_RETURN(2, 0xCB, 0x7D)
         INST_ERROR(ARG_VALUE)
     }
-    if (INST_NARGS == 2 && INST_TYPE(0) == AT_IMMEDIATE && INST_TYPE(1) == AT_INDIRECT &&
+    if (INST_TYPE(0) == AT_IMMEDIATE && INST_TYPE(1) == AT_INDIRECT &&
             (INST_INDIRECT(1).type == AT_REGISTER && INST_INDIRECT(1).addr.reg == REG_HL)) {
         if ((INST_IMM(0).mask & IMM_BIT && INST_IMM(0).uval == 0))
             INST_RETURN(2, 0xCB, 0x46)
@@ -335,7 +335,7 @@ INST_FUNC(bit)
             INST_RETURN(2, 0xCB, 0x7E)
         INST_ERROR(ARG_VALUE)
     }
-    if (INST_NARGS == 2 && INST_TYPE(0) == AT_IMMEDIATE && INST_TYPE(1) == AT_INDEXED) {
+    if (INST_TYPE(0) == AT_IMMEDIATE && INST_TYPE(1) == AT_INDEXED) {
         if ((INST_IMM(0).mask & IMM_BIT && INST_IMM(0).uval == 0))
             INST_RETURN(4, INST_INDEX_PREFIX(1), 0xCB, INST_INDEX(1).offset, 0x46)
         if ((INST_IMM(0).mask & IMM_BIT && INST_IMM(0).uval == 1))
@@ -464,7 +464,7 @@ INST_FUNC(inc)
         AT_NONE,
         AT_NONE
     )
-    if (INST_NARGS == 1 && INST_TYPE(0) == AT_REGISTER) {
+    if (INST_TYPE(0) == AT_REGISTER) {
         if (INST_REG(0) == REG_A)
             INST_RETURN(1, 0x3C)
         if (INST_REG(0) == REG_B)
@@ -501,11 +501,11 @@ INST_FUNC(inc)
             INST_RETURN(1, 0x33)
         INST_ERROR(ARG_VALUE)
     }
-    if (INST_NARGS == 1 && INST_TYPE(0) == AT_INDIRECT &&
+    if (INST_TYPE(0) == AT_INDIRECT &&
             (INST_INDIRECT(0).type == AT_REGISTER && INST_INDIRECT(0).addr.reg == REG_HL)) {
         INST_RETURN(1, 0x34)
     }
-    if (INST_NARGS == 1 && INST_TYPE(0) == AT_INDEXED) {
+    if (INST_TYPE(0) == AT_INDEXED) {
         INST_RETURN(3, INST_INDEX_PREFIX(0), 0x34, INST_INDEX(0).offset)
     }
     INST_ERROR(ARG_TYPE)
@@ -542,7 +542,7 @@ INST_FUNC(ld)
         AT_IMMEDIATE|AT_INDEXED|AT_INDIRECT|AT_REGISTER,
         AT_NONE
     )
-    if (INST_NARGS == 2 && INST_TYPE(0) == AT_REGISTER && INST_TYPE(1) == AT_REGISTER) {
+    if (INST_TYPE(0) == AT_REGISTER && INST_TYPE(1) == AT_REGISTER) {
         if (INST_REG(0) == REG_A && INST_REG(1) == REG_A)
             INST_RETURN(1, 0x7F)
         if (INST_REG(0) == REG_A && INST_REG(1) == REG_B)
@@ -757,7 +757,7 @@ INST_FUNC(ld)
             INST_RETURN(2, INST_IY_PREFIX, 0xF9)
         INST_ERROR(ARG_VALUE)
     }
-    if (INST_NARGS == 2 && INST_TYPE(0) == AT_REGISTER && INST_TYPE(1) == AT_IMMEDIATE) {
+    if (INST_TYPE(0) == AT_REGISTER && INST_TYPE(1) == AT_IMMEDIATE) {
         if (INST_REG(0) == REG_A && INST_IMM(1).mask & IMM_U8)
             INST_RETURN(2, 0x3E, INST_IMM(1).uval)
         if (INST_REG(0) == REG_B && INST_IMM(1).mask & IMM_U8)
@@ -794,7 +794,7 @@ INST_FUNC(ld)
             INST_RETURN(3, 0x31, INST_IMM_U16_B1(INST_IMM(1)), INST_IMM_U16_B2(INST_IMM(1)))
         INST_ERROR(ARG_VALUE)
     }
-    if (INST_NARGS == 2 && INST_TYPE(0) == AT_REGISTER && INST_TYPE(1) == AT_INDIRECT &&
+    if (INST_TYPE(0) == AT_REGISTER && INST_TYPE(1) == AT_INDIRECT &&
             (INST_INDIRECT(1).type == AT_REGISTER && INST_INDIRECT(1).addr.reg == REG_HL)) {
         if (INST_REG(0) == REG_A)
             INST_RETURN(1, 0x7E)
@@ -812,7 +812,7 @@ INST_FUNC(ld)
             INST_RETURN(1, 0x6E)
         INST_ERROR(ARG_VALUE)
     }
-    if (INST_NARGS == 2 && INST_TYPE(0) == AT_REGISTER && INST_TYPE(1) == AT_INDEXED) {
+    if (INST_TYPE(0) == AT_REGISTER && INST_TYPE(1) == AT_INDEXED) {
         if (INST_REG(0) == REG_A)
             INST_RETURN(3, INST_INDEX_PREFIX(1), 0x7E, INST_INDEX(1).offset)
         if (INST_REG(0) == REG_B)
@@ -829,7 +829,7 @@ INST_FUNC(ld)
             INST_RETURN(3, INST_INDEX_PREFIX(1), 0x6E, INST_INDEX(1).offset)
         INST_ERROR(ARG_VALUE)
     }
-    if (INST_NARGS == 2 && INST_TYPE(0) == AT_REGISTER && INST_TYPE(1) == AT_INDIRECT) {
+    if (INST_TYPE(0) == AT_REGISTER && INST_TYPE(1) == AT_INDIRECT) {
         if (INST_REG(0) == REG_A && (INST_INDIRECT(1).type == AT_REGISTER && INST_INDIRECT(1).addr.reg == REG_BC))
             INST_RETURN(1, 0x0A)
         if (INST_REG(0) == REG_A && (INST_INDIRECT(1).type == AT_REGISTER && INST_INDIRECT(1).addr.reg == REG_DE))
@@ -850,7 +850,7 @@ INST_FUNC(ld)
             INST_RETURN(4, 0xED, 0x7B, INST_IMM_U16_B1(INST_INDIRECT(1).addr.imm), INST_IMM_U16_B2(INST_INDIRECT(1).addr.imm))
         INST_ERROR(ARG_VALUE)
     }
-    if (INST_NARGS == 2 && INST_TYPE(0) == AT_INDIRECT && INST_TYPE(1) == AT_REGISTER &&
+    if (INST_TYPE(0) == AT_INDIRECT && INST_TYPE(1) == AT_REGISTER &&
             (INST_INDIRECT(0).type == AT_REGISTER && INST_INDIRECT(0).addr.reg == REG_HL)) {
         if (INST_REG(1) == REG_A)
             INST_RETURN(1, 0x77)
@@ -868,7 +868,7 @@ INST_FUNC(ld)
             INST_RETURN(1, 0x75)
         INST_ERROR(ARG_VALUE)
     }
-    if (INST_NARGS == 2 && INST_TYPE(0) == AT_INDEXED && INST_TYPE(1) == AT_REGISTER) {
+    if (INST_TYPE(0) == AT_INDEXED && INST_TYPE(1) == AT_REGISTER) {
         if (INST_REG(1) == REG_A)
             INST_RETURN(3, INST_INDEX_PREFIX(0), 0x77, INST_INDEX(0).offset)
         if (INST_REG(1) == REG_B)
@@ -885,18 +885,18 @@ INST_FUNC(ld)
             INST_RETURN(3, INST_INDEX_PREFIX(0), 0x75, INST_INDEX(0).offset)
         INST_ERROR(ARG_VALUE)
     }
-    if (INST_NARGS == 2 && INST_TYPE(0) == AT_INDIRECT && INST_TYPE(1) == AT_IMMEDIATE &&
+    if (INST_TYPE(0) == AT_INDIRECT && INST_TYPE(1) == AT_IMMEDIATE &&
             (INST_INDIRECT(0).type == AT_REGISTER && INST_INDIRECT(0).addr.reg == REG_HL)) {
         if (INST_IMM(1).mask & IMM_U8)
             INST_RETURN(2, 0x36, INST_IMM(1).uval)
         INST_ERROR(ARG_VALUE)
     }
-    if (INST_NARGS == 2 && INST_TYPE(0) == AT_INDEXED && INST_TYPE(1) == AT_IMMEDIATE) {
+    if (INST_TYPE(0) == AT_INDEXED && INST_TYPE(1) == AT_IMMEDIATE) {
         if (INST_IMM(1).mask & IMM_U8)
             INST_RETURN(4, INST_INDEX_PREFIX(0), 0x36, INST_INDEX(0).offset, INST_IMM(1).uval)
         INST_ERROR(ARG_VALUE)
     }
-    if (INST_NARGS == 2 && INST_TYPE(0) == AT_INDIRECT && INST_TYPE(1) == AT_REGISTER) {
+    if (INST_TYPE(0) == AT_INDIRECT && INST_TYPE(1) == AT_REGISTER) {
         if ((INST_INDIRECT(0).type == AT_REGISTER && INST_INDIRECT(0).addr.reg == REG_BC) && INST_REG(1) == REG_A)
             INST_RETURN(1, 0x02)
         if ((INST_INDIRECT(0).type == AT_REGISTER && INST_INDIRECT(0).addr.reg == REG_DE) && INST_REG(1) == REG_A)
