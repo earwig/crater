@@ -7,7 +7,7 @@
     `make` should trigger a rebuild when it is modified; if not, use:
     `python scripts/update_asm_instructions.py`.
 
-    @AUTOGEN_DATE Mon May 18 08:11:32 2015 UTC
+    @AUTOGEN_DATE Mon May 18 08:27:39 2015 UTC
 */
 
 /* @AUTOGEN_INST_BLOCK_START */
@@ -695,7 +695,7 @@ INST_FUNC(ld)
     }
     if (INST_NARGS == 2 && INST_TYPE(0) == AT_INDEXED && INST_TYPE(1) == AT_IMMEDIATE) {
         if (INST_IMM(1).mask & IMM_U8)
-            INST_RETURN(4, INST_INDEX_PREFIX(0), 0x36, INST_IMM(1).uval, INST_INDEX(0).offset)
+            INST_RETURN(4, INST_INDEX_PREFIX(0), 0x36, INST_INDEX(0).offset, INST_IMM(1).uval)
         INST_ERROR(ARG_VALUE)
     }
     if (INST_NARGS == 2 && INST_TYPE(0) == AT_INDIRECT && INST_TYPE(1) == AT_REGISTER) {

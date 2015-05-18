@@ -250,7 +250,7 @@ class Instruction(object):
                     ret.insert(0, prefix)
             elif types[i] == "indexed":
                 ret.insert(0, "INST_INDEX_PREFIX({0})".format(i))
-                ret.append("INST_INDEX({0}).offset".format(i))
+                ret.insert(2, "INST_INDEX({0}).offset".format(i))
 
         return ret
 
