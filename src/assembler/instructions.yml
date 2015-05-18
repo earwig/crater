@@ -82,9 +82,33 @@ add:
             - cond:   [a, _]
               return: [0x86]
 
-# and:
-#     args: yes
-#     return: TODO
+and:
+    args: yes
+    cases:
+        - type: [register]
+          cases:
+            - cond:   [a]
+              return: [0xA7]
+            - cond:   [b]
+              return: [0xA0]
+            - cond:   [c]
+              return: [0xA1]
+            - cond:   [d]
+              return: [0xA2]
+            - cond:   [e]
+              return: [0xA3]
+            - cond:   [h|ih]
+              return: [0xA4]
+            - cond:   [l|il]
+              return: [0xA5]
+        - type: [immediate]
+          cases:
+            - cond:   [u8]
+              return: [0xE6, u8]
+        - type: [indirect_hl_or_indexed]
+          cases:
+            - cond:   [_]
+              return: [0xA6]
 
 # bit:
 #     args: yes

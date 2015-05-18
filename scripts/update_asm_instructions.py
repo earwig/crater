@@ -179,7 +179,7 @@ class Instruction(object):
         """
         conds = [self._SUBCASE_LOOKUP_TABLE[types[i]](self, i, cond)
                  for i, cond in enumerate(conds) if cond != "_"]
-        return " && ".join(conds) if conds else "1"
+        return " && ".join(conds)
 
     def _iter_permutations(self, types, conds):
         """
@@ -281,22 +281,29 @@ class Instruction(object):
         """
         Return code to handle an instruction case.
         """
+        ctype = case["type"]
         for pseudo in self.PSEUDO_TYPES:
-            if pseudo in case["type"]:
+            if pseudo in ctype:
                 return self._handle_pseudo_case(pseudo, case)
 
         lines = []
-        cond = self._build_case_type_check(case["type"])
+        cond = self._build_case_type_check(ctype)
         lines.append(TAB + "if ({0}) {{".format(cond))
 
-        for subcase in case["cases"]:
-            for perm in self._iter_permutations(case["type"], subcase["cond"]):
-                cond = self._build_subcase_check(case["type"], perm)
-                ret = self._adapt_return(case["type"], perm, subcase["return"])
-                lines.append(TAB * 2 + "if ({0})".format(cond))
+        subcases = [(perm, sub["return"]) for sub in case["cases"]
+                    for perm in self._iter_permutations(ctype, sub["cond"])]
+        for cond, ret in subcases:
+            check = self._build_subcase_check(ctype, cond)
+            ret = self._adapt_return(ctype, cond, ret)
+            if check:
+                lines.append(TAB * 2 + "if ({0})".format(check))
                 lines.append(self._handle_return(ret, 3))
+            else:
+                lines.append(self._handle_return(ret, 2))
+                break  # Unconditional subcase
+        else:
+            lines.append(TAB * 2 + "INST_ERROR(ARG_VALUE)")
 
-        lines.append(TAB * 2 + "INST_ERROR(ARG_VALUE)")
         lines.append(TAB + "}")
         return lines
 
