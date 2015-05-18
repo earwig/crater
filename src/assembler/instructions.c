@@ -83,6 +83,9 @@ static ASMErrorDesc parse_inst_##mnemonic(                                    \
 #define INST_COND(n) args[n].data.cond
 #define INST_PORT(n) args[n].data.port
 
+#define INST_IX_PREFIX 0xDD
+#define INST_IY_PREFIX 0xFD
+
 #define INST_RETURN(len, ...) {                                               \
         (void) symbol;                                                        \
         INST_ALLOC_(len)                                                      \
@@ -90,17 +93,12 @@ static ASMErrorDesc parse_inst_##mnemonic(                                    \
         return ED_NONE;                                                       \
     }
 
-#define INST_IX_PREFIX 0xDD
-#define INST_IY_PREFIX 0xFD
+#define INST_IMM_U16_B1(imm)                                                  \
+    ((imm).is_label ? (*symbol = cr_strdup((imm).label), 0) : (imm).uval >> 8)
+#define INST_IMM_U16_B2(imm)                                                  \
+    ((imm).is_label ? 0 : (imm).uval & 0xFF)
 
 #define INST_INDEX_PREFIX(n) INST_PREFIX_(INST_INDEX(n).reg)
-
-// TODO: must check for imm actually using symbol...
-// - hint: *symbol = cr_strdup(label.text);
-// - hint: INST_FILL_BYTES_(len - 2, __VA_ARGS__)
-#define INST_INDIRECT_IMM(n)                                                  \
-    INST_INDIRECT(n).addr.imm.uval >> 8,                                      \
-    INST_INDIRECT(n).addr.imm.uval & 0xFF
 
 /* ----------------------------- END WORK BLOCK ---------------------------- */
 

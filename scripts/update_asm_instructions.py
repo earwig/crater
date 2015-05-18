@@ -77,7 +77,7 @@ class Instruction(object):
             return "AT_NONE"
         if optional:
             types.add("AT_OPTIONAL")
-        return "|".join(types)
+        return "|".join(sorted(types))
 
     def _handle_return(self, ret, indent=1):
         """
@@ -105,7 +105,19 @@ class Instruction(object):
         """
         Return an expression to check for a particular immediate value.
         """
-        # TODO: also allow direct value comparisons here
+        if "." in cond:
+            itype, value = cond.split(".", 1)
+            try:
+                value = int(value)
+            except ValueError:
+                value = int(value, 16)
+            vtype = "sval" if itype.upper() in ["S8", "REL"] else "uval"
+
+            test1 = "INST_IMM({0}).mask & IMM_{1}".format(num, itype.upper())
+            test2 = "!INST_IMM({0}).is_label".format(num)
+            test3 = "INST_IMM({0}).{1} == {2}".format(num, vtype, value)
+            return "({0} && {1} && {2})".format(test1, test2, test3)
+
         return "INST_IMM({0}).mask & IMM_{1}".format(num, cond.upper())
 
     def _build_indirect_check(self, num, cond):
@@ -140,7 +152,14 @@ class Instruction(object):
         """
         Return an expression to check for a particular port value.
         """
-        # TODO
+        if cond.startswith("reg."):
+            test1 = "INST_PORT({0}).type == AT_REGISTER".format(num)
+            test2 = "INST_PORT({0}).port.reg == REG_{1}".format(
+                num, cond[len("reg."):].upper())
+            return "({0} && {1})".format(test1, test2)
+
+        if cond == "imm" or cond == "immediate":
+            return "INST_PORT({0}).type == AT_IMMEDIATE".format(num)
 
         err = "Unknown condition for port argument: {0}"
         return RuntimeError(err.format(cond))
@@ -168,19 +187,30 @@ class Instruction(object):
         """
         def split(typ, cond):
             if "|" in cond:
-                sets = [split(typ, c) for c in cond.split("|")]
-                return {choice for s in sets for choice in s}
+                splits = [split(typ, c) for c in cond.split("|")]
+                merged = [choice for s in splits for choice in s]
+                if len(merged) != len(set(merged)):
+                    msg = "Repeated conditions for {0}: {1}"
+                    raise RuntimeError(msg.format(typ, cond))
+                return merged
             if typ == "register":
                 if cond == "i":
-                    return {"ix", "iy"}
+                    return ["ix", "iy"]
                 if cond == "ih":
-                    return {"ixh", "iyh"}
+                    return ["ixh", "iyh"]
                 if cond == "il":
-                    return {"ixl", "iyl"}
-            return {cond}
+                    return ["ixl", "iyl"]
+            return [cond]
 
-        return product(*(split(types[i], cond)
-                         for i, cond in enumerate(conds)))
+        splits = [split(typ, cond) for typ, cond in zip(types, conds)]
+        num = max(len(cond) for cond in splits)
+
+        if any(1 < len(cond) < num for cond in splits):
+            msg = "Invalid condition permutations: {0}"
+            raise RuntimeError(msg.format(conds))
+
+        choices = [cond * num if len(cond) == 1 else cond for cond in splits]
+        return zip(*choices)
 
     def _adapt_return(self, types, conds, ret):
         """
@@ -190,8 +220,25 @@ class Instruction(object):
         for i, byte in enumerate(ret):
             if not isinstance(byte, int):
                 if byte == "u8":
-                    imm = types.index("immediate")
-                    ret[i] = "INST_IMM({0}).uval".format(imm)
+                    index = types.index("immediate")
+                    ret[i] = "INST_IMM({0}).uval".format(index)
+
+                elif byte == "u16":
+                    if i < len(ret) - 1:
+                        raise RuntimeError("U16 return byte must be last")
+                    try:
+                        index = types.index("immediate")
+                        imm = "INST_IMM({0})".format(index)
+                    except ValueError:
+                        indir = types.index("indirect")
+                        if not conds[indir].startswith("imm"):
+                            msg = "Passing non-immediate indirect as immediate"
+                            raise RuntimeError(msg)
+                        imm = "INST_INDIRECT({0}).addr.imm".format(indir)
+                    ret[i] = "INST_IMM_U16_B1({0})".format(imm)
+                    ret.append("INST_IMM_U16_B2({0})".format(imm))
+                    break
+
                 else:
                     msg = "Unsupported return byte: {0}"
                     raise RuntimeError(msg.format(byte))
