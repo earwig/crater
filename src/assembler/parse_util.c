@@ -57,29 +57,31 @@ static bool adjust_for_indirection(ASMArgParseInfo *ap_info)
 /*
     Calculate the mask field for an ASMArgImmediate based on its uval/sval.
 */
-static void calculate_immediate_mask(ASMArgImmediate *imm)
+static ASMArgImmType calculate_immediate_mask(uint32_t uval, bool negative)
 {
-    imm->mask = 0;
-    if (imm->sval < 0) {
-        if (imm->sval >= INT8_MIN)
-            imm->mask |= IMM_S8;
-        if (imm->sval >= INT8_MIN + 2)
-            imm->mask |= IMM_REL;
+    ASMArgImmType mask = 0;
+    if (negative && uval != 0) {
+        int32_t sval = -uval;
+        if (sval >= INT8_MIN)
+            mask |= IMM_S8;
+        if (sval >= INT8_MIN + 2)
+            mask |= IMM_REL;
     } else {
-        imm->mask = IMM_U16;
-        if (imm->uval <= UINT8_MAX)
-            imm->mask |= IMM_U8;
-        if (imm->uval <= INT8_MAX)
-            imm->mask |= IMM_S8;
-        if (imm->uval <= INT8_MAX + 2)
-            imm->mask |= IMM_REL;
-        if (imm->uval <= 7)
-            imm->mask |= IMM_BIT;
-        if (!(imm->uval & ~0x38))
-            imm->mask |= IMM_RST;
-        if (imm->uval <= 2)
-            imm->mask |= IMM_IM;
+        mask = IMM_U16;
+        if (uval <= UINT8_MAX)
+            mask |= IMM_U8;
+        if (uval <= INT8_MAX)
+            mask |= IMM_S8;
+        if (uval <= INT8_MAX + 2)
+            mask |= IMM_REL;
+        if (uval <= 7)
+            mask |= IMM_BIT;
+        if (!(uval & ~0x38))
+            mask |= IMM_RST;
+        if (uval <= 2)
+            mask |= IMM_IM;
     }
+    return mask;
 }
 
 /*
@@ -365,7 +367,7 @@ bool argparse_immediate(ASMArgImmediate *result, ASMArgParseInfo ai)
             result->is_label = false;
             result->uval = define->value.uval;
             result->sval = -define->value.sval;
-            calculate_immediate_mask(result);
+            result->mask = calculate_immediate_mask(result->uval, true);
         } else {
             *result = define->value;
         }
@@ -389,7 +391,7 @@ bool argparse_immediate(ASMArgImmediate *result, ASMArgParseInfo ai)
     result->is_label = false;
     result->uval = uval;
     result->sval = sval;
-    calculate_immediate_mask(result);
+    result->mask = calculate_immediate_mask(uval, negative);
     return true;
 }
 
