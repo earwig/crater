@@ -7,7 +7,7 @@
     `make` should trigger a rebuild when it is modified; if not, use:
     `python scripts/update_asm_instructions.py`.
 
-    @AUTOGEN_DATE Tue May 19 06:49:06 2015 UTC
+    @AUTOGEN_DATE Tue May 19 07:10:15 2015 UTC
 */
 
 /* @AUTOGEN_INST_BLOCK_START */
@@ -561,6 +561,32 @@ INST_FUNC(ei)
     INST_RETURN(1, 0xFB)
 }
 
+INST_FUNC(ex)
+{
+    INST_TAKES_ARGS(
+        AT_INDIRECT|AT_REGISTER,
+        AT_REGISTER,
+        AT_NONE
+    )
+    if (INST_TYPE(0) == AT_REGISTER && INST_TYPE(1) == AT_REGISTER) {
+        if (INST_REG(0) == REG_AF && INST_REG(1) == REG_AF_)
+            INST_RETURN(1, 0x08)
+        if (INST_REG(0) == REG_DE && INST_REG(1) == REG_HL)
+            INST_RETURN(1, 0xEB)
+        INST_ERROR(ARG_VALUE)
+    }
+    if (INST_TYPE(0) == AT_INDIRECT && INST_TYPE(1) == AT_REGISTER) {
+        if ((INST_INDIRECT(0).type == AT_REGISTER && INST_INDIRECT(0).addr.reg == REG_SP) && INST_REG(1) == REG_HL)
+            INST_RETURN(1, 0xE3)
+        if ((INST_INDIRECT(0).type == AT_REGISTER && INST_INDIRECT(0).addr.reg == REG_SP) && INST_REG(1) == REG_IX)
+            INST_RETURN(2, INST_IX_PREFIX, 0xE3)
+        if ((INST_INDIRECT(0).type == AT_REGISTER && INST_INDIRECT(0).addr.reg == REG_SP) && INST_REG(1) == REG_IY)
+            INST_RETURN(2, INST_IY_PREFIX, 0xE3)
+        INST_ERROR(ARG_VALUE)
+    }
+    INST_ERROR(ARG_TYPE)
+}
+
 INST_FUNC(exx)
 {
     INST_TAKES_NO_ARGS
@@ -571,6 +597,59 @@ INST_FUNC(halt)
 {
     INST_TAKES_NO_ARGS
     INST_RETURN(1, 0x76)
+}
+
+INST_FUNC(im)
+{
+    INST_TAKES_ARGS(
+        AT_IMMEDIATE,
+        AT_NONE,
+        AT_NONE
+    )
+    if (INST_TYPE(0) == AT_IMMEDIATE) {
+        if ((INST_IMM(0).mask & IMM_IM && INST_IMM(0).uval == 0))
+            INST_RETURN(2, 0xED, 0x46)
+        if ((INST_IMM(0).mask & IMM_IM && INST_IMM(0).uval == 1))
+            INST_RETURN(2, 0xED, 0x56)
+        if ((INST_IMM(0).mask & IMM_IM && INST_IMM(0).uval == 2))
+            INST_RETURN(2, 0xED, 0x5E)
+        INST_ERROR(ARG_VALUE)
+    }
+    INST_ERROR(ARG_TYPE)
+}
+
+INST_FUNC(in)
+{
+    INST_TAKES_ARGS(
+        AT_PORT|AT_REGISTER,
+        AT_OPTIONAL|AT_PORT,
+        AT_NONE
+    )
+    if (INST_NARGS == 2 && INST_TYPE(0) == AT_REGISTER && INST_TYPE(1) == AT_PORT) {
+        if (INST_REG(0) == REG_A && INST_PORT(1).type == AT_IMMEDIATE)
+            INST_RETURN(2, 0xDB, INST_PORT(1).port.imm.uval)
+        if (INST_REG(0) == REG_A && INST_PORT(1).type == AT_REGISTER)
+            INST_RETURN(2, 0xED, 0x78)
+        if (INST_REG(0) == REG_B && INST_PORT(1).type == AT_REGISTER)
+            INST_RETURN(2, 0xED, 0x40)
+        if (INST_REG(0) == REG_C && INST_PORT(1).type == AT_REGISTER)
+            INST_RETURN(2, 0xED, 0x48)
+        if (INST_REG(0) == REG_D && INST_PORT(1).type == AT_REGISTER)
+            INST_RETURN(2, 0xED, 0x50)
+        if (INST_REG(0) == REG_E && INST_PORT(1).type == AT_REGISTER)
+            INST_RETURN(2, 0xED, 0x58)
+        if (INST_REG(0) == REG_H && INST_PORT(1).type == AT_REGISTER)
+            INST_RETURN(2, 0xED, 0x60)
+        if (INST_REG(0) == REG_L && INST_PORT(1).type == AT_REGISTER)
+            INST_RETURN(2, 0xED, 0x68)
+        INST_ERROR(ARG_VALUE)
+    }
+    if (INST_NARGS == 1 && INST_TYPE(0) == AT_PORT) {
+        if (INST_PORT(0).type == AT_REGISTER)
+            INST_RETURN(2, 0xED, 0x70)
+        INST_ERROR(ARG_VALUE)
+    }
+    INST_ERROR(ARG_TYPE)
 }
 
 INST_FUNC(inc)
@@ -1169,8 +1248,11 @@ static ASMInstParser lookup_parser(uint32_t key)
     HANDLE(di)
     HANDLE(djnz)
     HANDLE(ei)
+    HANDLE(ex)
     HANDLE(exx)
     HANDLE(halt)
+    HANDLE(im)
+    HANDLE(in)
     HANDLE(inc)
     HANDLE(ind)
     HANDLE(indr)

@@ -376,9 +376,19 @@ ei:
     args: no
     return: [0xFB]
 
-# ex:
-#     args: yes
-#     return: TODO
+ex:
+    args: yes
+    cases:
+        - type: [register, register]
+          cases:
+            - cond:   [af, af_]
+              return: [0x08]
+            - cond:   [de, hl]
+              return: [0xEB]
+        - type: [indirect, register]
+          cases:
+            - cond:   [reg.sp, hl|i]
+              return: [0xE3]
 
 exx:
     args: no
@@ -388,13 +398,43 @@ halt:
     args: no
     return: [0x76]
 
-# im:
-#     args: yes
-#     return: TODO
+im:
+    args: yes
+    cases:
+        - type: [immediate]
+          cases:
+            - cond:   [im.0]
+              return: [0xED, 0x46]
+            - cond:   [im.1]
+              return: [0xED, 0x56]
+            - cond:   [im.2]
+              return: [0xED, 0x5E]
 
-# in:
-#     args: yes
-#     return: TODO
+in:
+    args: yes
+    cases:
+        - type: [register, port]
+          cases:
+            - cond:   [a, imm]
+              return: [0xDB, u8]
+            - cond:   [a, reg.c]
+              return: [0xED, 0x78]
+            - cond:   [b, reg.c]
+              return: [0xED, 0x40]
+            - cond:   [c, reg.c]
+              return: [0xED, 0x48]
+            - cond:   [d, reg.c]
+              return: [0xED, 0x50]
+            - cond:   [e, reg.c]
+              return: [0xED, 0x58]
+            - cond:   [h, reg.c]
+              return: [0xED, 0x60]
+            - cond:   [l, reg.c]
+              return: [0xED, 0x68]
+        - type: [port]
+          cases:
+            - cond:   [reg.c]
+              return: [0xED, 0x70]
 
 inc:
     args: yes

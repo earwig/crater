@@ -159,12 +159,8 @@ class Instruction(object):
         """
         Return an expression to check for a particular port value.
         """
-        if cond.startswith("reg."):
-            test1 = "INST_PORT({0}).type == AT_REGISTER".format(num)
-            test2 = "INST_PORT({0}).port.reg == REG_{1}".format(
-                num, cond[len("reg."):].upper())
-            return "({0} && {1})".format(test1, test2)
-
+        if cond == "reg" or cond == "reg.c":
+            return "INST_PORT({0}).type == AT_REGISTER".format(num)
         if cond == "imm" or cond == "immediate":
             return "INST_PORT({0}).type == AT_IMMEDIATE".format(num)
 
@@ -227,8 +223,13 @@ class Instruction(object):
         for i, byte in enumerate(ret):
             if not isinstance(byte, int):
                 if byte == "u8":
-                    index = types.index("immediate")
-                    ret[i] = "INST_IMM({0}).uval".format(index)
+                    try:
+                        index = types.index("immediate")
+                        imm = "INST_IMM({0})".format(index)
+                    except ValueError:
+                        index = types.index("port")
+                        imm = "INST_PORT({0}).port.imm".format(index)
+                    ret[i] = imm + ".uval"
 
                 elif byte == "u16":
                     if i < len(ret) - 1:
