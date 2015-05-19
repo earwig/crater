@@ -246,6 +246,10 @@ class Instruction(object):
                     ret.append("INST_IMM_U16_B2({0})".format(imm))
                     break
 
+                elif byte == "rel":
+                    index = types.index("immediate")
+                    ret[i] = "INST_IMM({0}).sval - 2".format(index)
+
                 else:
                     msg = "Unsupported return byte: {0}"
                     raise RuntimeError(msg.format(byte))

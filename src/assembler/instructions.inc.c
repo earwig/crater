@@ -7,7 +7,7 @@
     `make` should trigger a rebuild when it is modified; if not, use:
     `python scripts/update_asm_instructions.py`.
 
-    @AUTOGEN_DATE Mon May 18 09:04:07 2015 UTC
+    @AUTOGEN_DATE Tue May 19 06:49:06 2015 UTC
 */
 
 /* @AUTOGEN_INST_BLOCK_START */
@@ -397,6 +397,53 @@ INST_FUNC(ccf)
     INST_RETURN(1, 0x3F)
 }
 
+INST_FUNC(cp)
+{
+    INST_TAKES_ARGS(
+        AT_IMMEDIATE|AT_INDEXED|AT_INDIRECT|AT_REGISTER,
+        AT_NONE,
+        AT_NONE
+    )
+    if (INST_TYPE(0) == AT_REGISTER) {
+        if (INST_REG(0) == REG_A)
+            INST_RETURN(1, 0xBF)
+        if (INST_REG(0) == REG_B)
+            INST_RETURN(1, 0xB8)
+        if (INST_REG(0) == REG_C)
+            INST_RETURN(1, 0xB9)
+        if (INST_REG(0) == REG_D)
+            INST_RETURN(1, 0xBA)
+        if (INST_REG(0) == REG_E)
+            INST_RETURN(1, 0xBB)
+        if (INST_REG(0) == REG_H)
+            INST_RETURN(1, 0xBC)
+        if (INST_REG(0) == REG_IXH)
+            INST_RETURN(2, INST_IX_PREFIX, 0xBC)
+        if (INST_REG(0) == REG_IYH)
+            INST_RETURN(2, INST_IY_PREFIX, 0xBC)
+        if (INST_REG(0) == REG_L)
+            INST_RETURN(1, 0xBD)
+        if (INST_REG(0) == REG_IXL)
+            INST_RETURN(2, INST_IX_PREFIX, 0xBD)
+        if (INST_REG(0) == REG_IYL)
+            INST_RETURN(2, INST_IY_PREFIX, 0xBD)
+        INST_ERROR(ARG_VALUE)
+    }
+    if (INST_TYPE(0) == AT_INDIRECT &&
+            (INST_INDIRECT(0).type == AT_REGISTER && INST_INDIRECT(0).addr.reg == REG_HL)) {
+        INST_RETURN(1, 0xBE)
+    }
+    if (INST_TYPE(0) == AT_INDEXED) {
+        INST_RETURN(3, INST_INDEX_PREFIX(0), 0xBE, INST_INDEX(0).offset)
+    }
+    if (INST_TYPE(0) == AT_IMMEDIATE) {
+        if (INST_IMM(0).mask & IMM_U8)
+            INST_RETURN(2, 0xFE, INST_IMM(0).uval)
+        INST_ERROR(ARG_VALUE)
+    }
+    INST_ERROR(ARG_TYPE)
+}
+
 INST_FUNC(cpd)
 {
     INST_TAKES_NO_ARGS
@@ -433,10 +480,79 @@ INST_FUNC(daa)
     INST_RETURN(1, 0x27)
 }
 
+INST_FUNC(dec)
+{
+    INST_TAKES_ARGS(
+        AT_INDEXED|AT_INDIRECT|AT_REGISTER,
+        AT_NONE,
+        AT_NONE
+    )
+    if (INST_TYPE(0) == AT_REGISTER) {
+        if (INST_REG(0) == REG_A)
+            INST_RETURN(1, 0x3D)
+        if (INST_REG(0) == REG_B)
+            INST_RETURN(1, 0x05)
+        if (INST_REG(0) == REG_C)
+            INST_RETURN(1, 0x0D)
+        if (INST_REG(0) == REG_D)
+            INST_RETURN(1, 0x15)
+        if (INST_REG(0) == REG_E)
+            INST_RETURN(1, 0x1D)
+        if (INST_REG(0) == REG_H)
+            INST_RETURN(1, 0x25)
+        if (INST_REG(0) == REG_IXH)
+            INST_RETURN(2, INST_IX_PREFIX, 0x25)
+        if (INST_REG(0) == REG_IYH)
+            INST_RETURN(2, INST_IY_PREFIX, 0x25)
+        if (INST_REG(0) == REG_L)
+            INST_RETURN(1, 0x2D)
+        if (INST_REG(0) == REG_IXL)
+            INST_RETURN(2, INST_IX_PREFIX, 0x2D)
+        if (INST_REG(0) == REG_IYL)
+            INST_RETURN(2, INST_IY_PREFIX, 0x2D)
+        if (INST_REG(0) == REG_BC)
+            INST_RETURN(1, 0x0B)
+        if (INST_REG(0) == REG_DE)
+            INST_RETURN(1, 0x1B)
+        if (INST_REG(0) == REG_HL)
+            INST_RETURN(1, 0x2B)
+        if (INST_REG(0) == REG_IX)
+            INST_RETURN(2, INST_IX_PREFIX, 0x2B)
+        if (INST_REG(0) == REG_IY)
+            INST_RETURN(2, INST_IY_PREFIX, 0x2B)
+        if (INST_REG(0) == REG_SP)
+            INST_RETURN(1, 0x3B)
+        INST_ERROR(ARG_VALUE)
+    }
+    if (INST_TYPE(0) == AT_INDIRECT &&
+            (INST_INDIRECT(0).type == AT_REGISTER && INST_INDIRECT(0).addr.reg == REG_HL)) {
+        INST_RETURN(1, 0x35)
+    }
+    if (INST_TYPE(0) == AT_INDEXED) {
+        INST_RETURN(3, INST_INDEX_PREFIX(0), 0x35, INST_INDEX(0).offset)
+    }
+    INST_ERROR(ARG_TYPE)
+}
+
 INST_FUNC(di)
 {
     INST_TAKES_NO_ARGS
     INST_RETURN(1, 0xF3)
+}
+
+INST_FUNC(djnz)
+{
+    INST_TAKES_ARGS(
+        AT_IMMEDIATE,
+        AT_NONE,
+        AT_NONE
+    )
+    if (INST_TYPE(0) == AT_IMMEDIATE) {
+        if (INST_IMM(0).mask & IMM_REL)
+            INST_RETURN(2, 0x10, INST_IMM(0).sval - 2)
+        INST_ERROR(ARG_VALUE)
+    }
+    INST_ERROR(ARG_TYPE)
 }
 
 INST_FUNC(ei)
@@ -1042,13 +1158,16 @@ static ASMInstParser lookup_parser(uint32_t key)
     HANDLE(bit)
     HANDLE(call)
     HANDLE(ccf)
+    HANDLE(cp)
     HANDLE(cpd)
     HANDLE(cpdr)
     HANDLE(cpi)
     HANDLE(cpir)
     HANDLE(cpl)
     HANDLE(daa)
+    HANDLE(dec)
     HANDLE(di)
+    HANDLE(djnz)
     HANDLE(ei)
     HANDLE(exx)
     HANDLE(halt)

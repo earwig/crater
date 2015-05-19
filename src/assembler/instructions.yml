@@ -276,9 +276,33 @@ ccf:
     args: no
     return: [0x3F]
 
-# cp:
-#     args: yes
-#     return: TODO
+cp:
+    args: yes
+    cases:
+        - type: [register]
+          cases:
+            - cond:   [a]
+              return: [0xBF]
+            - cond:   [b]
+              return: [0xB8]
+            - cond:   [c]
+              return: [0xB9]
+            - cond:   [d]
+              return: [0xBA]
+            - cond:   [e]
+              return: [0xBB]
+            - cond:   [h|ih]
+              return: [0xBC]
+            - cond:   [l|il]
+              return: [0xBD]
+        - type: [indirect_hl_or_indexed]
+          cases:
+            - cond:   [_]
+              return: [0xBE]
+        - type: [immediate]
+          cases:
+            - cond:   [u8]
+              return: [0xFE, u8]
 
 cpd:
     args: no
@@ -304,17 +328,49 @@ daa:
     args: no
     return: [0x27]
 
-# dec:
-#     args: yes
-#     return: TODO
+dec:
+    args: yes
+    cases:
+        - type: [register]
+          cases:
+            - cond:   [a]
+              return: [0x3D]
+            - cond:   [b]
+              return: [0x05]
+            - cond:   [c]
+              return: [0x0D]
+            - cond:   [d]
+              return: [0x15]
+            - cond:   [e]
+              return: [0x1D]
+            - cond:   [h|ih]
+              return: [0x25]
+            - cond:   [l|il]
+              return: [0x2D]
+            - cond:   [bc]
+              return: [0x0B]
+            - cond:   [de]
+              return: [0x1B]
+            - cond:   [hl|i]
+              return: [0x2B]
+            - cond:   [sp]
+              return: [0x3B]
+        - type: [indirect_hl_or_indexed]
+          cases:
+            - cond:   [_]
+              return: [0x35]
 
 di:
     args: no
     return: [0xF3]
 
-# djnz:
-#     args: yes
-#     return: TODO
+djnz:
+    args: yes
+    cases:
+        - type: [immediate]
+          cases:
+            - cond:   [rel]
+              return: [0x10, rel]
 
 ei:
     args: no
