@@ -7,7 +7,7 @@
     `make` should trigger a rebuild when it is modified; if not, use:
     `python scripts/update_asm_instructions.py`.
 
-    @AUTOGEN_DATE Wed May 20 06:53:00 2015 UTC
+    @AUTOGEN_DATE Wed May 20 07:15:29 2015 UTC
 */
 
 /* @AUTOGEN_INST_BLOCK_START */
@@ -1696,10 +1696,112 @@ INST_FUNC(retn)
     INST_RETURN(2, 0xED, 0x45)
 }
 
+INST_FUNC(rl)
+{
+    INST_TAKES_ARGS(
+        AT_INDEXED|AT_INDIRECT|AT_REGISTER,
+        AT_OPTIONAL|AT_REGISTER,
+        AT_NONE
+    )
+    if (INST_NARGS == 1 && INST_TYPE(0) == AT_REGISTER) {
+        if (INST_REG(0) == REG_A)
+            INST_RETURN(2, 0xCB, 0x17)
+        if (INST_REG(0) == REG_B)
+            INST_RETURN(2, 0xCB, 0x10)
+        if (INST_REG(0) == REG_C)
+            INST_RETURN(2, 0xCB, 0x11)
+        if (INST_REG(0) == REG_D)
+            INST_RETURN(2, 0xCB, 0x12)
+        if (INST_REG(0) == REG_E)
+            INST_RETURN(2, 0xCB, 0x13)
+        if (INST_REG(0) == REG_H)
+            INST_RETURN(2, 0xCB, 0x14)
+        if (INST_REG(0) == REG_L)
+            INST_RETURN(2, 0xCB, 0x15)
+        INST_ERROR(ARG_VALUE)
+    }
+    if (INST_NARGS == 1 && INST_TYPE(0) == AT_INDIRECT &&
+            (INST_INDIRECT(0).type == AT_REGISTER && INST_INDIRECT(0).addr.reg == REG_HL)) {
+        INST_RETURN(2, 0xCB, 0x16)
+    }
+    if (INST_NARGS == 1 && INST_TYPE(0) == AT_INDEXED) {
+        INST_RETURN(4, INST_INDEX_PREFIX(0), 0xCB, INST_INDEX(0).offset, 0x16)
+    }
+    if (INST_NARGS == 2 && INST_TYPE(0) == AT_INDEXED && INST_TYPE(1) == AT_REGISTER) {
+        if (INST_REG(1) == REG_A)
+            INST_RETURN(4, INST_INDEX_PREFIX(0), 0xCB, INST_INDEX(0).offset, 0x17)
+        if (INST_REG(1) == REG_B)
+            INST_RETURN(4, INST_INDEX_PREFIX(0), 0xCB, INST_INDEX(0).offset, 0x10)
+        if (INST_REG(1) == REG_C)
+            INST_RETURN(4, INST_INDEX_PREFIX(0), 0xCB, INST_INDEX(0).offset, 0x11)
+        if (INST_REG(1) == REG_D)
+            INST_RETURN(4, INST_INDEX_PREFIX(0), 0xCB, INST_INDEX(0).offset, 0x12)
+        if (INST_REG(1) == REG_E)
+            INST_RETURN(4, INST_INDEX_PREFIX(0), 0xCB, INST_INDEX(0).offset, 0x13)
+        if (INST_REG(1) == REG_H)
+            INST_RETURN(4, INST_INDEX_PREFIX(0), 0xCB, INST_INDEX(0).offset, 0x14)
+        if (INST_REG(1) == REG_L)
+            INST_RETURN(4, INST_INDEX_PREFIX(0), 0xCB, INST_INDEX(0).offset, 0x15)
+        INST_ERROR(ARG_VALUE)
+    }
+    INST_ERROR(ARG_TYPE)
+}
+
 INST_FUNC(rla)
 {
     INST_TAKES_NO_ARGS
     INST_RETURN(1, 0x17)
+}
+
+INST_FUNC(rlc)
+{
+    INST_TAKES_ARGS(
+        AT_INDEXED|AT_INDIRECT|AT_REGISTER,
+        AT_OPTIONAL|AT_REGISTER,
+        AT_NONE
+    )
+    if (INST_NARGS == 1 && INST_TYPE(0) == AT_REGISTER) {
+        if (INST_REG(0) == REG_A)
+            INST_RETURN(2, 0xCB, 0x07)
+        if (INST_REG(0) == REG_B)
+            INST_RETURN(2, 0xCB, 0x00)
+        if (INST_REG(0) == REG_C)
+            INST_RETURN(2, 0xCB, 0x01)
+        if (INST_REG(0) == REG_D)
+            INST_RETURN(2, 0xCB, 0x02)
+        if (INST_REG(0) == REG_E)
+            INST_RETURN(2, 0xCB, 0x03)
+        if (INST_REG(0) == REG_H)
+            INST_RETURN(2, 0xCB, 0x04)
+        if (INST_REG(0) == REG_L)
+            INST_RETURN(2, 0xCB, 0x05)
+        INST_ERROR(ARG_VALUE)
+    }
+    if (INST_NARGS == 1 && INST_TYPE(0) == AT_INDIRECT &&
+            (INST_INDIRECT(0).type == AT_REGISTER && INST_INDIRECT(0).addr.reg == REG_HL)) {
+        INST_RETURN(2, 0xCB, 0x06)
+    }
+    if (INST_NARGS == 1 && INST_TYPE(0) == AT_INDEXED) {
+        INST_RETURN(4, INST_INDEX_PREFIX(0), 0xCB, INST_INDEX(0).offset, 0x06)
+    }
+    if (INST_NARGS == 2 && INST_TYPE(0) == AT_INDEXED && INST_TYPE(1) == AT_REGISTER) {
+        if (INST_REG(1) == REG_A)
+            INST_RETURN(4, INST_INDEX_PREFIX(0), 0xCB, INST_INDEX(0).offset, 0x07)
+        if (INST_REG(1) == REG_B)
+            INST_RETURN(4, INST_INDEX_PREFIX(0), 0xCB, INST_INDEX(0).offset, 0x00)
+        if (INST_REG(1) == REG_C)
+            INST_RETURN(4, INST_INDEX_PREFIX(0), 0xCB, INST_INDEX(0).offset, 0x01)
+        if (INST_REG(1) == REG_D)
+            INST_RETURN(4, INST_INDEX_PREFIX(0), 0xCB, INST_INDEX(0).offset, 0x02)
+        if (INST_REG(1) == REG_E)
+            INST_RETURN(4, INST_INDEX_PREFIX(0), 0xCB, INST_INDEX(0).offset, 0x03)
+        if (INST_REG(1) == REG_H)
+            INST_RETURN(4, INST_INDEX_PREFIX(0), 0xCB, INST_INDEX(0).offset, 0x04)
+        if (INST_REG(1) == REG_L)
+            INST_RETURN(4, INST_INDEX_PREFIX(0), 0xCB, INST_INDEX(0).offset, 0x05)
+        INST_ERROR(ARG_VALUE)
+    }
+    INST_ERROR(ARG_TYPE)
 }
 
 INST_FUNC(rlca)
@@ -1714,10 +1816,112 @@ INST_FUNC(rld)
     INST_RETURN(2, 0xED, 0x6F)
 }
 
+INST_FUNC(rr)
+{
+    INST_TAKES_ARGS(
+        AT_INDEXED|AT_INDIRECT|AT_REGISTER,
+        AT_OPTIONAL|AT_REGISTER,
+        AT_NONE
+    )
+    if (INST_NARGS == 1 && INST_TYPE(0) == AT_REGISTER) {
+        if (INST_REG(0) == REG_A)
+            INST_RETURN(2, 0xCB, 0x1F)
+        if (INST_REG(0) == REG_B)
+            INST_RETURN(2, 0xCB, 0x18)
+        if (INST_REG(0) == REG_C)
+            INST_RETURN(2, 0xCB, 0x19)
+        if (INST_REG(0) == REG_D)
+            INST_RETURN(2, 0xCB, 0x1A)
+        if (INST_REG(0) == REG_E)
+            INST_RETURN(2, 0xCB, 0x1B)
+        if (INST_REG(0) == REG_H)
+            INST_RETURN(2, 0xCB, 0x1C)
+        if (INST_REG(0) == REG_L)
+            INST_RETURN(2, 0xCB, 0x1D)
+        INST_ERROR(ARG_VALUE)
+    }
+    if (INST_NARGS == 1 && INST_TYPE(0) == AT_INDIRECT &&
+            (INST_INDIRECT(0).type == AT_REGISTER && INST_INDIRECT(0).addr.reg == REG_HL)) {
+        INST_RETURN(2, 0xCB, 0x1E)
+    }
+    if (INST_NARGS == 1 && INST_TYPE(0) == AT_INDEXED) {
+        INST_RETURN(4, INST_INDEX_PREFIX(0), 0xCB, INST_INDEX(0).offset, 0x1E)
+    }
+    if (INST_NARGS == 2 && INST_TYPE(0) == AT_INDEXED && INST_TYPE(1) == AT_REGISTER) {
+        if (INST_REG(1) == REG_A)
+            INST_RETURN(4, INST_INDEX_PREFIX(0), 0xCB, INST_INDEX(0).offset, 0x1F)
+        if (INST_REG(1) == REG_B)
+            INST_RETURN(4, INST_INDEX_PREFIX(0), 0xCB, INST_INDEX(0).offset, 0x18)
+        if (INST_REG(1) == REG_C)
+            INST_RETURN(4, INST_INDEX_PREFIX(0), 0xCB, INST_INDEX(0).offset, 0x19)
+        if (INST_REG(1) == REG_D)
+            INST_RETURN(4, INST_INDEX_PREFIX(0), 0xCB, INST_INDEX(0).offset, 0x1A)
+        if (INST_REG(1) == REG_E)
+            INST_RETURN(4, INST_INDEX_PREFIX(0), 0xCB, INST_INDEX(0).offset, 0x1B)
+        if (INST_REG(1) == REG_H)
+            INST_RETURN(4, INST_INDEX_PREFIX(0), 0xCB, INST_INDEX(0).offset, 0x1C)
+        if (INST_REG(1) == REG_L)
+            INST_RETURN(4, INST_INDEX_PREFIX(0), 0xCB, INST_INDEX(0).offset, 0x1D)
+        INST_ERROR(ARG_VALUE)
+    }
+    INST_ERROR(ARG_TYPE)
+}
+
 INST_FUNC(rra)
 {
     INST_TAKES_NO_ARGS
     INST_RETURN(1, 0x1F)
+}
+
+INST_FUNC(rrc)
+{
+    INST_TAKES_ARGS(
+        AT_INDEXED|AT_INDIRECT|AT_REGISTER,
+        AT_OPTIONAL|AT_REGISTER,
+        AT_NONE
+    )
+    if (INST_NARGS == 1 && INST_TYPE(0) == AT_REGISTER) {
+        if (INST_REG(0) == REG_A)
+            INST_RETURN(2, 0xCB, 0x0F)
+        if (INST_REG(0) == REG_B)
+            INST_RETURN(2, 0xCB, 0x08)
+        if (INST_REG(0) == REG_C)
+            INST_RETURN(2, 0xCB, 0x09)
+        if (INST_REG(0) == REG_D)
+            INST_RETURN(2, 0xCB, 0x0A)
+        if (INST_REG(0) == REG_E)
+            INST_RETURN(2, 0xCB, 0x0B)
+        if (INST_REG(0) == REG_H)
+            INST_RETURN(2, 0xCB, 0x0C)
+        if (INST_REG(0) == REG_L)
+            INST_RETURN(2, 0xCB, 0x0D)
+        INST_ERROR(ARG_VALUE)
+    }
+    if (INST_NARGS == 1 && INST_TYPE(0) == AT_INDIRECT &&
+            (INST_INDIRECT(0).type == AT_REGISTER && INST_INDIRECT(0).addr.reg == REG_HL)) {
+        INST_RETURN(2, 0xCB, 0x0E)
+    }
+    if (INST_NARGS == 1 && INST_TYPE(0) == AT_INDEXED) {
+        INST_RETURN(4, INST_INDEX_PREFIX(0), 0xCB, INST_INDEX(0).offset, 0x0E)
+    }
+    if (INST_NARGS == 2 && INST_TYPE(0) == AT_INDEXED && INST_TYPE(1) == AT_REGISTER) {
+        if (INST_REG(1) == REG_A)
+            INST_RETURN(4, INST_INDEX_PREFIX(0), 0xCB, INST_INDEX(0).offset, 0x0F)
+        if (INST_REG(1) == REG_B)
+            INST_RETURN(4, INST_INDEX_PREFIX(0), 0xCB, INST_INDEX(0).offset, 0x08)
+        if (INST_REG(1) == REG_C)
+            INST_RETURN(4, INST_INDEX_PREFIX(0), 0xCB, INST_INDEX(0).offset, 0x09)
+        if (INST_REG(1) == REG_D)
+            INST_RETURN(4, INST_INDEX_PREFIX(0), 0xCB, INST_INDEX(0).offset, 0x0A)
+        if (INST_REG(1) == REG_E)
+            INST_RETURN(4, INST_INDEX_PREFIX(0), 0xCB, INST_INDEX(0).offset, 0x0B)
+        if (INST_REG(1) == REG_H)
+            INST_RETURN(4, INST_INDEX_PREFIX(0), 0xCB, INST_INDEX(0).offset, 0x0C)
+        if (INST_REG(1) == REG_L)
+            INST_RETURN(4, INST_INDEX_PREFIX(0), 0xCB, INST_INDEX(0).offset, 0x0D)
+        INST_ERROR(ARG_VALUE)
+    }
+    INST_ERROR(ARG_TYPE)
 }
 
 INST_FUNC(rrca)
@@ -2011,6 +2215,304 @@ INST_FUNC(set)
     INST_ERROR(ARG_TYPE)
 }
 
+INST_FUNC(sl1)
+{
+    INST_TAKES_ARGS(
+        AT_INDEXED|AT_INDIRECT|AT_REGISTER,
+        AT_OPTIONAL|AT_REGISTER,
+        AT_NONE
+    )
+    if (INST_NARGS == 1 && INST_TYPE(0) == AT_REGISTER) {
+        if (INST_REG(0) == REG_A)
+            INST_RETURN(2, 0xCB, 0x37)
+        if (INST_REG(0) == REG_B)
+            INST_RETURN(2, 0xCB, 0x30)
+        if (INST_REG(0) == REG_C)
+            INST_RETURN(2, 0xCB, 0x31)
+        if (INST_REG(0) == REG_D)
+            INST_RETURN(2, 0xCB, 0x32)
+        if (INST_REG(0) == REG_E)
+            INST_RETURN(2, 0xCB, 0x33)
+        if (INST_REG(0) == REG_H)
+            INST_RETURN(2, 0xCB, 0x34)
+        if (INST_REG(0) == REG_L)
+            INST_RETURN(2, 0xCB, 0x35)
+        INST_ERROR(ARG_VALUE)
+    }
+    if (INST_NARGS == 1 && INST_TYPE(0) == AT_INDIRECT &&
+            (INST_INDIRECT(0).type == AT_REGISTER && INST_INDIRECT(0).addr.reg == REG_HL)) {
+        INST_RETURN(2, 0xCB, 0x36)
+    }
+    if (INST_NARGS == 1 && INST_TYPE(0) == AT_INDEXED) {
+        INST_RETURN(4, INST_INDEX_PREFIX(0), 0xCB, INST_INDEX(0).offset, 0x36)
+    }
+    if (INST_NARGS == 2 && INST_TYPE(0) == AT_INDEXED && INST_TYPE(1) == AT_REGISTER) {
+        if (INST_REG(1) == REG_A)
+            INST_RETURN(4, INST_INDEX_PREFIX(0), 0xCB, INST_INDEX(0).offset, 0x37)
+        if (INST_REG(1) == REG_B)
+            INST_RETURN(4, INST_INDEX_PREFIX(0), 0xCB, INST_INDEX(0).offset, 0x30)
+        if (INST_REG(1) == REG_C)
+            INST_RETURN(4, INST_INDEX_PREFIX(0), 0xCB, INST_INDEX(0).offset, 0x31)
+        if (INST_REG(1) == REG_D)
+            INST_RETURN(4, INST_INDEX_PREFIX(0), 0xCB, INST_INDEX(0).offset, 0x32)
+        if (INST_REG(1) == REG_E)
+            INST_RETURN(4, INST_INDEX_PREFIX(0), 0xCB, INST_INDEX(0).offset, 0x33)
+        if (INST_REG(1) == REG_H)
+            INST_RETURN(4, INST_INDEX_PREFIX(0), 0xCB, INST_INDEX(0).offset, 0x34)
+        if (INST_REG(1) == REG_L)
+            INST_RETURN(4, INST_INDEX_PREFIX(0), 0xCB, INST_INDEX(0).offset, 0x35)
+        INST_ERROR(ARG_VALUE)
+    }
+    INST_ERROR(ARG_TYPE)
+}
+
+INST_FUNC(sla)
+{
+    INST_TAKES_ARGS(
+        AT_INDEXED|AT_INDIRECT|AT_REGISTER,
+        AT_OPTIONAL|AT_REGISTER,
+        AT_NONE
+    )
+    if (INST_NARGS == 1 && INST_TYPE(0) == AT_REGISTER) {
+        if (INST_REG(0) == REG_A)
+            INST_RETURN(2, 0xCB, 0x27)
+        if (INST_REG(0) == REG_B)
+            INST_RETURN(2, 0xCB, 0x20)
+        if (INST_REG(0) == REG_C)
+            INST_RETURN(2, 0xCB, 0x21)
+        if (INST_REG(0) == REG_D)
+            INST_RETURN(2, 0xCB, 0x22)
+        if (INST_REG(0) == REG_E)
+            INST_RETURN(2, 0xCB, 0x23)
+        if (INST_REG(0) == REG_H)
+            INST_RETURN(2, 0xCB, 0x24)
+        if (INST_REG(0) == REG_L)
+            INST_RETURN(2, 0xCB, 0x25)
+        INST_ERROR(ARG_VALUE)
+    }
+    if (INST_NARGS == 1 && INST_TYPE(0) == AT_INDIRECT &&
+            (INST_INDIRECT(0).type == AT_REGISTER && INST_INDIRECT(0).addr.reg == REG_HL)) {
+        INST_RETURN(2, 0xCB, 0x26)
+    }
+    if (INST_NARGS == 1 && INST_TYPE(0) == AT_INDEXED) {
+        INST_RETURN(4, INST_INDEX_PREFIX(0), 0xCB, INST_INDEX(0).offset, 0x26)
+    }
+    if (INST_NARGS == 2 && INST_TYPE(0) == AT_INDEXED && INST_TYPE(1) == AT_REGISTER) {
+        if (INST_REG(1) == REG_A)
+            INST_RETURN(4, INST_INDEX_PREFIX(0), 0xCB, INST_INDEX(0).offset, 0x27)
+        if (INST_REG(1) == REG_B)
+            INST_RETURN(4, INST_INDEX_PREFIX(0), 0xCB, INST_INDEX(0).offset, 0x20)
+        if (INST_REG(1) == REG_C)
+            INST_RETURN(4, INST_INDEX_PREFIX(0), 0xCB, INST_INDEX(0).offset, 0x21)
+        if (INST_REG(1) == REG_D)
+            INST_RETURN(4, INST_INDEX_PREFIX(0), 0xCB, INST_INDEX(0).offset, 0x22)
+        if (INST_REG(1) == REG_E)
+            INST_RETURN(4, INST_INDEX_PREFIX(0), 0xCB, INST_INDEX(0).offset, 0x23)
+        if (INST_REG(1) == REG_H)
+            INST_RETURN(4, INST_INDEX_PREFIX(0), 0xCB, INST_INDEX(0).offset, 0x24)
+        if (INST_REG(1) == REG_L)
+            INST_RETURN(4, INST_INDEX_PREFIX(0), 0xCB, INST_INDEX(0).offset, 0x25)
+        INST_ERROR(ARG_VALUE)
+    }
+    INST_ERROR(ARG_TYPE)
+}
+
+INST_FUNC(sll)
+{
+    INST_TAKES_ARGS(
+        AT_INDEXED|AT_INDIRECT|AT_REGISTER,
+        AT_OPTIONAL|AT_REGISTER,
+        AT_NONE
+    )
+    if (INST_NARGS == 1 && INST_TYPE(0) == AT_REGISTER) {
+        if (INST_REG(0) == REG_A)
+            INST_RETURN(2, 0xCB, 0x37)
+        if (INST_REG(0) == REG_B)
+            INST_RETURN(2, 0xCB, 0x30)
+        if (INST_REG(0) == REG_C)
+            INST_RETURN(2, 0xCB, 0x31)
+        if (INST_REG(0) == REG_D)
+            INST_RETURN(2, 0xCB, 0x32)
+        if (INST_REG(0) == REG_E)
+            INST_RETURN(2, 0xCB, 0x33)
+        if (INST_REG(0) == REG_H)
+            INST_RETURN(2, 0xCB, 0x34)
+        if (INST_REG(0) == REG_L)
+            INST_RETURN(2, 0xCB, 0x35)
+        INST_ERROR(ARG_VALUE)
+    }
+    if (INST_NARGS == 1 && INST_TYPE(0) == AT_INDIRECT) {
+        INST_RETURN(2, 0xCB, 0x36)
+    }
+    if (INST_NARGS == 2 && INST_TYPE(0) == AT_INDEXED && INST_TYPE(1) == AT_REGISTER) {
+        if (INST_REG(1) == REG_A)
+            INST_RETURN(4, INST_INDEX_PREFIX(0), 0xCB, INST_INDEX(0).offset, 0x37)
+        if (INST_REG(1) == REG_B)
+            INST_RETURN(4, INST_INDEX_PREFIX(0), 0xCB, INST_INDEX(0).offset, 0x30)
+        if (INST_REG(1) == REG_C)
+            INST_RETURN(4, INST_INDEX_PREFIX(0), 0xCB, INST_INDEX(0).offset, 0x31)
+        if (INST_REG(1) == REG_D)
+            INST_RETURN(4, INST_INDEX_PREFIX(0), 0xCB, INST_INDEX(0).offset, 0x32)
+        if (INST_REG(1) == REG_E)
+            INST_RETURN(4, INST_INDEX_PREFIX(0), 0xCB, INST_INDEX(0).offset, 0x33)
+        if (INST_REG(1) == REG_H)
+            INST_RETURN(4, INST_INDEX_PREFIX(0), 0xCB, INST_INDEX(0).offset, 0x34)
+        if (INST_REG(1) == REG_L)
+            INST_RETURN(4, INST_INDEX_PREFIX(0), 0xCB, INST_INDEX(0).offset, 0x35)
+        INST_ERROR(ARG_VALUE)
+    }
+    INST_ERROR(ARG_TYPE)
+}
+
+INST_FUNC(sls)
+{
+    INST_TAKES_ARGS(
+        AT_INDEXED|AT_INDIRECT|AT_REGISTER,
+        AT_OPTIONAL|AT_REGISTER,
+        AT_NONE
+    )
+    if (INST_NARGS == 1 && INST_TYPE(0) == AT_REGISTER) {
+        if (INST_REG(0) == REG_A)
+            INST_RETURN(2, 0xCB, 0x37)
+        if (INST_REG(0) == REG_B)
+            INST_RETURN(2, 0xCB, 0x30)
+        if (INST_REG(0) == REG_C)
+            INST_RETURN(2, 0xCB, 0x31)
+        if (INST_REG(0) == REG_D)
+            INST_RETURN(2, 0xCB, 0x32)
+        if (INST_REG(0) == REG_E)
+            INST_RETURN(2, 0xCB, 0x33)
+        if (INST_REG(0) == REG_H)
+            INST_RETURN(2, 0xCB, 0x34)
+        if (INST_REG(0) == REG_L)
+            INST_RETURN(2, 0xCB, 0x35)
+        INST_ERROR(ARG_VALUE)
+    }
+    if (INST_NARGS == 1 && INST_TYPE(0) == AT_INDIRECT) {
+        INST_RETURN(2, 0xCB, 0x36)
+    }
+    if (INST_NARGS == 2 && INST_TYPE(0) == AT_INDEXED && INST_TYPE(1) == AT_REGISTER) {
+        if (INST_REG(1) == REG_A)
+            INST_RETURN(4, INST_INDEX_PREFIX(0), 0xCB, INST_INDEX(0).offset, 0x37)
+        if (INST_REG(1) == REG_B)
+            INST_RETURN(4, INST_INDEX_PREFIX(0), 0xCB, INST_INDEX(0).offset, 0x30)
+        if (INST_REG(1) == REG_C)
+            INST_RETURN(4, INST_INDEX_PREFIX(0), 0xCB, INST_INDEX(0).offset, 0x31)
+        if (INST_REG(1) == REG_D)
+            INST_RETURN(4, INST_INDEX_PREFIX(0), 0xCB, INST_INDEX(0).offset, 0x32)
+        if (INST_REG(1) == REG_E)
+            INST_RETURN(4, INST_INDEX_PREFIX(0), 0xCB, INST_INDEX(0).offset, 0x33)
+        if (INST_REG(1) == REG_H)
+            INST_RETURN(4, INST_INDEX_PREFIX(0), 0xCB, INST_INDEX(0).offset, 0x34)
+        if (INST_REG(1) == REG_L)
+            INST_RETURN(4, INST_INDEX_PREFIX(0), 0xCB, INST_INDEX(0).offset, 0x35)
+        INST_ERROR(ARG_VALUE)
+    }
+    INST_ERROR(ARG_TYPE)
+}
+
+INST_FUNC(sra)
+{
+    INST_TAKES_ARGS(
+        AT_INDEXED|AT_INDIRECT|AT_REGISTER,
+        AT_OPTIONAL|AT_REGISTER,
+        AT_NONE
+    )
+    if (INST_NARGS == 1 && INST_TYPE(0) == AT_REGISTER) {
+        if (INST_REG(0) == REG_A)
+            INST_RETURN(2, 0xCB, 0x2F)
+        if (INST_REG(0) == REG_B)
+            INST_RETURN(2, 0xCB, 0x28)
+        if (INST_REG(0) == REG_C)
+            INST_RETURN(2, 0xCB, 0x29)
+        if (INST_REG(0) == REG_D)
+            INST_RETURN(2, 0xCB, 0x2A)
+        if (INST_REG(0) == REG_E)
+            INST_RETURN(2, 0xCB, 0x2B)
+        if (INST_REG(0) == REG_H)
+            INST_RETURN(2, 0xCB, 0x2C)
+        if (INST_REG(0) == REG_L)
+            INST_RETURN(2, 0xCB, 0x2D)
+        INST_ERROR(ARG_VALUE)
+    }
+    if (INST_NARGS == 1 && INST_TYPE(0) == AT_INDIRECT &&
+            (INST_INDIRECT(0).type == AT_REGISTER && INST_INDIRECT(0).addr.reg == REG_HL)) {
+        INST_RETURN(2, 0xCB, 0x2E)
+    }
+    if (INST_NARGS == 1 && INST_TYPE(0) == AT_INDEXED) {
+        INST_RETURN(4, INST_INDEX_PREFIX(0), 0xCB, INST_INDEX(0).offset, 0x2E)
+    }
+    if (INST_NARGS == 2 && INST_TYPE(0) == AT_INDEXED && INST_TYPE(1) == AT_REGISTER) {
+        if (INST_REG(1) == REG_A)
+            INST_RETURN(4, INST_INDEX_PREFIX(0), 0xCB, INST_INDEX(0).offset, 0x2F)
+        if (INST_REG(1) == REG_B)
+            INST_RETURN(4, INST_INDEX_PREFIX(0), 0xCB, INST_INDEX(0).offset, 0x28)
+        if (INST_REG(1) == REG_C)
+            INST_RETURN(4, INST_INDEX_PREFIX(0), 0xCB, INST_INDEX(0).offset, 0x29)
+        if (INST_REG(1) == REG_D)
+            INST_RETURN(4, INST_INDEX_PREFIX(0), 0xCB, INST_INDEX(0).offset, 0x2A)
+        if (INST_REG(1) == REG_E)
+            INST_RETURN(4, INST_INDEX_PREFIX(0), 0xCB, INST_INDEX(0).offset, 0x2B)
+        if (INST_REG(1) == REG_H)
+            INST_RETURN(4, INST_INDEX_PREFIX(0), 0xCB, INST_INDEX(0).offset, 0x2C)
+        if (INST_REG(1) == REG_L)
+            INST_RETURN(4, INST_INDEX_PREFIX(0), 0xCB, INST_INDEX(0).offset, 0x2D)
+        INST_ERROR(ARG_VALUE)
+    }
+    INST_ERROR(ARG_TYPE)
+}
+
+INST_FUNC(srl)
+{
+    INST_TAKES_ARGS(
+        AT_INDEXED|AT_INDIRECT|AT_REGISTER,
+        AT_OPTIONAL|AT_REGISTER,
+        AT_NONE
+    )
+    if (INST_NARGS == 1 && INST_TYPE(0) == AT_REGISTER) {
+        if (INST_REG(0) == REG_A)
+            INST_RETURN(2, 0xCB, 0x3F)
+        if (INST_REG(0) == REG_B)
+            INST_RETURN(2, 0xCB, 0x38)
+        if (INST_REG(0) == REG_C)
+            INST_RETURN(2, 0xCB, 0x39)
+        if (INST_REG(0) == REG_D)
+            INST_RETURN(2, 0xCB, 0x3A)
+        if (INST_REG(0) == REG_E)
+            INST_RETURN(2, 0xCB, 0x3B)
+        if (INST_REG(0) == REG_H)
+            INST_RETURN(2, 0xCB, 0x3C)
+        if (INST_REG(0) == REG_L)
+            INST_RETURN(2, 0xCB, 0x3D)
+        INST_ERROR(ARG_VALUE)
+    }
+    if (INST_NARGS == 1 && INST_TYPE(0) == AT_INDIRECT &&
+            (INST_INDIRECT(0).type == AT_REGISTER && INST_INDIRECT(0).addr.reg == REG_HL)) {
+        INST_RETURN(2, 0xCB, 0x3E)
+    }
+    if (INST_NARGS == 1 && INST_TYPE(0) == AT_INDEXED) {
+        INST_RETURN(4, INST_INDEX_PREFIX(0), 0xCB, INST_INDEX(0).offset, 0x3E)
+    }
+    if (INST_NARGS == 2 && INST_TYPE(0) == AT_INDEXED && INST_TYPE(1) == AT_REGISTER) {
+        if (INST_REG(1) == REG_A)
+            INST_RETURN(4, INST_INDEX_PREFIX(0), 0xCB, INST_INDEX(0).offset, 0x3F)
+        if (INST_REG(1) == REG_B)
+            INST_RETURN(4, INST_INDEX_PREFIX(0), 0xCB, INST_INDEX(0).offset, 0x38)
+        if (INST_REG(1) == REG_C)
+            INST_RETURN(4, INST_INDEX_PREFIX(0), 0xCB, INST_INDEX(0).offset, 0x39)
+        if (INST_REG(1) == REG_D)
+            INST_RETURN(4, INST_INDEX_PREFIX(0), 0xCB, INST_INDEX(0).offset, 0x3A)
+        if (INST_REG(1) == REG_E)
+            INST_RETURN(4, INST_INDEX_PREFIX(0), 0xCB, INST_INDEX(0).offset, 0x3B)
+        if (INST_REG(1) == REG_H)
+            INST_RETURN(4, INST_INDEX_PREFIX(0), 0xCB, INST_INDEX(0).offset, 0x3C)
+        if (INST_REG(1) == REG_L)
+            INST_RETURN(4, INST_INDEX_PREFIX(0), 0xCB, INST_INDEX(0).offset, 0x3D)
+        INST_ERROR(ARG_VALUE)
+    }
+    INST_ERROR(ARG_TYPE)
+}
+
 /* @AUTOGEN_INST_BLOCK_END */
 
 /*
@@ -2067,13 +2569,23 @@ static ASMInstParser lookup_parser(uint32_t key)
     HANDLE(ret)
     HANDLE(reti)
     HANDLE(retn)
+    HANDLE(rl)
     HANDLE(rla)
+    HANDLE(rlc)
     HANDLE(rlca)
     HANDLE(rld)
+    HANDLE(rr)
     HANDLE(rra)
+    HANDLE(rrc)
     HANDLE(rrca)
     HANDLE(scf)
     HANDLE(set)
+    HANDLE(sl1)
+    HANDLE(sla)
+    HANDLE(sll)
+    HANDLE(sls)
+    HANDLE(sra)
+    HANDLE(srl)
 /* @AUTOGEN_LOOKUP_BLOCK_END */
     return NULL;
 }

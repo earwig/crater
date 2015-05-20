@@ -1142,17 +1142,89 @@ retn:
     args: no
     return: [0xED, 0x45]
 
-# rl:
-#     args: yes
-#     return: TODO
+rl:
+    args: yes
+    cases:
+        - type: [register]
+          cases:
+            - cond:   [a]
+              return: [0xCB, 0x17]
+            - cond:   [b]
+              return: [0xCB, 0x10]
+            - cond:   [c]
+              return: [0xCB, 0x11]
+            - cond:   [d]
+              return: [0xCB, 0x12]
+            - cond:   [e]
+              return: [0xCB, 0x13]
+            - cond:   [h]
+              return: [0xCB, 0x14]
+            - cond:   [l]
+              return: [0xCB, 0x15]
+        - type: [indirect_hl_or_indexed]
+          cases:
+            - cond:   [_]
+              return: [0xCB, 0x16]
+        - type: [indexed, register]
+          cases:
+            - cond:   [_, a]
+              return: [0xCB, 0x17]
+            - cond:   [_, b]
+              return: [0xCB, 0x10]
+            - cond:   [_, c]
+              return: [0xCB, 0x11]
+            - cond:   [_, d]
+              return: [0xCB, 0x12]
+            - cond:   [_, e]
+              return: [0xCB, 0x13]
+            - cond:   [_, h]
+              return: [0xCB, 0x14]
+            - cond:   [_, l]
+              return: [0xCB, 0x15]
 
 rla:
     args: no
     return: [0x17]
 
-# rlc:
-#     args: yes
-#     return: TODO
+rlc:
+    args: yes
+    cases:
+        - type: [register]
+          cases:
+            - cond:   [a]
+              return: [0xCB, 0x07]
+            - cond:   [b]
+              return: [0xCB, 0x00]
+            - cond:   [c]
+              return: [0xCB, 0x01]
+            - cond:   [d]
+              return: [0xCB, 0x02]
+            - cond:   [e]
+              return: [0xCB, 0x03]
+            - cond:   [h]
+              return: [0xCB, 0x04]
+            - cond:   [l]
+              return: [0xCB, 0x05]
+        - type: [indirect_hl_or_indexed]
+          cases:
+            - cond:   [_]
+              return: [0xCB, 0x06]
+        - type: [indexed, register]
+          cases:
+            - cond:   [_, a]
+              return: [0xCB, 0x07]
+            - cond:   [_, b]
+              return: [0xCB, 0x00]
+            - cond:   [_, c]
+              return: [0xCB, 0x01]
+            - cond:   [_, d]
+              return: [0xCB, 0x02]
+            - cond:   [_, e]
+              return: [0xCB, 0x03]
+            - cond:   [_, h]
+              return: [0xCB, 0x04]
+            - cond:   [_, l]
+              return: [0xCB, 0x05]
 
 rlca:
     args: no
@@ -1162,17 +1234,89 @@ rld:
     args: no
     return: [0xED, 0x6F]
 
-# rr:
-#     args: yes
-#     return: TODO
+rr:
+    args: yes
+    cases:
+        - type: [register]
+          cases:
+            - cond:   [a]
+              return: [0xCB, 0x1F]
+            - cond:   [b]
+              return: [0xCB, 0x18]
+            - cond:   [c]
+              return: [0xCB, 0x19]
+            - cond:   [d]
+              return: [0xCB, 0x1A]
+            - cond:   [e]
+              return: [0xCB, 0x1B]
+            - cond:   [h]
+              return: [0xCB, 0x1C]
+            - cond:   [l]
+              return: [0xCB, 0x1D]
+        - type: [indirect_hl_or_indexed]
+          cases:
+            - cond:   [_]
+              return: [0xCB, 0x1E]
+        - type: [indexed, register]
+          cases:
+            - cond:   [_, a]
+              return: [0xCB, 0x1F]
+            - cond:   [_, b]
+              return: [0xCB, 0x18]
+            - cond:   [_, c]
+              return: [0xCB, 0x19]
+            - cond:   [_, d]
+              return: [0xCB, 0x1A]
+            - cond:   [_, e]
+              return: [0xCB, 0x1B]
+            - cond:   [_, h]
+              return: [0xCB, 0x1C]
+            - cond:   [_, l]
+              return: [0xCB, 0x1D]
 
 rra:
     args: no
     return: [0x1F]
 
-# rrc:
-#     args: yes
-#     return: TODO
+rrc:
+    args: yes
+    cases:
+        - type: [register]
+          cases:
+            - cond:   [a]
+              return: [0xCB, 0x0F]
+            - cond:   [b]
+              return: [0xCB, 0x08]
+            - cond:   [c]
+              return: [0xCB, 0x09]
+            - cond:   [d]
+              return: [0xCB, 0x0A]
+            - cond:   [e]
+              return: [0xCB, 0x0B]
+            - cond:   [h]
+              return: [0xCB, 0x0C]
+            - cond:   [l]
+              return: [0xCB, 0x0D]
+        - type: [indirect_hl_or_indexed]
+          cases:
+            - cond:   [_]
+              return: [0xCB, 0x0E]
+        - type: [indexed, register]
+          cases:
+            - cond:   [_, a]
+              return: [0xCB, 0x0F]
+            - cond:   [_, b]
+              return: [0xCB, 0x08]
+            - cond:   [_, c]
+              return: [0xCB, 0x09]
+            - cond:   [_, d]
+              return: [0xCB, 0x0A]
+            - cond:   [_, e]
+              return: [0xCB, 0x0B]
+            - cond:   [_, h]
+              return: [0xCB, 0x0C]
+            - cond:   [_, l]
+              return: [0xCB, 0x0D]
 
 rrca:
     args: no
@@ -1444,29 +1588,169 @@ set:
             - cond:   [bit.7, _, l]
               return: [0xCB, 0xFD]
 
-# sl1:
-#     args: yes
-#     return: TODO
+sl1: &sl1
+    args: yes
+    cases:
+        - type: [register]
+          cases:
+            - cond:   [a]
+              return: [0xCB, 0x37]
+            - cond:   [b]
+              return: [0xCB, 0x30]
+            - cond:   [c]
+              return: [0xCB, 0x31]
+            - cond:   [d]
+              return: [0xCB, 0x32]
+            - cond:   [e]
+              return: [0xCB, 0x33]
+            - cond:   [h]
+              return: [0xCB, 0x34]
+            - cond:   [l]
+              return: [0xCB, 0x35]
+        - type: [indirect_hl_or_indexed]
+          cases:
+            - cond:   [_]
+              return: [0xCB, 0x36]
+        - type: [indexed, register]
+          cases:
+            - cond:   [_, a]
+              return: [0xCB, 0x37]
+            - cond:   [_, b]
+              return: [0xCB, 0x30]
+            - cond:   [_, c]
+              return: [0xCB, 0x31]
+            - cond:   [_, d]
+              return: [0xCB, 0x32]
+            - cond:   [_, e]
+              return: [0xCB, 0x33]
+            - cond:   [_, h]
+              return: [0xCB, 0x34]
+            - cond:   [_, l]
+              return: [0xCB, 0x35]
 
-# sla:
-#     args: yes
-#     return: TODO
+sla:
+    args: yes
+    cases:
+        - type: [register]
+          cases:
+            - cond:   [a]
+              return: [0xCB, 0x27]
+            - cond:   [b]
+              return: [0xCB, 0x20]
+            - cond:   [c]
+              return: [0xCB, 0x21]
+            - cond:   [d]
+              return: [0xCB, 0x22]
+            - cond:   [e]
+              return: [0xCB, 0x23]
+            - cond:   [h]
+              return: [0xCB, 0x24]
+            - cond:   [l]
+              return: [0xCB, 0x25]
+        - type: [indirect_hl_or_indexed]
+          cases:
+            - cond:   [_]
+              return: [0xCB, 0x26]
+        - type: [indexed, register]
+          cases:
+            - cond:   [_, a]
+              return: [0xCB, 0x27]
+            - cond:   [_, b]
+              return: [0xCB, 0x20]
+            - cond:   [_, c]
+              return: [0xCB, 0x21]
+            - cond:   [_, d]
+              return: [0xCB, 0x22]
+            - cond:   [_, e]
+              return: [0xCB, 0x23]
+            - cond:   [_, h]
+              return: [0xCB, 0x24]
+            - cond:   [_, l]
+              return: [0xCB, 0x25]
 
-# sll:
-#     args: yes
-#     return: TODO
+sll: *sl1
 
-# sls:
-#     args: yes
-#     return: TODO
+sls: *sl1
 
-# sra:
-#     args: yes
-#     return: TODO
+sra:
+    args: yes
+    cases:
+        - type: [register]
+          cases:
+            - cond:   [a]
+              return: [0xCB, 0x2F]
+            - cond:   [b]
+              return: [0xCB, 0x28]
+            - cond:   [c]
+              return: [0xCB, 0x29]
+            - cond:   [d]
+              return: [0xCB, 0x2A]
+            - cond:   [e]
+              return: [0xCB, 0x2B]
+            - cond:   [h]
+              return: [0xCB, 0x2C]
+            - cond:   [l]
+              return: [0xCB, 0x2D]
+        - type: [indirect_hl_or_indexed]
+          cases:
+            - cond:   [_]
+              return: [0xCB, 0x2E]
+        - type: [indexed, register]
+          cases:
+            - cond:   [_, a]
+              return: [0xCB, 0x2F]
+            - cond:   [_, b]
+              return: [0xCB, 0x28]
+            - cond:   [_, c]
+              return: [0xCB, 0x29]
+            - cond:   [_, d]
+              return: [0xCB, 0x2A]
+            - cond:   [_, e]
+              return: [0xCB, 0x2B]
+            - cond:   [_, h]
+              return: [0xCB, 0x2C]
+            - cond:   [_, l]
+              return: [0xCB, 0x2D]
 
-# srl:
-#     args: yes
-#     return: TODO
+srl:
+    args: yes
+    cases:
+        - type: [register]
+          cases:
+            - cond:   [a]
+              return: [0xCB, 0x3F]
+            - cond:   [b]
+              return: [0xCB, 0x38]
+            - cond:   [c]
+              return: [0xCB, 0x39]
+            - cond:   [d]
+              return: [0xCB, 0x3A]
+            - cond:   [e]
+              return: [0xCB, 0x3B]
+            - cond:   [h]
+              return: [0xCB, 0x3C]
+            - cond:   [l]
+              return: [0xCB, 0x3D]
+        - type: [indirect_hl_or_indexed]
+          cases:
+            - cond:   [_]
+              return: [0xCB, 0x3E]
+        - type: [indexed, register]
+          cases:
+            - cond:   [_, a]
+              return: [0xCB, 0x3F]
+            - cond:   [_, b]
+              return: [0xCB, 0x38]
+            - cond:   [_, c]
+              return: [0xCB, 0x39]
+            - cond:   [_, d]
+              return: [0xCB, 0x3A]
+            - cond:   [_, e]
+              return: [0xCB, 0x3B]
+            - cond:   [_, h]
+              return: [0xCB, 0x3C]
+            - cond:   [_, l]
+              return: [0xCB, 0x3D]
 
 # sub:
 #     args: yes
