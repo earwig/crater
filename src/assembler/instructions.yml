@@ -1322,17 +1322,67 @@ rrca:
     args: no
     return: [0x0F]
 
-# rrd:
-#     args: yes
-#     return: TODO
+rrd:
+    args: no
+    return: [0xED, 0x67]
 
-# rst:
-#     args: yes
-#     return: TODO
+rst:
+    args: yes
+    cases:
+        - type: [immediate]
+          cases:
+            - cond:   [rst.0x00]
+              return: [0xC7]
+            - cond:   [rst.0x08]
+              return: [0xCF]
+            - cond:   [rst.0x10]
+              return: [0xD7]
+            - cond:   [rst.0x18]
+              return: [0xDF]
+            - cond:   [rst.0x20]
+              return: [0xE7]
+            - cond:   [rst.0x28]
+              return: [0xEF]
+            - cond:   [rst.0x30]
+              return: [0xF7]
+            - cond:   [rst.0x38]
+              return: [0xFF]
 
-# sbc:
-#     args: yes
-#     return: TODO
+sbc:
+    args: yes
+    cases:
+        - type: [register, register]
+          cases:
+            - cond:   [a, a]
+              return: [0x9F]
+            - cond:   [a, b]
+              return: [0x98]
+            - cond:   [a, c]
+              return: [0x99]
+            - cond:   [a, d]
+              return: [0x9A]
+            - cond:   [a, e]
+              return: [0x9B]
+            - cond:   [a, h|ih]
+              return: [0x9C]
+            - cond:   [a, l|il]
+              return: [0x9D]
+            - cond:   [hl, bc]
+              return: [0xED, 0x42]
+            - cond:   [hl, de]
+              return: [0xED, 0x52]
+            - cond:   [hl, hl]
+              return: [0xED, 0x62]
+            - cond:   [hl, sp]
+              return: [0xED, 0x72]
+        - type: [register, immediate]
+          cases:
+            - cond:   [a, u8]
+              return: [0xDE, u8]
+        - type: [register, indirect_hl_or_indexed]
+          cases:
+            - cond:   [a, _]
+              return: [0x9E]
 
 scf:
     args: no
@@ -1752,10 +1802,58 @@ srl:
             - cond:   [_, l]
               return: [0xCB, 0x3D]
 
-# sub:
-#     args: yes
-#     return: TODO
+sub:
+    args: yes
+    cases:
+        - type: [register]
+          cases:
+            - cond:   [a]
+              return: [0x97]
+            - cond:   [b]
+              return: [0x90]
+            - cond:   [c]
+              return: [0x91]
+            - cond:   [d]
+              return: [0x92]
+            - cond:   [e]
+              return: [0x93]
+            - cond:   [h|ih]
+              return: [0x94]
+            - cond:   [l|il]
+              return: [0x95]
+        - type: [immediate]
+          cases:
+            - cond:   [u8]
+              return: [0xD6, u8]
+        - type: [indirect_hl_or_indexed]
+          cases:
+            - cond:   [_]
+              return: [0x96]
 
-# xor:
-#     args: yes
-#     return: TODO
+xor:
+    args: yes
+    cases:
+        - type: [register]
+          cases:
+            - cond:   [a]
+              return: [0xAF]
+            - cond:   [b]
+              return: [0xA8]
+            - cond:   [c]
+              return: [0xA9]
+            - cond:   [d]
+              return: [0xAA]
+            - cond:   [e]
+              return: [0xAB]
+            - cond:   [h|ih]
+              return: [0xAC]
+            - cond:   [l|il]
+              return: [0xAD]
+        - type: [immediate]
+          cases:
+            - cond:   [u8]
+              return: [0xEE, u8]
+        - type: [indirect_hl_or_indexed]
+          cases:
+            - cond:   [_]
+              return: [0xAE]
