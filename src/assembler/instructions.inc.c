@@ -7,7 +7,7 @@
     `make` should trigger a rebuild when it is modified; if not, use:
     `python scripts/update_asm_instructions.py`.
 
-    @AUTOGEN_DATE Tue May 19 07:10:15 2015 UTC
+    @AUTOGEN_DATE Wed May 20 06:24:37 2015 UTC
 */
 
 /* @AUTOGEN_INST_BLOCK_START */
@@ -730,6 +730,73 @@ INST_FUNC(inir)
     INST_RETURN(2, 0xED, 0xB2)
 }
 
+INST_FUNC(jp)
+{
+    INST_TAKES_ARGS(
+        AT_CONDITION|AT_IMMEDIATE|AT_INDEXED|AT_INDIRECT,
+        AT_IMMEDIATE|AT_OPTIONAL,
+        AT_NONE
+    )
+    if (INST_NARGS == 1 && INST_TYPE(0) == AT_IMMEDIATE) {
+        if (INST_IMM(0).mask & IMM_U16)
+            INST_RETURN(3, 0xC3, INST_IMM_U16_B1(INST_IMM(0)), INST_IMM_U16_B2(INST_IMM(0)))
+        INST_ERROR(ARG_VALUE)
+    }
+    if (INST_NARGS == 2 && INST_TYPE(0) == AT_CONDITION && INST_TYPE(1) == AT_IMMEDIATE) {
+        if (INST_COND(0) == COND_NZ && INST_IMM(1).mask & IMM_U16)
+            INST_RETURN(3, 0xC2, INST_IMM_U16_B1(INST_IMM(1)), INST_IMM_U16_B2(INST_IMM(1)))
+        if (INST_COND(0) == COND_Z && INST_IMM(1).mask & IMM_U16)
+            INST_RETURN(3, 0xCA, INST_IMM_U16_B1(INST_IMM(1)), INST_IMM_U16_B2(INST_IMM(1)))
+        if (INST_COND(0) == COND_NC && INST_IMM(1).mask & IMM_U16)
+            INST_RETURN(3, 0xD2, INST_IMM_U16_B1(INST_IMM(1)), INST_IMM_U16_B2(INST_IMM(1)))
+        if (INST_COND(0) == COND_C && INST_IMM(1).mask & IMM_U16)
+            INST_RETURN(3, 0xDA, INST_IMM_U16_B1(INST_IMM(1)), INST_IMM_U16_B2(INST_IMM(1)))
+        if (INST_COND(0) == COND_PO && INST_IMM(1).mask & IMM_U16)
+            INST_RETURN(3, 0xE2, INST_IMM_U16_B1(INST_IMM(1)), INST_IMM_U16_B2(INST_IMM(1)))
+        if (INST_COND(0) == COND_PE && INST_IMM(1).mask & IMM_U16)
+            INST_RETURN(3, 0xEA, INST_IMM_U16_B1(INST_IMM(1)), INST_IMM_U16_B2(INST_IMM(1)))
+        if (INST_COND(0) == COND_P && INST_IMM(1).mask & IMM_U16)
+            INST_RETURN(3, 0xF2, INST_IMM_U16_B1(INST_IMM(1)), INST_IMM_U16_B2(INST_IMM(1)))
+        if (INST_COND(0) == COND_M && INST_IMM(1).mask & IMM_U16)
+            INST_RETURN(3, 0xFA, INST_IMM_U16_B1(INST_IMM(1)), INST_IMM_U16_B2(INST_IMM(1)))
+        INST_ERROR(ARG_VALUE)
+    }
+    if (INST_NARGS == 1 && INST_TYPE(0) == AT_INDIRECT &&
+            (INST_INDIRECT(0).type == AT_REGISTER && INST_INDIRECT(0).addr.reg == REG_HL)) {
+        INST_RETURN(1, 0xE9)
+    }
+    if (INST_NARGS == 1 && INST_TYPE(0) == AT_INDEXED) {
+        INST_RETURN(3, INST_INDEX_PREFIX(0), 0xE9, INST_INDEX(0).offset)
+    }
+    INST_ERROR(ARG_TYPE)
+}
+
+INST_FUNC(jr)
+{
+    INST_TAKES_ARGS(
+        AT_CONDITION|AT_IMMEDIATE,
+        AT_IMMEDIATE|AT_OPTIONAL,
+        AT_NONE
+    )
+    if (INST_NARGS == 1 && INST_TYPE(0) == AT_IMMEDIATE) {
+        if (INST_IMM(0).mask & IMM_REL)
+            INST_RETURN(2, 0x18, INST_IMM(0).sval - 2)
+        INST_ERROR(ARG_VALUE)
+    }
+    if (INST_NARGS == 2 && INST_TYPE(0) == AT_CONDITION && INST_TYPE(1) == AT_IMMEDIATE) {
+        if (INST_COND(0) == COND_NZ && INST_IMM(1).mask & IMM_REL)
+            INST_RETURN(2, 0x20, INST_IMM(1).sval - 2)
+        if (INST_COND(0) == COND_Z && INST_IMM(1).mask & IMM_REL)
+            INST_RETURN(2, 0x28, INST_IMM(1).sval - 2)
+        if (INST_COND(0) == COND_NC && INST_IMM(1).mask & IMM_REL)
+            INST_RETURN(2, 0x30, INST_IMM(1).sval - 2)
+        if (INST_COND(0) == COND_C && INST_IMM(1).mask & IMM_REL)
+            INST_RETURN(2, 0x38, INST_IMM(1).sval - 2)
+        INST_ERROR(ARG_VALUE)
+    }
+    INST_ERROR(ARG_TYPE)
+}
+
 INST_FUNC(ld)
 {
     INST_TAKES_ARGS(
@@ -1151,6 +1218,53 @@ INST_FUNC(nop)
     INST_RETURN(1, 0x00)
 }
 
+INST_FUNC(or)
+{
+    INST_TAKES_ARGS(
+        AT_IMMEDIATE|AT_INDEXED|AT_INDIRECT|AT_REGISTER,
+        AT_NONE,
+        AT_NONE
+    )
+    if (INST_TYPE(0) == AT_REGISTER) {
+        if (INST_REG(0) == REG_A)
+            INST_RETURN(1, 0xB7)
+        if (INST_REG(0) == REG_B)
+            INST_RETURN(1, 0xB0)
+        if (INST_REG(0) == REG_C)
+            INST_RETURN(1, 0xB1)
+        if (INST_REG(0) == REG_D)
+            INST_RETURN(1, 0xB2)
+        if (INST_REG(0) == REG_E)
+            INST_RETURN(1, 0xB3)
+        if (INST_REG(0) == REG_H)
+            INST_RETURN(1, 0xB4)
+        if (INST_REG(0) == REG_IXH)
+            INST_RETURN(2, INST_IX_PREFIX, 0xB4)
+        if (INST_REG(0) == REG_IYH)
+            INST_RETURN(2, INST_IY_PREFIX, 0xB4)
+        if (INST_REG(0) == REG_L)
+            INST_RETURN(1, 0xB5)
+        if (INST_REG(0) == REG_IXL)
+            INST_RETURN(2, INST_IX_PREFIX, 0xB5)
+        if (INST_REG(0) == REG_IYL)
+            INST_RETURN(2, INST_IY_PREFIX, 0xB5)
+        INST_ERROR(ARG_VALUE)
+    }
+    if (INST_TYPE(0) == AT_IMMEDIATE) {
+        if (INST_IMM(0).mask & IMM_U8)
+            INST_RETURN(2, 0xF6, INST_IMM(0).uval)
+        INST_ERROR(ARG_VALUE)
+    }
+    if (INST_TYPE(0) == AT_INDIRECT &&
+            (INST_INDIRECT(0).type == AT_REGISTER && INST_INDIRECT(0).addr.reg == REG_HL)) {
+        INST_RETURN(1, 0xB6)
+    }
+    if (INST_TYPE(0) == AT_INDEXED) {
+        INST_RETURN(3, INST_INDEX_PREFIX(0), 0xB6, INST_INDEX(0).offset)
+    }
+    INST_ERROR(ARG_TYPE)
+}
+
 INST_FUNC(otdr)
 {
     INST_TAKES_NO_ARGS
@@ -1161,6 +1275,40 @@ INST_FUNC(otir)
 {
     INST_TAKES_NO_ARGS
     INST_RETURN(2, 0xED, 0xB3)
+}
+
+INST_FUNC(out)
+{
+    INST_TAKES_ARGS(
+        AT_PORT,
+        AT_IMMEDIATE|AT_REGISTER,
+        AT_NONE
+    )
+    if (INST_TYPE(0) == AT_PORT && INST_TYPE(1) == AT_REGISTER) {
+        if (INST_PORT(0).type == AT_IMMEDIATE && INST_REG(1) == REG_A)
+            INST_RETURN(2, 0xD3, INST_PORT(0).port.imm.uval)
+        if (INST_PORT(0).type == AT_REGISTER && INST_REG(1) == REG_A)
+            INST_RETURN(2, 0xED, 0x79)
+        if (INST_PORT(0).type == AT_REGISTER && INST_REG(1) == REG_B)
+            INST_RETURN(2, 0xED, 0x41)
+        if (INST_PORT(0).type == AT_REGISTER && INST_REG(1) == REG_C)
+            INST_RETURN(2, 0xED, 0x49)
+        if (INST_PORT(0).type == AT_REGISTER && INST_REG(1) == REG_D)
+            INST_RETURN(2, 0xED, 0x51)
+        if (INST_PORT(0).type == AT_REGISTER && INST_REG(1) == REG_E)
+            INST_RETURN(2, 0xED, 0x59)
+        if (INST_PORT(0).type == AT_REGISTER && INST_REG(1) == REG_H)
+            INST_RETURN(2, 0xED, 0x61)
+        if (INST_PORT(0).type == AT_REGISTER && INST_REG(1) == REG_L)
+            INST_RETURN(2, 0xED, 0x69)
+        INST_ERROR(ARG_VALUE)
+    }
+    if (INST_TYPE(0) == AT_PORT && INST_TYPE(1) == AT_IMMEDIATE) {
+        if (INST_PORT(0).type == AT_REGISTER && (INST_IMM(1).mask & IMM_U8 && INST_IMM(1).uval == 0))
+            INST_RETURN(2, 0xED, 0x71)
+        INST_ERROR(ARG_VALUE)
+    }
+    INST_ERROR(ARG_TYPE)
 }
 
 INST_FUNC(outd)
@@ -1258,6 +1406,8 @@ static ASMInstParser lookup_parser(uint32_t key)
     HANDLE(indr)
     HANDLE(ini)
     HANDLE(inir)
+    HANDLE(jp)
+    HANDLE(jr)
     HANDLE(ld)
     HANDLE(ldd)
     HANDLE(lddr)
@@ -1265,8 +1415,10 @@ static ASMInstParser lookup_parser(uint32_t key)
     HANDLE(ldir)
     HANDLE(neg)
     HANDLE(nop)
+    HANDLE(or)
     HANDLE(otdr)
     HANDLE(otir)
+    HANDLE(out)
     HANDLE(outd)
     HANDLE(outi)
     HANDLE(reti)
