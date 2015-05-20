@@ -12,6 +12,7 @@ CFLAGS = $(shell sdl2-config --cflags)
 LIBS   = $(shell sdl2-config --libs)
 MKDIR  = mkdir -p
 RM     = rm -rf
+ASM_UP = scripts/update_asm_instructions.py
 
 MODE = release
 BNRY = $(PROGRAM)
@@ -23,7 +24,7 @@ DIRS = $(sort $(dir $(OBJS)))
 
 ifdef DEBUG
 	BNRY  := $(BNRY)$(DEVEXT)
-	FLAGS += -g -fsanitize=address -DDEBUG_MODE
+	FLAGS += -g -DDEBUG_MODE
 	MODE   = debug
 endif
 
@@ -46,6 +47,10 @@ $(BUILD)/$(MODE)/%.o: %.c
 	$(CC) $(FLAGS) $(CFLAGS) -MMD -MP -c $< -o $@
 
 -include $(DEPS)
+
+ASM_INST = $(SOURCES)/assembler/instructions
+$(ASM_INST).inc.c: $(ASM_INST).yml $(ASM_UP)
+	python $(ASM_UP)
 
 test: test-all test-z80 test-asm test-dasm
 

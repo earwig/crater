@@ -57,29 +57,31 @@ static bool adjust_for_indirection(ASMArgParseInfo *ap_info)
 /*
     Calculate the mask field for an ASMArgImmediate based on its uval/sval.
 */
-static void calculate_immediate_mask(ASMArgImmediate *imm)
+static ASMArgImmType calculate_immediate_mask(uint32_t uval, bool negative)
 {
-    imm->mask = 0;
-    if (imm->sval < 0) {
-        if (imm->sval >= INT8_MIN)
-            imm->mask |= IMM_S8;
-        if (imm->sval >= INT8_MIN + 2)
-            imm->mask |= IMM_REL;
+    ASMArgImmType mask = 0;
+    if (negative && uval != 0) {
+        int32_t sval = -uval;
+        if (sval >= INT8_MIN)
+            mask |= IMM_S8;
+        if (sval >= INT8_MIN + 2)
+            mask |= IMM_REL;
     } else {
-        imm->mask = IMM_U16;
-        if (imm->uval <= UINT8_MAX)
-            imm->mask |= IMM_U8;
-        if (imm->uval <= INT8_MAX)
-            imm->mask |= IMM_S8;
-        if (imm->uval <= INT8_MAX + 2)
-            imm->mask |= IMM_REL;
-        if (imm->uval <= 7)
-            imm->mask |= IMM_BIT;
-        if (!(imm->uval & ~0x38))
-            imm->mask |= IMM_RST;
-        if (imm->uval <= 2)
-            imm->mask |= IMM_IM;
+        mask = IMM_U16;
+        if (uval <= UINT8_MAX)
+            mask |= IMM_U8;
+        if (uval <= INT8_MAX)
+            mask |= IMM_S8;
+        if (uval <= INT8_MAX + 2)
+            mask |= IMM_REL;
+        if (uval <= 7)
+            mask |= IMM_BIT;
+        if (!(uval & ~0x38))
+            mask |= IMM_RST;
+        if (uval <= 2)
+            mask |= IMM_IM;
     }
+    return mask;
 }
 
 /*
@@ -300,7 +302,7 @@ bool argparse_condition(ASMArgCondition *result, ASMArgParseInfo ai)
     switch (ai.size) {
         case 1:
             switch (buf[0]) {
-                case 'n': return (*result = COND_N), true;
+                case 'z': return (*result = COND_Z), true;
                 case 'c': return (*result = COND_C), true;
                 case 'p': return (*result = COND_P), true;
                 case 'm': return (*result = COND_M), true;
@@ -319,6 +321,26 @@ bool argparse_condition(ASMArgCondition *result, ASMArgParseInfo ai)
 }
 
 /*
+    Read in a label immediate argument and store it in *result.
+*/
+static bool argparse_imm_label(ASMArgImmediate *result, ASMArgParseInfo ai)
+{
+    if (ai.size >= MAX_SYMBOL_SIZE)
+        return false;
+
+    for (const char *i = ai.arg; i < ai.arg + ai.size; i++) {
+        if (!is_valid_symbol_char(*i, i == ai.arg))
+            return false;
+    }
+
+    result->mask = IMM_U16;
+    result->is_label = true;
+    strncpy(result->label, ai.arg, ai.size);
+    result->label[ai.size] = '\0';
+    return true;
+}
+
+/*
     Read in an immediate argument and store it in *result.
 */
 bool argparse_immediate(ASMArgImmediate *result, ASMArgParseInfo ai)
@@ -326,10 +348,11 @@ bool argparse_immediate(ASMArgImmediate *result, ASMArgParseInfo ai)
     if (ai.size <= 0)
         return false;
 
-    bool negative = false;
+    bool negative = false, modifiers = false;
     ssize_t i = 0;
 
     while (ai.arg[i] == '-' || ai.arg[i] == '+' || ai.arg[i] == ' ') {
+        modifiers = true;
         if (ai.arg[i] == '-')
             negative = !negative;
         if (++i >= ai.size)
@@ -341,9 +364,10 @@ bool argparse_immediate(ASMArgImmediate *result, ASMArgParseInfo ai)
     const ASMDefine *define = asm_deftable_find(ai.deftable, ai.arg, ai.size);
     if (define) {
         if (negative) {
+            result->is_label = false;
             result->uval = define->value.uval;
             result->sval = -define->value.sval;
-            calculate_immediate_mask(result);
+            result->mask = calculate_immediate_mask(result->uval, true);
         } else {
             *result = define->value;
         }
@@ -351,16 +375,23 @@ bool argparse_immediate(ASMArgImmediate *result, ASMArgParseInfo ai)
     }
 
     uint32_t uval;
-    if (!parse_uint32_t(&uval, ai.arg, ai.size) || uval > UINT16_MAX)
+    if (!parse_uint32_t(&uval, ai.arg, ai.size)) {
+        if (!modifiers && argparse_imm_label(result, ai))
+            return true;
+        return false;
+    }
+
+    if (uval > UINT16_MAX)
         return false;
 
     int32_t sval = negative ? -uval : uval;
     if (sval < INT16_MIN)
         return false;
 
+    result->is_label = false;
     result->uval = uval;
     result->sval = sval;
-    calculate_immediate_mask(result);
+    result->mask = calculate_immediate_mask(uval, negative);
     return true;
 }
 
@@ -374,9 +405,9 @@ bool argparse_indirect(ASMArgIndirect *result, ASMArgParseInfo ai)
 
     ASMArgRegister reg;
     ASMArgImmediate imm;
-    ASMArgLabel label;
     if (argparse_register(&reg, ai)) {
-        if (reg == REG_BC || reg == REG_DE || reg == REG_HL) {
+        if (reg == REG_BC || reg == REG_DE || reg == REG_HL ||
+                             reg == REG_IX || reg == REG_IY) {
             result->type = AT_REGISTER;
             result->addr.reg = reg;
             return true;
@@ -387,10 +418,6 @@ bool argparse_indirect(ASMArgIndirect *result, ASMArgParseInfo ai)
             result->addr.imm = imm;
             return true;
         }
-    } else if (argparse_label(&label, ai)) {
-        result->type = AT_LABEL;
-        result->addr.label = label;
-        return true;
     }
     return false;
 }
@@ -433,24 +460,29 @@ bool argparse_indexed(ASMArgIndexed *result, ASMArgParseInfo ai)
 }
 
 /*
-    Read in a label argument and store it in *result.
+    Read in a port argument and store it in *result.
 */
-bool argparse_label(ASMArgLabel *result, ASMArgParseInfo ai)
+bool argparse_port(ASMArgPort *result, ASMArgParseInfo ai)
 {
-    if (ai.size <= 0 || ai.size >= MAX_SYMBOL_SIZE)
+    if (ai.size < 3 || !adjust_for_indirection(&ai))
         return false;
 
-    for (const char *i = ai.arg; i < ai.arg + ai.size; i++) {
-        if (!is_valid_symbol_char(*i, i == ai.arg))
-            return false;
+    ASMArgRegister reg;
+    ASMArgImmediate imm;
+    if (argparse_register(&reg, ai)) {
+        if (reg == REG_C) {
+            result->type = AT_REGISTER;
+            result->port.reg = reg;
+            return true;
+        }
+    } else if (argparse_immediate(&imm, ai)) {
+        if (imm.mask & IMM_U8) {
+            result->type = AT_IMMEDIATE;
+            result->port.imm = imm;
+            return true;
+        }
     }
-
-    if (asm_deftable_find(ai.deftable, ai.arg, ai.size))
-        return false;
-
-    strncpy(result->text, ai.arg, ai.size);
-    result->text[ai.size] = '\0';
-    return true;
+    return false;
 }
 
 /*

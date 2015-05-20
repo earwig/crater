@@ -33,7 +33,7 @@ bool argparse_condition(ASMArgCondition*, ASMArgParseInfo);
 bool argparse_immediate(ASMArgImmediate*, ASMArgParseInfo);
 bool argparse_indirect(ASMArgIndirect*, ASMArgParseInfo);
 bool argparse_indexed(ASMArgIndexed*, ASMArgParseInfo);
-bool argparse_label(ASMArgLabel*, ASMArgParseInfo);
+bool argparse_port(ASMArgPort*, ASMArgParseInfo);
 
 /* Preprocessor directive parsers */
 bool dparse_bool(bool*, const ASMLine*, const char*);
