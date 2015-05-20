@@ -7,7 +7,7 @@
     `make` should trigger a rebuild when it is modified; if not, use:
     `python scripts/update_asm_instructions.py`.
 
-    @AUTOGEN_DATE Wed May 20 06:40:09 2015 UTC
+    @AUTOGEN_DATE Wed May 20 06:53:00 2015 UTC
 */
 
 /* @AUTOGEN_INST_BLOCK_START */
@@ -1652,6 +1652,38 @@ INST_FUNC(res)
     INST_ERROR(ARG_TYPE)
 }
 
+INST_FUNC(ret)
+{
+    INST_TAKES_ARGS(
+        AT_CONDITION|AT_OPTIONAL,
+        AT_NONE,
+        AT_NONE
+    )
+    if (INST_NARGS == 0) {
+        INST_RETURN(1, 0xC9)
+    }
+    if (INST_NARGS == 1 && INST_TYPE(0) == AT_CONDITION) {
+        if (INST_COND(0) == COND_NZ)
+            INST_RETURN(1, 0xC0)
+        if (INST_COND(0) == COND_Z)
+            INST_RETURN(1, 0xC8)
+        if (INST_COND(0) == COND_NC)
+            INST_RETURN(1, 0xD0)
+        if (INST_COND(0) == COND_C)
+            INST_RETURN(1, 0xD8)
+        if (INST_COND(0) == COND_PO)
+            INST_RETURN(1, 0xE0)
+        if (INST_COND(0) == COND_PE)
+            INST_RETURN(1, 0xE8)
+        if (INST_COND(0) == COND_P)
+            INST_RETURN(1, 0xF0)
+        if (INST_COND(0) == COND_M)
+            INST_RETURN(1, 0xF8)
+        INST_ERROR(ARG_VALUE)
+    }
+    INST_ERROR(ARG_TYPE)
+}
+
 INST_FUNC(reti)
 {
     INST_TAKES_NO_ARGS
@@ -2032,6 +2064,7 @@ static ASMInstParser lookup_parser(uint32_t key)
     HANDLE(pop)
     HANDLE(push)
     HANDLE(res)
+    HANDLE(ret)
     HANDLE(reti)
     HANDLE(retn)
     HANDLE(rla)

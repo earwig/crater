@@ -1110,9 +1110,29 @@ res:
             - cond:   [bit.7, _, l]
               return: [0xCB, 0xBD]
 
-# ret:
-#     args: yes
-#     return: TODO
+ret:
+    args: yes
+    cases:
+        - type: []
+          return: [0xC9]
+        - type: [condition]
+          cases:
+            - cond:   [nz]
+              return: [0xC0]
+            - cond:   [z]
+              return: [0xC8]
+            - cond:   [nc]
+              return: [0xD0]
+            - cond:   [c]
+              return: [0xD8]
+            - cond:   [po]
+              return: [0xE0]
+            - cond:   [pe]
+              return: [0xE8]
+            - cond:   [p]
+              return: [0xF0]
+            - cond:   [m]
+              return: [0xF8]
 
 reti:
     args: no

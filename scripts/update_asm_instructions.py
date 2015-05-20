@@ -266,6 +266,16 @@ class Instruction(object):
 
         return ret
 
+    def _handle_null_case(self, case):
+        """
+        Return code to handle an instruction case that takes no arguments.
+        """
+        return [
+            TAB + "if (INST_NARGS == 0) {",
+            self._handle_return(case["return"], 2),
+            TAB + "}"
+        ]
+
     def _handle_pseudo_case(self, pseudo, case):
         """
         Return code to handle an instruction pseudo-case.
@@ -294,6 +304,9 @@ class Instruction(object):
         Return code to handle an instruction case.
         """
         ctype = case["type"]
+        if not ctype:
+            return self._handle_null_case(case)
+
         for pseudo in self.PSEUDO_TYPES:
             if pseudo in ctype:
                 return self._handle_pseudo_case(pseudo, case)

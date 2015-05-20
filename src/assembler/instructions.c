@@ -65,8 +65,6 @@ static ASMErrorDesc parse_inst_##mnemonic(                                    \
         INST_ERROR(TOO_MANY_ARGS)
 
 #define INST_TAKES_ARGS(a0, a1, a2)                                           \
-    if (!ap_info.arg)                                                         \
-        INST_ERROR(TOO_FEW_ARGS)                                              \
     ASMInstArg args[3];                                                       \
     size_t nargs;                                                             \
     ASMArgType masks[] = {a0, a1, a2};                                        \
