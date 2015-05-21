@@ -7,7 +7,7 @@
     `make` should trigger a rebuild when it is modified; if not, use:
     `python scripts/update_asm_instructions.py`.
 
-    @AUTOGEN_DATE Thu May 21 20:33:21 2015 UTC
+    @AUTOGEN_DATE Thu May 21 21:05:17 2015 UTC
 */
 
 /* @AUTOGEN_INST_BLOCK_START */

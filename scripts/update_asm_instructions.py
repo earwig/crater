@@ -37,6 +37,15 @@ re_lookup = re.compile(
     r"(/\* @AUTOGEN_LOOKUP_BLOCK_START \*/\n*)(.*?)"
     r"(\n*/\* @AUTOGEN_LOOKUP_BLOCK_END \*/)", re.S)
 
+def _atoi(value):
+    """
+    Try to convert a string to an integer, supporting decimal and hexadecimal.
+    """
+    try:
+        return int(value)
+    except ValueError:
+        return int(value, 16)
+
 class Instruction(object):
     """
     Represent a single ASM instruction mnemonic.
@@ -56,7 +65,9 @@ class Instruction(object):
     def __init__(self, name, data):
         self._name = name
         self._data = data
+
         self._has_optional_args = False
+        self._step_state = {}
 
     def _get_arg_parse_mask(self, num):
         """
@@ -113,16 +124,12 @@ class Instruction(object):
         """
         if "." in cond:
             itype, value = cond.split(".", 1)
-            try:
-                value = int(value)
-            except ValueError:
-                value = int(value, 16)
             vtype = "sval" if itype.upper() in ["S8", "REL"] else "uval"
 
             test1 = "INST_IMM({0}).mask & IMM_{1}".format(num, itype.upper())
             if (itype.upper() == "U16"):
                 test1 += " && !INST_IMM({0}).is_label".format(num)
-            test2 = "INST_IMM({0}).{1} == {2}".format(num, vtype, value)
+            test2 = "INST_IMM({0}).{1} == {2}".format(num, vtype, _atoi(value))
             return "({0} && {1})".format(test1, test2)
 
         return "INST_IMM({0}).mask & IMM_{1}".format(num, cond.upper())
@@ -253,8 +260,19 @@ class Instruction(object):
 
                 elif byte.startswith("bit(") and byte.endswith(")"):
                     index = types.index("immediate")
-                    off = byte[4:-1]
-                    ret[i] = "{0} + 8 * INST_IMM({1}).uval".format(off, index)
+                    base = byte[4:-1]
+                    ret[i] = "{0} + 8 * INST_IMM({1}).uval".format(base, index)
+
+                elif byte.startswith("step(") and byte.endswith(")"):
+                    arg = byte[5:-1]
+                    if " " in arg:
+                        base, stride = map(_atoi, arg.split(" "))
+                    else:
+                        base, stride = _atoi(arg), 1
+                    if base not in self._step_state:
+                        self._step_state[base] = 0
+                    ret[i] = base + self._step_state[base] * stride
+                    self._step_state[base] += 1
 
                 else:
                     msg = "Unsupported return byte: {0}"
