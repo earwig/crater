@@ -251,6 +251,11 @@ class Instruction(object):
                     index = types.index("immediate")
                     ret[i] = "INST_IMM({0}).sval - 2".format(index)
 
+                elif byte.startswith("bit(") and byte.endswith(")"):
+                    index = types.index("immediate")
+                    off = byte[4:-1]
+                    ret[i] = "{0} + 8 * INST_IMM({1}).uval".format(off, index)
+
                 else:
                     msg = "Unsupported return byte: {0}"
                     raise RuntimeError(msg.format(byte))
