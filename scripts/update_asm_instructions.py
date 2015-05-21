@@ -12,7 +12,6 @@ when the latter is modified, but can also be run manually.
 
 from __future__ import print_function
 
-from itertools import product
 import re
 import time
 
@@ -45,6 +44,18 @@ def _atoi(value):
         return int(value)
     except ValueError:
         return int(value, 16)
+
+def _is_call(call, func):
+    """
+    Return whether the first argument is a function call of the second.
+    """
+    return call.startswith(func + "(") and call.endswith(")")
+
+def _call_args(call, func):
+    """
+    Given a call and a function name, return the function call arguments.
+    """
+    return call[len(func) + 1:-1].strip()
 
 class Instruction(object):
     """
@@ -222,6 +233,23 @@ class Instruction(object):
         choices = [cond * num if len(cond) == 1 else cond for cond in splits]
         return zip(*choices)
 
+    def _step(self, argdata):
+        """
+        Evaluate a step function call into a single byte.
+        """
+        args = _call_args(argdata, "step")
+        if " " in args:
+            base, stride = map(_atoi, args.split(" "))
+        else:
+            base, stride = _atoi(args), 1
+
+        if base not in self._step_state:
+            self._step_state[base] = 0
+
+        byte = base + self._step_state[base] * stride
+        self._step_state[base] += 1
+        return byte
+
     def _adapt_return(self, types, conds, ret):
         """
         Return a modified byte list to accomodate for prefixes and immediates.
@@ -258,21 +286,16 @@ class Instruction(object):
                     index = types.index("immediate")
                     ret[i] = "INST_IMM({0}).sval - 2".format(index)
 
-                elif byte.startswith("bit(") and byte.endswith(")"):
+                elif _is_call(byte, "bit"):
                     index = types.index("immediate")
-                    base = byte[4:-1]
-                    ret[i] = "{0} + 8 * INST_IMM({1}).uval".format(base, index)
+                    base = _call_args(byte, "bit")
+                    if _is_call(base, "step"):
+                        base = self._step(base)
+                    ret[i] = "0x{0:02X} + 8 * INST_IMM({1}).uval".format(
+                        _atoi(base), index)
 
-                elif byte.startswith("step(") and byte.endswith(")"):
-                    arg = byte[5:-1]
-                    if " " in arg:
-                        base, stride = map(_atoi, arg.split(" "))
-                    else:
-                        base, stride = _atoi(arg), 1
-                    if base not in self._step_state:
-                        self._step_state[base] = 0
-                    ret[i] = base + self._step_state[base] * stride
-                    self._step_state[base] += 1
+                elif _is_call(byte, "step"):
+                    ret[i] = self._step(byte)
 
                 else:
                     msg = "Unsupported return byte: {0}"
@@ -338,6 +361,7 @@ class Instruction(object):
         cond = self._build_case_type_check(ctype)
         lines.append(TAB + "if ({0}) {{".format(cond))
 
+        self._step_state = {}
         subcases = [(perm, sub["return"]) for sub in case["cases"]
                     for perm in self._iter_permutations(ctype, sub["cond"])]
         for cond, ret in subcases:
