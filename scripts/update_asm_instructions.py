@@ -112,7 +112,8 @@ class Instruction(object):
         "hl": 2,
         "ix": 2,
         "iy": 2,
-        "sp": 3
+        "sp": 3,
+        "af": 3
     }
     CONDITION_ORDER = ["nz", "z", "nc", "c", "po", "pe", "p", "m"]
 
