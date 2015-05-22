@@ -57,17 +57,17 @@ def _is_call(call, func):
     """
     return call.startswith(func + "(") and call.endswith(")")
 
-def _call_args(call, func):
+def _call_args(call):
     """
     Given a call and a function name, return the function call arguments.
     """
-    return call[len(func) + 1:-1].strip()
+    return call[call.index("(") + 1:-1].strip()
 
-def _parse_step_args(call, func):
+def _parse_step_args(call):
     """
     Parse arguments to a step function (e.g. reg() or cond()).
     """
-    args = _call_args(call, func)
+    args = _call_args(call)
     if " " in args:
         return map(_atoi, args.split(" "))
     else:
@@ -280,7 +280,7 @@ class Instruction(object):
         Return a modified byte list to accomodate for prefixes and immediates.
         """
         def handle_reg_func(call):
-            base, stride = _parse_step_args(call, "reg")
+            base, stride = _parse_step_args(call)
             index = _rindex(types, "register")
             return base + self.REGISTER_OFFSETS[conds[index]] * stride
 
@@ -318,7 +318,7 @@ class Instruction(object):
 
                 elif _is_call(byte, "bit"):
                     index = types.index("immediate")
-                    base = _call_args(byte, "bit")
+                    base = _call_args(byte)
                     if _is_call(base, "reg"):
                         base = handle_reg_func(base)
                     ret[i] = "0x{0:02X} + 8 * INST_IMM({1}).uval".format(
@@ -326,7 +326,7 @@ class Instruction(object):
 
                 elif _is_call(byte, "rst"):
                     index = types.index("immediate")
-                    base = _call_args(byte, "rst")
+                    base = _call_args(byte)
                     ret[i] = "0x{0:02X} + INST_IMM({1}).uval".format(
                         _atoi(base), index)
 
@@ -334,7 +334,7 @@ class Instruction(object):
                     ret[i] = handle_reg_func(byte)
 
                 elif _is_call(byte, "cond"):
-                    base, stride = _parse_step_args(byte, "cond")
+                    base, stride = _parse_step_args(byte)
                     index = types.index("condition")
                     offset = self.CONDITION_ORDER.index(conds[index])
                     ret[i] = base + offset * stride
