@@ -15,23 +15,23 @@ adc:
     cases:
         - type: [register, register]
           cases:
-            - cond:   [a, a]
+            - if:     [a, a]
               return: [0x8F]
-            - cond:   [a, b|c|d|e]
-              return: [step(0x88)]
-            - cond:   [a, h|ih]
+            - if:     [a, b|c|d|e]
+              return: [reg(0x88)]
+            - if:     [a, h|ih]
               return: [0x8C]
-            - cond:   [a, l|il]
+            - if:     [a, l|il]
               return: [0x8D]
-            - cond:   [hl, bc|de|hl|sp]
-              return: [0xED, step(0x4A 0x10)]
+            - if:     [hl, bc|de|hl|sp]
+              return: [0xED, reg(0x4A 0x10)]
         - type: [register, immediate]
           cases:
-            - cond:   [a, u8]
+            - if:     [a, u8]
               return: [0xCE, u8]
         - type: [register, indirect_hl_or_indexed]
           cases:
-            - cond:   [a, _]
+            - if:     [a, _]
               return: [0x8E]
 
 add:
@@ -39,29 +39,29 @@ add:
     cases:
         - type: [register, register]
           cases:
-            - cond:   [a, a]
+            - if:     [a, a]
               return: [0x87]
-            - cond:   [a, b|c|d|e]
-              return: [step(0x80)]
-            - cond:   [a, h|ih]
+            - if:     [a, b|c|d|e]
+              return: [reg(0x80)]
+            - if:     [a, h|ih]
               return: [0x84]
-            - cond:   [a, l|il]
+            - if:     [a, l|il]
               return: [0x85]
-            - cond:   [hl|i, bc]
+            - if:     [hl|i, bc]
               return: [0x09]
-            - cond:   [hl|i, de]
+            - if:     [hl|i, de]
               return: [0x19]
-            - cond:   [hl|i, hl|i]
+            - if:     [hl|i, hl|i]
               return: [0x29]
-            - cond:   [hl|i, sp]
+            - if:     [hl|i, sp]
               return: [0x39]
         - type: [register, immediate]
           cases:
-            - cond:   [a, u8]
+            - if:     [a, u8]
               return: [0xC6, u8]
         - type: [register, indirect_hl_or_indexed]
           cases:
-            - cond:   [a, _]
+            - if:     [a, _]
               return: [0x86]
 
 and:
@@ -69,21 +69,21 @@ and:
     cases:
         - type: [register]
           cases:
-            - cond:   [a]
+            - if:     [a]
               return: [0xA7]
-            - cond:   [b|c|d|e]
-              return: [step(0xA0)]
-            - cond:   [h|ih]
+            - if:     [b|c|d|e]
+              return: [reg(0xA0)]
+            - if:     [h|ih]
               return: [0xA4]
-            - cond:   [l|il]
+            - if:     [l|il]
               return: [0xA5]
         - type: [immediate]
           cases:
-            - cond:   [u8]
+            - if:     [u8]
               return: [0xE6, u8]
         - type: [indirect_hl_or_indexed]
           cases:
-            - cond:   [_]
+            - if:     [_]
               return: [0xA6]
 
 bit:
@@ -91,13 +91,13 @@ bit:
     cases:
         - type: [immediate, register]
           cases:
-            - cond:   [bit, a]
+            - if:     [bit, a]
               return: [0xCB, bit(0x47)]
-            - cond:   [bit, b|c|d|e|h|l]
-              return: [0xCB, bit(step(0x40))]
+            - if:     [bit, b|c|d|e|h|l]
+              return: [0xCB, bit(reg(0x40))]
         - type: [immediate, indirect_hl_or_indexed]
           cases:
-            - cond:   [bit, _]
+            - if:     [bit, _]
               return: [0xCB, bit(0x46)]
 
 call:
@@ -105,12 +105,12 @@ call:
     cases:
         - type: [immediate]
           cases:
-            - cond:   [u16]
+            - if:     [u16]
               return: [0xCD, u16]
         - type: [condition, immediate]
           cases:
-            - cond:   [nz|z|nc|c|po|pe|p|m, u16]
-              return: [step(0xC4 0x08), u16]
+            - if:     [nz|z|nc|c|po|pe|p|m, u16]
+              return: [cond(0xC4 0x08), u16]
 
 ccf:
     args: no
@@ -121,21 +121,21 @@ cp:
     cases:
         - type: [register]
           cases:
-            - cond:   [a]
+            - if:     [a]
               return: [0xBF]
-            - cond:   [b|c|d|e]
-              return: [step(0xB8)]
-            - cond:   [h|ih]
+            - if:     [b|c|d|e]
+              return: [reg(0xB8)]
+            - if:     [h|ih]
               return: [0xBC]
-            - cond:   [l|il]
+            - if:     [l|il]
               return: [0xBD]
         - type: [indirect_hl_or_indexed]
           cases:
-            - cond:   [_]
+            - if:     [_]
               return: [0xBE]
         - type: [immediate]
           cases:
-            - cond:   [u8]
+            - if:     [u8]
               return: [0xFE, u8]
 
 cpd:
@@ -167,25 +167,25 @@ dec:
     cases:
         - type: [register]
           cases:
-            - cond:   [a]
+            - if:     [a]
               return: [0x3D]
-            - cond:   [b|c|d|e]
-              return: [step(0x05 0x08)]
-            - cond:   [h|ih]
+            - if:     [b|c|d|e]
+              return: [reg(0x05 0x08)]
+            - if:     [h|ih]
               return: [0x25]
-            - cond:   [l|il]
+            - if:     [l|il]
               return: [0x2D]
-            - cond:   [bc]
+            - if:     [bc]
               return: [0x0B]
-            - cond:   [de]
+            - if:     [de]
               return: [0x1B]
-            - cond:   [hl|i]
+            - if:     [hl|i]
               return: [0x2B]
-            - cond:   [sp]
+            - if:     [sp]
               return: [0x3B]
         - type: [indirect_hl_or_indexed]
           cases:
-            - cond:   [_]
+            - if:     [_]
               return: [0x35]
 
 di:
@@ -197,7 +197,7 @@ djnz:
     cases:
         - type: [immediate]
           cases:
-            - cond:   [rel]
+            - if:     [rel]
               return: [0x10, rel]
 
 ei:
@@ -209,13 +209,13 @@ ex:
     cases:
         - type: [register, register]
           cases:
-            - cond:   [af, af_]
+            - if:     [af, af_]
               return: [0x08]
-            - cond:   [de, hl]
+            - if:     [de, hl]
               return: [0xEB]
         - type: [indirect, register]
           cases:
-            - cond:   [reg.sp, hl|i]
+            - if:     [reg.sp, hl|i]
               return: [0xE3]
 
 exx:
@@ -231,11 +231,11 @@ im:
     cases:
         - type: [immediate]
           cases:
-            - cond:   [im.0]
+            - if:     [im.0]
               return: [0xED, 0x46]
-            - cond:   [im.1]
+            - if:     [im.1]
               return: [0xED, 0x56]
-            - cond:   [im.2]
+            - if:     [im.2]
               return: [0xED, 0x5E]
 
 in:
@@ -243,15 +243,15 @@ in:
     cases:
         - type: [register, port]
           cases:
-            - cond:   [a, imm]
+            - if:     [a, imm]
               return: [0xDB, u8]
-            - cond:   [a, reg.c]
+            - if:     [a, reg.c]
               return: [0xED, 0x78]
-            - cond:   [b|c|d|e|h|l, reg.c]
-              return: [0xED, step(0x40 0x08)]
+            - if:     [b|c|d|e|h|l, reg.c]
+              return: [0xED, reg(0x40 0x08)]
         - type: [port]
           cases:
-            - cond:   [reg.c]
+            - if:     [reg.c]
               return: [0xED, 0x70]
 
 inc:
@@ -259,25 +259,25 @@ inc:
     cases:
         - type: [register]
           cases:
-            - cond:   [a]
+            - if:     [a]
               return: [0x3C]
-            - cond:   [b|c|d|e]
-              return: [step(0x04 0x08)]
-            - cond:   [h|ih]
+            - if:     [b|c|d|e]
+              return: [reg(0x04 0x08)]
+            - if:     [h|ih]
               return: [0x24]
-            - cond:   [l|il]
+            - if:     [l|il]
               return: [0x2C]
-            - cond:   [bc]
+            - if:     [bc]
               return: [0x03]
-            - cond:   [de]
+            - if:     [de]
               return: [0x13]
-            - cond:   [hl|i]
+            - if:     [hl|i]
               return: [0x23]
-            - cond:   [sp]
+            - if:     [sp]
               return: [0x33]
         - type: [indirect_hl_or_indexed]
           cases:
-            - cond:   [_]
+            - if:     [_]
               return: [0x34]
 
 ind:
@@ -301,15 +301,15 @@ jp:
     cases:
         - type: [immediate]
           cases:
-            - cond:   [u16]
+            - if:     [u16]
               return: [0xC3, u16]
         - type: [condition, immediate]
           cases:
-            - cond:   [nz|z|nc|c|po|pe|p|m, u16]
-              return: [step(0xC2 0x08), u16]
+            - if:     [nz|z|nc|c|po|pe|p|m, u16]
+              return: [cond(0xC2 0x08), u16]
         - type: [indirect_hl_or_indexed]
           cases:
-            - cond:   [_]
+            - if:     [_]
               return: [0xE9]
 
 jr:
@@ -317,161 +317,161 @@ jr:
     cases:
         - type: [immediate]
           cases:
-            - cond:   [rel]
+            - if:     [rel]
               return: [0x18, rel]
         - type: [condition, immediate]
           cases:
-            - cond:   [nz|z|nc|c, rel]
-              return: [step(0x20 0x08), rel]
+            - if:     [nz|z|nc|c, rel]
+              return: [cond(0x20 0x08), rel]
 
 ld:
     args: yes
     cases:
         - type: [register, register]
           cases:
-            - cond:   [a, a]
+            - if:     [a, a]
               return: [0x7F]
-            - cond:   [a, b|c|d|e]
-              return: [step(0x78)]
-            - cond:   [a, h|ih]
+            - if:     [a, b|c|d|e]
+              return: [reg(0x78)]
+            - if:     [a, h|ih]
               return: [0x7C]
-            - cond:   [a, l|il]
+            - if:     [a, l|il]
               return: [0x7D]
-            - cond:   [b, a]
+            - if:     [b, a]
               return: [0x47]
-            - cond:   [b, b|c|d|e]
-              return: [step(0x40)]
-            - cond:   [b, h|ih]
+            - if:     [b, b|c|d|e]
+              return: [reg(0x40)]
+            - if:     [b, h|ih]
               return: [0x44]
-            - cond:   [b, l|il]
+            - if:     [b, l|il]
               return: [0x45]
-            - cond:   [c, a]
+            - if:     [c, a]
               return: [0x4F]
-            - cond:   [c, b|c|d|e]
-              return: [step(0x48)]
-            - cond:   [c, h|ih]
+            - if:     [c, b|c|d|e]
+              return: [reg(0x48)]
+            - if:     [c, h|ih]
               return: [0x4C]
-            - cond:   [c, l|il]
+            - if:     [c, l|il]
               return: [0x4D]
-            - cond:   [d, a]
+            - if:     [d, a]
               return: [0x57]
-            - cond:   [d, b|c|d|e]
-              return: [step(0x50)]
-            - cond:   [d, h|ih]
+            - if:     [d, b|c|d|e]
+              return: [reg(0x50)]
+            - if:     [d, h|ih]
               return: [0x54]
-            - cond:   [d, l|il]
+            - if:     [d, l|il]
               return: [0x55]
-            - cond:   [e, a]
+            - if:     [e, a]
               return: [0x5F]
-            - cond:   [e, b|c|d|e]
-              return: [step(0x58)]
-            - cond:   [e, h|ih]
+            - if:     [e, b|c|d|e]
+              return: [reg(0x58)]
+            - if:     [e, h|ih]
               return: [0x5C]
-            - cond:   [e, l|il]
+            - if:     [e, l|il]
               return: [0x5D]
-            - cond:   [h|ih, a]
+            - if:     [h|ih, a]
               return: [0x67]
-            - cond:   [h|ih, b]
+            - if:     [h|ih, b]
               return: [0x60]
-            - cond:   [h|ih, c]
+            - if:     [h|ih, c]
               return: [0x61]
-            - cond:   [h|ih, d]
+            - if:     [h|ih, d]
               return: [0x62]
-            - cond:   [h|ih, e]
+            - if:     [h|ih, e]
               return: [0x63]
-            - cond:   [h|ih, h|ih]
+            - if:     [h|ih, h|ih]
               return: [0x64]
-            - cond:   [h|ih, l|il]
+            - if:     [h|ih, l|il]
               return: [0x65]
-            - cond:   [l|il, a]
+            - if:     [l|il, a]
               return: [0x6F]
-            - cond:   [l|il, b]
+            - if:     [l|il, b]
               return: [0x68]
-            - cond:   [l|il, c]
+            - if:     [l|il, c]
               return: [0x69]
-            - cond:   [l|il, d]
+            - if:     [l|il, d]
               return: [0x6A]
-            - cond:   [l|il, e]
+            - if:     [l|il, e]
               return: [0x6B]
-            - cond:   [l|il, h|ih]
+            - if:     [l|il, h|ih]
               return: [0x6C]
-            - cond:   [l|il, l|il]
+            - if:     [l|il, l|il]
               return: [0x6D]
-            - cond:   [a, i]
+            - if:     [a, i]
               return: [0xED, 0x57]
-            - cond:   [i, a]
+            - if:     [i, a]
               return: [0xED, 0x47]
-            - cond:   [a, r]
+            - if:     [a, r]
               return: [0xED, 0x5F]
-            - cond:   [r, a]
+            - if:     [r, a]
               return: [0xED, 0x4F]
-            - cond:   [sp, hl|i]
+            - if:     [sp, hl|i]
               return: [0xF9]
         - type: [register, immediate]
           cases:
-            - cond:   [a, u8]
+            - if:     [a, u8]
               return: [0x3E, u8]
-            - cond:   [b|c|d|e, u8]
-              return: [step(0x06 0x08), u8]
-            - cond:   [h|ih, u8]
+            - if:     [b|c|d|e, u8]
+              return: [reg(0x06 0x08), u8]
+            - if:     [h|ih, u8]
               return: [0x26, u8]
-            - cond:   [l|il, u8]
+            - if:     [l|il, u8]
               return: [0x2E, u8]
-            - cond:   [bc, u16]
+            - if:     [bc, u16]
               return: [0x01, u16]
-            - cond:   [de, u16]
+            - if:     [de, u16]
               return: [0x11, u16]
-            - cond:   [hl|i, u16]
+            - if:     [hl|i, u16]
               return: [0x21, u16]
-            - cond:   [sp, u16]
+            - if:     [sp, u16]
               return: [0x31, u16]
         - type: [register, indirect_hl_or_indexed]
           cases:
-            - cond:   [a, _]
+            - if:     [a, _]
               return: [0x7E]
-            - cond:   [b|c|d|e|h|l, _]
-              return: [step(0x46 0x08)]
+            - if:     [b|c|d|e|h|l, _]
+              return: [reg(0x46 0x08)]
         - type: [register, indirect]
           cases:
-            - cond:   [a, reg.bc]
+            - if:     [a, reg.bc]
               return: [0x0A]
-            - cond:   [a, reg.de]
+            - if:     [a, reg.de]
               return: [0x1A]
-            - cond:   [hl|i, imm]
+            - if:     [hl|i, imm]
               return: [0x2A, u16]
-            - cond:   [a, imm]
+            - if:     [a, imm]
               return: [0x3A, u16]
-            - cond:   [bc, imm]
+            - if:     [bc, imm]
               return: [0xED, 0x4B, u16]
-            - cond:   [de, imm]
+            - if:     [de, imm]
               return: [0xED, 0x5B, u16]
-            - cond:   [sp, imm]
+            - if:     [sp, imm]
               return: [0xED, 0x7B, u16]
         - type: [indirect_hl_or_indexed, register]
           cases:
-            - cond:   [_, a]
+            - if:     [_, a]
               return: [0x77]
-            - cond:   [_, b|c|d|e|h|l]
-              return: [step(0x70)]
+            - if:     [_, b|c|d|e|h|l]
+              return: [reg(0x70)]
         - type: [indirect_hl_or_indexed, immediate]
           cases:
-            - cond:   [_, u8]
+            - if:     [_, u8]
               return: [0x36, u8]
         - type: [indirect, register]
           cases:
-            - cond:   [reg.bc, a]
+            - if:     [reg.bc, a]
               return: [0x02]
-            - cond:   [reg.de, a]
+            - if:     [reg.de, a]
               return: [0x12]
-            - cond:   [imm, hl|i]
+            - if:     [imm, hl|i]
               return: [0x22, u16]
-            - cond:   [imm, a]
+            - if:     [imm, a]
               return: [0x32, u16]
-            - cond:   [imm, bc]
+            - if:     [imm, bc]
               return: [0xED, 0x43, u16]
-            - cond:   [imm, de]
+            - if:     [imm, de]
               return: [0xED, 0x53, u16]
-            - cond:   [imm, sp]
+            - if:     [imm, sp]
               return: [0xED, 0x73, u16]
 
 ldd:
@@ -503,21 +503,21 @@ or:
     cases:
         - type: [register]
           cases:
-            - cond:   [a]
+            - if:     [a]
               return: [0xB7]
-            - cond:   [b|c|d|e]
-              return: [step(0xB0)]
-            - cond:   [h|ih]
+            - if:     [b|c|d|e]
+              return: [reg(0xB0)]
+            - if:     [h|ih]
               return: [0xB4]
-            - cond:   [l|il]
+            - if:     [l|il]
               return: [0xB5]
         - type: [immediate]
           cases:
-            - cond:   [u8]
+            - if:     [u8]
               return: [0xF6, u8]
         - type: [indirect_hl_or_indexed]
           cases:
-            - cond:   [_]
+            - if:     [_]
               return: [0xB6]
 
 otdr:
@@ -533,15 +533,15 @@ out:
     cases:
         - type: [port, register]
           cases:
-            - cond:   [imm, a]
+            - if:     [imm, a]
               return: [0xD3, u8]
-            - cond:   [reg.c, a]
+            - if:     [reg.c, a]
               return: [0xED, 0x79]
-            - cond:   [reg.c, b|c|d|e|h|l]
-              return: [0xED, step(0x41 0x08)]
+            - if:     [reg.c, b|c|d|e|h|l]
+              return: [0xED, reg(0x41 0x08)]
         - type: [port, immediate]
           cases:
-            - cond:   [reg.c, u8.0]
+            - if:     [reg.c, u8.0]
               return: [0xED, 0x71]
 
 outd:
@@ -557,13 +557,13 @@ pop:
     cases:
         - type: [register]
           cases:
-            - cond:   [bc]
+            - if:     [bc]
               return: [0xC1]
-            - cond:   [de]
+            - if:     [de]
               return: [0xD1]
-            - cond:   [hl|i]
+            - if:     [hl|i]
               return: [0xE1]
-            - cond:   [af]
+            - if:     [af]
               return: [0xF1]
 
 push:
@@ -571,13 +571,13 @@ push:
     cases:
         - type: [register]
           cases:
-            - cond:   [bc]
+            - if:     [bc]
               return: [0xC5]
-            - cond:   [de]
+            - if:     [de]
               return: [0xD5]
-            - cond:   [hl|i]
+            - if:     [hl|i]
               return: [0xE5]
-            - cond:   [af]
+            - if:     [af]
               return: [0xF5]
 
 res:
@@ -585,20 +585,20 @@ res:
     cases:
         - type: [immediate, register]
           cases:
-            - cond:   [bit, a]
+            - if:     [bit, a]
               return: [0xCB, bit(0x87)]
-            - cond:   [bit, b|c|d|e|h|l]
-              return: [0xCB, bit(step(0x80))]
+            - if:     [bit, b|c|d|e|h|l]
+              return: [0xCB, bit(reg(0x80))]
         - type: [immediate, indirect_hl_or_indexed]
           cases:
-            - cond:   [bit, _]
+            - if:     [bit, _]
               return: [0xCB, bit(0x86)]
         - type: [immediate, indexed, register]
           cases:
-            - cond:   [bit, _, a]
+            - if:     [bit, _, a]
               return: [0xCB, bit(0x87)]
-            - cond:   [bit, _, b|c|d|e|h|l]
-              return: [0xCB, bit(step(0x80))]
+            - if:     [bit, _, b|c|d|e|h|l]
+              return: [0xCB, bit(reg(0x80))]
 
 ret:
     args: yes
@@ -607,8 +607,8 @@ ret:
           return: [0xC9]
         - type: [condition]
           cases:
-            - cond:   [nz|z|nc|c|po|pe|p|m]
-              return: [step(0xC0 0x08)]
+            - if:     [nz|z|nc|c|po|pe|p|m]
+              return: [cond(0xC0 0x08)]
 
 reti:
     args: no
@@ -623,20 +623,20 @@ rl:
     cases:
         - type: [register]
           cases:
-            - cond:   [a]
+            - if:     [a]
               return: [0xCB, 0x17]
-            - cond:   [b|c|d|e|h|l]
-              return: [0xCB, step(0x10)]
+            - if:     [b|c|d|e|h|l]
+              return: [0xCB, reg(0x10)]
         - type: [indirect_hl_or_indexed]
           cases:
-            - cond:   [_]
+            - if:     [_]
               return: [0xCB, 0x16]
         - type: [indexed, register]
           cases:
-            - cond:   [_, a]
+            - if:     [_, a]
               return: [0xCB, 0x17]
-            - cond:   [_, b|c|d|e|h|l]
-              return: [0xCB, step(0x10)]
+            - if:     [_, b|c|d|e|h|l]
+              return: [0xCB, reg(0x10)]
 
 rla:
     args: no
@@ -647,20 +647,20 @@ rlc:
     cases:
         - type: [register]
           cases:
-            - cond:   [a]
+            - if:     [a]
               return: [0xCB, 0x07]
-            - cond:   [b|c|d|e|h|l]
-              return: [0xCB, step(0x00)]
+            - if:     [b|c|d|e|h|l]
+              return: [0xCB, reg(0x00)]
         - type: [indirect_hl_or_indexed]
           cases:
-            - cond:   [_]
+            - if:     [_]
               return: [0xCB, 0x06]
         - type: [indexed, register]
           cases:
-            - cond:   [_, a]
+            - if:     [_, a]
               return: [0xCB, 0x07]
-            - cond:   [_, b|c|d|e|h|l]
-              return: [0xCB, step(0x00)]
+            - if:     [_, b|c|d|e|h|l]
+              return: [0xCB, reg(0x00)]
 
 rlca:
     args: no
@@ -675,20 +675,20 @@ rr:
     cases:
         - type: [register]
           cases:
-            - cond:   [a]
+            - if:     [a]
               return: [0xCB, 0x1F]
-            - cond:   [b|c|d|e|h|l]
-              return: [0xCB, step(0x18)]
+            - if:     [b|c|d|e|h|l]
+              return: [0xCB, reg(0x18)]
         - type: [indirect_hl_or_indexed]
           cases:
-            - cond:   [_]
+            - if:     [_]
               return: [0xCB, 0x1E]
         - type: [indexed, register]
           cases:
-            - cond:   [_, a]
+            - if:     [_, a]
               return: [0xCB, 0x1F]
-            - cond:   [_, b|c|d|e|h|l]
-              return: [0xCB, step(0x18)]
+            - if:     [_, b|c|d|e|h|l]
+              return: [0xCB, reg(0x18)]
 
 rra:
     args: no
@@ -699,20 +699,20 @@ rrc:
     cases:
         - type: [register]
           cases:
-            - cond:   [a]
+            - if:     [a]
               return: [0xCB, 0x0F]
-            - cond:   [b|c|d|e|h|l]
-              return: [0xCB, step(0x08)]
+            - if:     [b|c|d|e|h|l]
+              return: [0xCB, reg(0x08)]
         - type: [indirect_hl_or_indexed]
           cases:
-            - cond:   [_]
+            - if:     [_]
               return: [0xCB, 0x0E]
         - type: [indexed, register]
           cases:
-            - cond:   [_, a]
+            - if:     [_, a]
               return: [0xCB, 0x0F]
-            - cond:   [_, b|c|d|e|h|l]
-              return: [0xCB, step(0x08)]
+            - if:     [_, b|c|d|e|h|l]
+              return: [0xCB, reg(0x08)]
 
 rrca:
     args: no
@@ -727,21 +727,21 @@ rst:
     cases:
         - type: [immediate]
           cases:
-            - cond:   [rst.0x00]
+            - if:     [rst.0x00]
               return: [0xC7]
-            - cond:   [rst.0x08]
+            - if:     [rst.0x08]
               return: [0xCF]
-            - cond:   [rst.0x10]
+            - if:     [rst.0x10]
               return: [0xD7]
-            - cond:   [rst.0x18]
+            - if:     [rst.0x18]
               return: [0xDF]
-            - cond:   [rst.0x20]
+            - if:     [rst.0x20]
               return: [0xE7]
-            - cond:   [rst.0x28]
+            - if:     [rst.0x28]
               return: [0xEF]
-            - cond:   [rst.0x30]
+            - if:     [rst.0x30]
               return: [0xF7]
-            - cond:   [rst.0x38]
+            - if:     [rst.0x38]
               return: [0xFF]
 
 sbc:
@@ -749,23 +749,23 @@ sbc:
     cases:
         - type: [register, register]
           cases:
-            - cond:   [a, a]
+            - if:     [a, a]
               return: [0x9F]
-            - cond:   [a, b|c|d|e]
-              return: [step(0x98)]
-            - cond:   [a, h|ih]
+            - if:     [a, b|c|d|e]
+              return: [reg(0x98)]
+            - if:     [a, h|ih]
               return: [0x9C]
-            - cond:   [a, l|il]
+            - if:     [a, l|il]
               return: [0x9D]
-            - cond:   [hl, bc|de|hl|sp]
-              return: [0xED, step(0x42 0x10)]
+            - if:     [hl, bc|de|hl|sp]
+              return: [0xED, reg(0x42 0x10)]
         - type: [register, immediate]
           cases:
-            - cond:   [a, u8]
+            - if:     [a, u8]
               return: [0xDE, u8]
         - type: [register, indirect_hl_or_indexed]
           cases:
-            - cond:   [a, _]
+            - if:     [a, _]
               return: [0x9E]
 
 scf:
@@ -777,60 +777,60 @@ set:
     cases:
         - type: [immediate, register]
           cases:
-            - cond:   [bit, a]
+            - if:     [bit, a]
               return: [0xCB, bit(0xC7)]
-            - cond:   [bit, b|c|d|e|h|l]
-              return: [0xCB, bit(step(0xC0))]
+            - if:     [bit, b|c|d|e|h|l]
+              return: [0xCB, bit(reg(0xC0))]
         - type: [immediate, indirect_hl_or_indexed]
           cases:
-            - cond:   [bit, _]
+            - if:     [bit, _]
               return: [0xCB, bit(0xC6)]
         - type: [immediate, indexed, register]
           cases:
-            - cond:   [bit, _, a]
+            - if:     [bit, _, a]
               return: [0xCB, bit(0xC7)]
-            - cond:   [bit, _, b|c|d|e|h|l]
-              return: [0xCB, bit(step(0xC0))]
+            - if:     [bit, _, b|c|d|e|h|l]
+              return: [0xCB, bit(reg(0xC0))]
 
 sl1: &sl1
     args: yes
     cases:
         - type: [register]
           cases:
-            - cond:   [a]
+            - if:     [a]
               return: [0xCB, 0x37]
-            - cond:   [b|c|d|e|h|l]
-              return: [0xCB, step(0x30)]
+            - if:     [b|c|d|e|h|l]
+              return: [0xCB, reg(0x30)]
         - type: [indirect_hl_or_indexed]
           cases:
-            - cond:   [_]
+            - if:     [_]
               return: [0xCB, 0x36]
         - type: [indexed, register]
           cases:
-            - cond:   [_, a]
+            - if:     [_, a]
               return: [0xCB, 0x37]
-            - cond:   [_, b|c|d|e|h|l]
-              return: [0xCB, step(0x30)]
+            - if:     [_, b|c|d|e|h|l]
+              return: [0xCB, reg(0x30)]
 
 sla:
     args: yes
     cases:
         - type: [register]
           cases:
-            - cond:   [a]
+            - if:     [a]
               return: [0xCB, 0x27]
-            - cond:   [b|c|d|e|h|l]
-              return: [0xCB, step(0x20)]
+            - if:     [b|c|d|e|h|l]
+              return: [0xCB, reg(0x20)]
         - type: [indirect_hl_or_indexed]
           cases:
-            - cond:   [_]
+            - if:     [_]
               return: [0xCB, 0x26]
         - type: [indexed, register]
           cases:
-            - cond:   [_, a]
+            - if:     [_, a]
               return: [0xCB, 0x27]
-            - cond:   [_, b|c|d|e|h|l]
-              return: [0xCB, step(0x20)]
+            - if:     [_, b|c|d|e|h|l]
+              return: [0xCB, reg(0x20)]
 
 sll: *sl1
 
@@ -841,61 +841,61 @@ sra:
     cases:
         - type: [register]
           cases:
-            - cond:   [a]
+            - if:     [a]
               return: [0xCB, 0x2F]
-            - cond:   [b|c|d|e|h|l]
-              return: [0xCB, step(0x28)]
+            - if:     [b|c|d|e|h|l]
+              return: [0xCB, reg(0x28)]
         - type: [indirect_hl_or_indexed]
           cases:
-            - cond:   [_]
+            - if:     [_]
               return: [0xCB, 0x2E]
         - type: [indexed, register]
           cases:
-            - cond:   [_, a]
+            - if:     [_, a]
               return: [0xCB, 0x2F]
-            - cond:   [_, b|c|d|e|h|l]
-              return: [0xCB, step(0x28)]
+            - if:     [_, b|c|d|e|h|l]
+              return: [0xCB, reg(0x28)]
 
 srl:
     args: yes
     cases:
         - type: [register]
           cases:
-            - cond:   [a]
+            - if:     [a]
               return: [0xCB, 0x3F]
-            - cond:   [b|c|d|e|h|l]
-              return: [0xCB, step(0x38)]
+            - if:     [b|c|d|e|h|l]
+              return: [0xCB, reg(0x38)]
         - type: [indirect_hl_or_indexed]
           cases:
-            - cond:   [_]
+            - if:     [_]
               return: [0xCB, 0x3E]
         - type: [indexed, register]
           cases:
-            - cond:   [_, a]
+            - if:     [_, a]
               return: [0xCB, 0x3F]
-            - cond:   [_, b|c|d|e|h|l]
-              return: [0xCB, step(0x38)]
+            - if:     [_, b|c|d|e|h|l]
+              return: [0xCB, reg(0x38)]
 
 sub:
     args: yes
     cases:
         - type: [register]
           cases:
-            - cond:   [a]
+            - if:     [a]
               return: [0x97]
-            - cond:   [b|c|d|e]
-              return: [step(0x90)]
-            - cond:   [h|ih]
+            - if:     [b|c|d|e]
+              return: [reg(0x90)]
+            - if:     [h|ih]
               return: [0x94]
-            - cond:   [l|il]
+            - if:     [l|il]
               return: [0x95]
         - type: [immediate]
           cases:
-            - cond:   [u8]
+            - if:     [u8]
               return: [0xD6, u8]
         - type: [indirect_hl_or_indexed]
           cases:
-            - cond:   [_]
+            - if:     [_]
               return: [0x96]
 
 xor:
@@ -903,19 +903,19 @@ xor:
     cases:
         - type: [register]
           cases:
-            - cond:   [a]
+            - if:     [a]
               return: [0xAF]
-            - cond:   [b|c|d|e]
-              return: [step(0xA8)]
-            - cond:   [h|ih]
+            - if:     [b|c|d|e]
+              return: [reg(0xA8)]
+            - if:     [h|ih]
               return: [0xAC]
-            - cond:   [l|il]
+            - if:     [l|il]
               return: [0xAD]
         - type: [immediate]
           cases:
-            - cond:   [u8]
+            - if:     [u8]
               return: [0xEE, u8]
         - type: [indirect_hl_or_indexed]
           cases:
-            - cond:   [_]
+            - if:     [_]
               return: [0xAE]

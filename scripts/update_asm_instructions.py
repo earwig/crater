@@ -36,6 +36,12 @@ re_lookup = re.compile(
     r"(/\* @AUTOGEN_LOOKUP_BLOCK_START \*/\n*)(.*?)"
     r"(\n*/\* @AUTOGEN_LOOKUP_BLOCK_END \*/)", re.S)
 
+def _rindex(L, val):
+    """
+    Return the index of the last occurence of val in L.
+    """
+    return len(L) - L[::-1].index(val) - 1
+
 def _atoi(value):
     """
     Try to convert a string to an integer, supporting decimal and hexadecimal.
@@ -57,6 +63,22 @@ def _call_args(call, func):
     """
     return call[len(func) + 1:-1].strip()
 
+def _parse_step_args(call, func):
+    """
+    Parse arguments to a step function (e.g. reg() or cond()).
+    """
+    args = _call_args(call, func)
+    if " " in args:
+        return map(_atoi, args.split(" "))
+    else:
+        return _atoi(args), 1
+
+class ASMInstError(Exception):
+    """
+    Base class for all errors while trying to generate the instructions file.
+    """
+
+
 class Instruction(object):
     """
     Represent a single ASM instruction mnemonic.
@@ -72,13 +94,32 @@ class Instruction(object):
     PSEUDO_TYPES = {
         "indirect_hl_or_indexed": ["AT_INDIRECT", "AT_INDEXED"]
     }
+    REGISTER_OFFSETS = {
+        "a": 7,
+        "b": 0,
+        "c": 1,
+        "d": 2,
+        "e": 3,
+        "h": 4,
+        "ixh": 4,
+        "iyh": 4,
+        "l": 5,
+        "ixl": 5,
+        "iyl": 5,
+
+        "bc": 0,
+        "de": 1,
+        "hl": 2,
+        "ix": 2,
+        "iy": 2,
+        "sp": 3
+    }
+    CONDITION_ORDER = ["nz", "z", "nc", "c", "po", "pe", "p", "m"]
 
     def __init__(self, name, data):
         self._name = name
         self._data = data
-
         self._has_optional_args = False
-        self._step_state = {}
 
     def _get_arg_parse_mask(self, num):
         """
@@ -159,13 +200,13 @@ class Instruction(object):
             return "INST_INDIRECT({0}).type == AT_IMMEDIATE".format(num)
 
         err = "Unknown condition for indirect argument: {0}"
-        return RuntimeError(err.format(cond))
+        return ASMInstError(err.format(cond))
 
     def _build_indexed_check(self, num, cond):
         """
         Return an expression to check for a particular indexed value.
         """
-        raise RuntimeError("The indexed arg type does not support conditions")
+        raise ASMInstError("The indexed arg type does not support conditions")
 
     def _build_condition_check(self, num, cond):
         """
@@ -183,7 +224,7 @@ class Instruction(object):
             return "INST_PORT({0}).type == AT_IMMEDIATE".format(num)
 
         err = "Unknown condition for port argument: {0}"
-        return RuntimeError(err.format(cond))
+        return ASMInstError(err.format(cond))
 
     _SUBCASE_LOOKUP_TABLE = {
         "register": _build_register_check,
@@ -212,7 +253,7 @@ class Instruction(object):
                 merged = [choice for s in splits for choice in s]
                 if len(merged) != len(set(merged)):
                     msg = "Repeated conditions for {0}: {1}"
-                    raise RuntimeError(msg.format(typ, cond))
+                    raise ASMInstError(msg.format(typ, cond))
                 return merged
             if typ == "register":
                 if cond == "i":
@@ -228,32 +269,20 @@ class Instruction(object):
 
         if any(1 < len(cond) < num for cond in splits):
             msg = "Invalid condition permutations: {0}"
-            raise RuntimeError(msg.format(conds))
+            raise ASMInstError(msg.format(conds))
 
         choices = [cond * num if len(cond) == 1 else cond for cond in splits]
         return zip(*choices)
-
-    def _step(self, argdata):
-        """
-        Evaluate a step function call into a single byte.
-        """
-        args = _call_args(argdata, "step")
-        if " " in args:
-            base, stride = map(_atoi, args.split(" "))
-        else:
-            base, stride = _atoi(args), 1
-
-        if base not in self._step_state:
-            self._step_state[base] = 0
-
-        byte = base + self._step_state[base] * stride
-        self._step_state[base] += 1
-        return byte
 
     def _adapt_return(self, types, conds, ret):
         """
         Return a modified byte list to accomodate for prefixes and immediates.
         """
+        def handle_reg_func(call):
+            base, stride = _parse_step_args(call, "reg")
+            index = _rindex(types, "register")
+            return base + self.REGISTER_OFFSETS[conds[index]] * stride
+
         ret = ret[:]
         for i, byte in enumerate(ret):
             if not isinstance(byte, int):
@@ -268,7 +297,7 @@ class Instruction(object):
 
                 elif byte == "u16":
                     if i < len(ret) - 1:
-                        raise RuntimeError("U16 return byte must be last")
+                        raise ASMInstError("U16 return byte must be last")
                     try:
                         index = types.index("immediate")
                         imm = "INST_IMM({0})".format(index)
@@ -276,7 +305,7 @@ class Instruction(object):
                         indir = types.index("indirect")
                         if not conds[indir].startswith("imm"):
                             msg = "Passing non-immediate indirect as immediate"
-                            raise RuntimeError(msg)
+                            raise ASMInstError(msg)
                         imm = "INST_INDIRECT({0}).addr.imm".format(indir)
                     ret[i] = "INST_IMM_U16_B1({0})".format(imm)
                     ret.append("INST_IMM_U16_B2({0})".format(imm))
@@ -289,17 +318,23 @@ class Instruction(object):
                 elif _is_call(byte, "bit"):
                     index = types.index("immediate")
                     base = _call_args(byte, "bit")
-                    if _is_call(base, "step"):
-                        base = self._step(base)
+                    if _is_call(base, "reg"):
+                        base = handle_reg_func(base)
                     ret[i] = "0x{0:02X} + 8 * INST_IMM({1}).uval".format(
                         _atoi(base), index)
 
-                elif _is_call(byte, "step"):
-                    ret[i] = self._step(byte)
+                elif _is_call(byte, "reg"):
+                    ret[i] = handle_reg_func(byte)
+
+                elif _is_call(byte, "cond"):
+                    base, stride = _parse_step_args(byte, "cond")
+                    index = types.index("condition")
+                    offset = self.CONDITION_ORDER.index(conds[index])
+                    ret[i] = base + offset * stride
 
                 else:
                     msg = "Unsupported return byte: {0}"
-                    raise RuntimeError(msg.format(byte))
+                    raise ASMInstError(msg.format(byte))
 
         for i, cond in enumerate(conds):
             if types[i] == "register" and cond[0] == "i":
@@ -343,7 +378,7 @@ class Instruction(object):
 
             return indirect + indexed
 
-        raise RuntimeError("Unknown pseudo-type: {0}".format(pseudo))
+        raise ASMInstError("Unknown pseudo-type: {0}".format(pseudo))
 
     def _handle_case(self, case):
         """
@@ -361,9 +396,8 @@ class Instruction(object):
         cond = self._build_case_type_check(ctype)
         lines.append(TAB + "if ({0}) {{".format(cond))
 
-        self._step_state = {}
         subcases = [(perm, sub["return"]) for sub in case["cases"]
-                    for perm in self._iter_permutations(ctype, sub["cond"])]
+                    for perm in self._iter_permutations(ctype, sub["if"])]
         for cond, ret in subcases:
             check = self._build_subcase_check(ctype, cond)
             ret = self._adapt_return(ctype, cond, ret)
@@ -401,32 +435,32 @@ class Instruction(object):
             lines.append(TAB + "INST_ERROR(ARG_TYPE)")
         else:
             msg = "Missing return or case block for {0} instruction"
-            raise RuntimeError(msg.format(self._name))
+            raise ASMInstError(msg.format(self._name))
 
         contents = "\n".join(lines)
         return "INST_FUNC({0})\n{{\n{1}\n}}".format(self._name, contents)
 
 
-def build_inst_block(data):
+def _build_inst_block(data):
     """
     Return the instruction parser block, given instruction data.
     """
     return "\n\n".join(
         Instruction(k, v).render() for k, v in sorted(data.items()))
 
-def build_lookup_block(data):
+def _build_lookup_block(data):
     """
     Return the instruction lookup block, given instruction data.
     """
     macro = TAB + "HANDLE({0})"
     return "\n".join(macro.format(inst) for inst in sorted(data.keys()))
 
-def process(template, data):
+def _process(template, data):
     """
     Return C code generated from a source template and instruction data.
     """
-    inst_block = build_inst_block(data)
-    lookup_block = build_lookup_block(data)
+    inst_block = _build_inst_block(data)
+    lookup_block = _build_lookup_block(data)
     date = time.asctime(time.gmtime())
 
     result = re_date.sub(r"\1{0} UTC".format(date), template)
@@ -444,7 +478,7 @@ def main():
         template = fp.read().decode(ENCODING)
 
     data = yaml.load(text)
-    result = process(template, data)
+    result = _process(template, data)
 
     with open(DEST, "w") as fp:
         fp.write(result.encode(ENCODING))
