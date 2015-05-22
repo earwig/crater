@@ -324,6 +324,12 @@ class Instruction(object):
                     ret[i] = "0x{0:02X} + 8 * INST_IMM({1}).uval".format(
                         _atoi(base), index)
 
+                elif _is_call(byte, "rst"):
+                    index = types.index("immediate")
+                    base = _call_args(byte, "rst")
+                    ret[i] = "0x{0:02X} + INST_IMM({1}).uval".format(
+                        _atoi(base), index)
+
                 elif _is_call(byte, "reg"):
                     ret[i] = handle_reg_func(byte)
 

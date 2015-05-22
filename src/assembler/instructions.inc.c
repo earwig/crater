@@ -7,7 +7,7 @@
     `make` should trigger a rebuild when it is modified; if not, use:
     `python scripts/update_asm_instructions.py`.
 
-    @AUTOGEN_DATE Fri May 22 00:55:44 2015 UTC
+    @AUTOGEN_DATE Fri May 22 00:59:54 2015 UTC
 */
 
 /* @AUTOGEN_INST_BLOCK_START */
@@ -1594,22 +1594,8 @@ INST_FUNC(rst)
         AT_NONE
     )
     if (INST_TYPE(0) == AT_IMMEDIATE) {
-        if ((INST_IMM(0).mask & IMM_RST && INST_IMM(0).uval == 0))
-            INST_RETURN(1, 0xC7)
-        if ((INST_IMM(0).mask & IMM_RST && INST_IMM(0).uval == 8))
-            INST_RETURN(1, 0xCF)
-        if ((INST_IMM(0).mask & IMM_RST && INST_IMM(0).uval == 16))
-            INST_RETURN(1, 0xD7)
-        if ((INST_IMM(0).mask & IMM_RST && INST_IMM(0).uval == 24))
-            INST_RETURN(1, 0xDF)
-        if ((INST_IMM(0).mask & IMM_RST && INST_IMM(0).uval == 32))
-            INST_RETURN(1, 0xE7)
-        if ((INST_IMM(0).mask & IMM_RST && INST_IMM(0).uval == 40))
-            INST_RETURN(1, 0xEF)
-        if ((INST_IMM(0).mask & IMM_RST && INST_IMM(0).uval == 48))
-            INST_RETURN(1, 0xF7)
-        if ((INST_IMM(0).mask & IMM_RST && INST_IMM(0).uval == 56))
-            INST_RETURN(1, 0xFF)
+        if (INST_IMM(0).mask & IMM_RST)
+            INST_RETURN(1, 0xC7 + INST_IMM(0).uval)
         INST_ERROR(ARG_VALUE)
     }
     INST_ERROR(ARG_TYPE)

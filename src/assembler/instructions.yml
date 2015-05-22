@@ -581,22 +581,8 @@ rst:
     cases:
         - type: [immediate]
           cases:
-            - if:     [rst.0x00]
-              return: [0xC7]
-            - if:     [rst.0x08]
-              return: [0xCF]
-            - if:     [rst.0x10]
-              return: [0xD7]
-            - if:     [rst.0x18]
-              return: [0xDF]
-            - if:     [rst.0x20]
-              return: [0xE7]
-            - if:     [rst.0x28]
-              return: [0xEF]
-            - if:     [rst.0x30]
-              return: [0xF7]
-            - if:     [rst.0x38]
-              return: [0xFF]
+            - if:     [rst]
+              return: [rst(0xC7)]
 
 sbc:
     args: yes
