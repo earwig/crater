@@ -3,3 +3,4 @@ roms/*
 !roms/README
 crater
 crater-dev
+tests/runner
