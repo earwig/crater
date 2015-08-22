@@ -9,7 +9,7 @@
 #include "../src/logging.h"
 
 /*
-    TODO
+    Run tests for the Z80 CPU.
 */
 static bool test_cpu()
 {
@@ -18,7 +18,7 @@ static bool test_cpu()
 }
 
 /*
-    TODO
+    Run tests for the VDP.
 */
 static bool test_vdp()
 {
@@ -27,7 +27,7 @@ static bool test_vdp()
 }
 
 /*
-    TODO
+    Run tests for the SN76489 PSG.
 */
 static bool test_psg()
 {
@@ -36,7 +36,7 @@ static bool test_psg()
 }
 
 /*
-    TODO
+    Run tests for the assembler.
 */
 static bool test_asm()
 {
@@ -45,7 +45,7 @@ static bool test_asm()
 }
 
 /*
-    TODO
+    Run tests for the disassembler.
 */
 static bool test_dis()
 {
@@ -54,7 +54,7 @@ static bool test_dis()
 }
 
 /*
-    TODO
+    Run integration tests (i.e., multiple components working together).
 */
 static bool test_integrate()
 {
@@ -62,14 +62,13 @@ static bool test_integrate()
     return true;
 }
 
-
 /*
     Main function.
 */
 int main(int argc, char *argv[])
 {
     if (argc != 2)
-        FATAL("a component name is required")
+        FATAL("a single component name is required")
 
     const char *component = argv[1], *name;
     bool (*func)();
