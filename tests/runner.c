@@ -62,12 +62,12 @@ static bool diff_files(const char *expected_path, const char *actual_path)
     bool same = false;
     FILE *expected = NULL, *actual = NULL;
 
-    if (!(expected = fopen(expected_path, "rb"))) {
-        FAIL_TEST("missing reference file: %s", expected_path)
-        goto cleanup;
-    }
     if (!(actual = fopen(actual_path, "rb"))) {
         FAIL_TEST("missing output file: %s", actual_path)
+        goto cleanup;
+    }
+    if (!(expected = fopen(expected_path, "rb"))) {
+        FAIL_TEST("missing reference file: %s", expected_path)
         goto cleanup;
     }
 
@@ -100,6 +100,14 @@ static bool diff_files(const char *expected_path, const char *actual_path)
     if (actual)
         fclose(actual);
     return same;
+}
+
+/*
+    Return whether the given character is valid within a filename.
+*/
+static bool is_valid_filename_char(char c) {
+    return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') ||
+           (c >= '0' && c <= '9') || c == '.' || c == '_' || c == '-';
 }
 
 /*
@@ -169,8 +177,8 @@ static bool test_asm()
         return false;
     }
 
-    char *line = NULL, *split;
-    size_t cap = 0, lineno = 0;
+    char *line = NULL, *split, c;
+    size_t cap = 0, lineno = 0, i;
     ssize_t len;
 
     while ((len = getline(&line, &cap, fp)) > 0) {
@@ -179,7 +187,14 @@ static bool test_asm()
         if (!len)
             continue;
 
-        // TODO: validate chars
+        i = 0;
+        while ((c = line[i++])) {
+            if (!is_valid_filename_char(c) && c != ' ') {
+                READY_STDOUT()
+                ERROR("bad character in manifest file on line %zu", lineno)
+                return false;
+            }
+        }
 
         split = strchr(line, ' ');
         if (!split || strchr(split + 1, ' ')) {
