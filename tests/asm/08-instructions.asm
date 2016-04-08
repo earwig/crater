@@ -3,15 +3,5 @@
 
 ; ----- CRATER UNIT TESTING SUITE ---------------------------------------------
 
-; 05-includes.asm
-; Source file inclusion test, involving cross-file label references and complex
-; origins
-
-.include	"05.inc1.asm"
-
-.org $0000
-main:
-	di
-	ld	c, $FA
-	inc	c
-	call	bar
+; 08-instructions.asm
+; Exhaustive test of instruction syntax

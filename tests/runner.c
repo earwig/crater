@@ -206,7 +206,7 @@ static bool test_asm()
 
         *(split++) = '\0';
         if (!run_asm_test(line, split)) {
-            fprintf(stderr, "test: %s -> %s\n", line, split);
+            fprintf(stderr, "in test: %s -> %s\n", line, split);
             return false;
         }
         PASS_TEST()

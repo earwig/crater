@@ -3,15 +3,13 @@
 
 ; ----- CRATER UNIT TESTING SUITE ---------------------------------------------
 
-; 05-includes.asm
-; Source file inclusion test, involving cross-file label references and complex
-; origins
+; 06-formatting.asm
+; Complex formatting test, involving strange indentation and newline usage
 
-.include	"05.inc1.asm"
+foo:	.inCLUde         "06.inc.asm"
 
-.org $0000
-main:
-	di
-	ld	c, $FA
-	inc	c
-	call	bar
+.ORG			 $0100
+
+ayy: lmao:
+	   		    			   			di
+ret
