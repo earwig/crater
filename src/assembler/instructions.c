@@ -98,8 +98,6 @@ static ASMErrorDesc parse_inst_##mnemonic(                                    \
 
 #define INST_INDEX_PREFIX(n) INST_PREFIX_(INST_INDEX(n).reg)
 
-/* ----------------------------- END WORK BLOCK ---------------------------- */
-
 /*
     Fill an instruction's byte array with the given data.
 

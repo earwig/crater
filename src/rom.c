@@ -32,7 +32,7 @@ static void print_header(const uint8_t *header)
             snprintf(&header_chr[3 * i], 3, "%2c", header[i]);
         else {
             header_chr[3 * i]     = ' ';
-            header_chr[3 * i + 1] = '?';
+            header_chr[3 * i + 1] = '.';
         }
         header_hex[3 * i + 2] = header_chr[3 * i + 2] = ' ';
     }

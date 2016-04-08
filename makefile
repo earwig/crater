@@ -1,4 +1,4 @@
-# Copyright (C) 2014-2015 Ben Kurtovic <ben.kurtovic@gmail.com>
+# Copyright (C) 2014-2016 Ben Kurtovic <ben.kurtovic@gmail.com>
 # Released under the terms of the MIT License. See LICENSE for details.
 
 PROGRAM = crater
@@ -36,7 +36,7 @@ export CC
 export FLAGS
 export RM
 
-.PHONY: all clean test-prereqs test tests $(TCPS)
+.PHONY: all clean test tests test-prereqs test-make-prereqs $(TCPS)
 
 all: $(BNRY)
 
@@ -61,13 +61,16 @@ ASM_INST = $(SOURCES)/assembler/instructions
 $(ASM_INST).inc.c: $(ASM_INST).yml $(ASM_UP)
 	python $(ASM_UP)
 
-test-prereqs:
-	$(MAKE) $(PROGRAM) DEBUG=
+test-prereqs: $(PROGRAM)
+	@: # No-op; prevents make from cluttering output with "X is up to date"
 
-test: test-prereqs
-	$(MAKE) -C tests all
+test-make-prereqs:
+	@$(MAKE) test-prereqs DEBUG=
+
+test: test-make-prereqs
+	@$(MAKE) -C tests -s all
 
 tests: test
 
-$(TCPS): test-prereqs
-	$(MAKE) -C tests $(subst test-,,$@)
+$(TCPS): test-make-prereqs
+	@$(MAKE) -C tests -s $(subst test-,,$@)
