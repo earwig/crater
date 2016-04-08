@@ -10,12 +10,13 @@
 
 /* Internal usage only */
 
-#define LOG_MSG_(dest, level, extra, after, ...) { \
+#define LOG_MSG_(dest, level, extra, after, ...)  \
+    do {                                          \
         fprintf(dest, level ": " __VA_ARGS__);    \
         extra;                                    \
         fprintf(dest, "\n");                      \
         after;                                    \
-    }
+    } while (0);
 
 #define LOG_ERR_(...) LOG_MSG_(stderr, __VA_ARGS__)
 #define LOG_OUT_(...) LOG_MSG_(stdout, __VA_ARGS__)

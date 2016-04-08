@@ -90,7 +90,7 @@ static int get_rom_paths(char ***path_ptr)
         }
         closedir(dirp);
     } else {
-        WARN_ERRNO("couldn't open 'roms/'")
+        WARN_ERRNO("couldn't open '" ROMS_DIR "/'")
     }
     *path_ptr = paths;
     return npaths;

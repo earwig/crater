@@ -24,12 +24,19 @@ Installing
 ----------
 
 Only OS X and Linux are tested. You'll need a modern compiler that supports C11
-(clang preferred) and SDL 2. Using Homebrew, you can `brew install sdl2`; using
-apt, you can `apt-get install libsdl2-dev`.
+([clang][clang] preferred) and [SDL 2][sdl2]. Using Homebrew, you can
+`brew install sdl2`; using apt, you can `apt-get install libsdl2-dev`.
 
 Run `make` to create `./crater`. To build the development version with debug
-symbols (they can exist simultaneously), run `make DEBUG=1`, which creates
-`./crater-dev`. This also enables the printing of debugging info to stdout.
+symbols and extra diagnostic info (they can exist simultaneously), run
+`make DEBUG=1`, which creates `./crater-dev`.
+
+crater has a number of test cases. Run the entire suite with `make test`;
+individual components can be tested by doing `make test-{component}`, where
+`{component}` is one of `cpu`, `vdp`, `psg`, `asm`, `dis`, or `integrate`.
+
+[clang]: http://clang.llvm.org/
+[sdl2]: https://www.libsdl.org/
 
 Usage
 -----

@@ -276,6 +276,21 @@ static bool parse_space(
 }
 
 /*
+    Parse a string like parse_string(), but null-terminate it.
+*/
+static bool parse_cstring(
+    char **result, size_t *length, const char *arg, ssize_t size)
+{
+    if (!parse_string(result, length, arg, size))
+        return false;
+
+    (*length)++;
+    *result = cr_realloc(*result, sizeof(char) * (*length));
+    (*result)[*length - 1] = '\0';
+    return true;
+}
+
+/*
     Parse data encoded in a line into an ASMData object.
 
     On success, return NULL and store the instruction in *data_ptr. On failure,
@@ -285,7 +300,7 @@ static ErrorInfo* parse_data(
     const ASMLine *line, ASMData **data_ptr, size_t offset)
 {
     const char *directive;
-    parser_func parser = (parser_func) parse_string;
+    parser_func parser;
 
     if (IS_DIRECTIVE(line, DIR_BYTE)) {
         directive = DIR_BYTE;
@@ -295,10 +310,13 @@ static ErrorInfo* parse_data(
         parser = parse_space;
     } else if (IS_DIRECTIVE(line, DIR_ASCII)) {
         directive = DIR_ASCII;
+        parser = (parser_func) parse_string;
     } else if (IS_DIRECTIVE(line, DIR_ASCIZ)) {
         directive = DIR_ASCIZ;
+        parser = (parser_func) parse_cstring;
     } else if (IS_DIRECTIVE(line, DIR_ASCIIZ)) {
         directive = DIR_ASCIIZ;
+        parser = (parser_func) parse_cstring;
     } else {
         return error_info_create(line, ET_PREPROC, ED_PP_UNKNOWN);
     }

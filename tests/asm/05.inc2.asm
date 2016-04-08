@@ -1,0 +1,3 @@
+testfunc:
+	sub b
+	ret
