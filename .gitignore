@@ -4,3 +4,4 @@ roms/*
 crater
 crater-dev
 tests/runner
+tests/asm/full/*.gg
