@@ -10,7 +10,7 @@ all: $(COMPONENTS)
 
 clean:
 	$(RM) $(RUNNER)
-	rm asm/full/*.gg
+	$(RM) asm/*.gg
 
 $(RUNNER): $(RUNNER).c
 	$(CC) $(FLAGS) $< -o $@
@@ -21,7 +21,7 @@ $(COMPONENTS): $(RUNNER)
 asm: asm-unarchive
 
 asm-archive:
-	tar -czf asm/full/roms.tar.gz asm/full/*.gg
+	tar -czf asm/roms.tar.gz asm/*.gg
 
 asm-unarchive:
-	tar -xf asm/full/roms.tar.gz
+	tar -xf asm/roms.tar.gz

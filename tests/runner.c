@@ -10,8 +10,8 @@
 #include "../src/logging.h"
 #include "../src/util.h"
 
-#define ASM_FULL "asm/full/"
-#define ASM_OUTFILE ASM_FULL ".output.gg"
+#define ASM_PREFIX "asm/"
+#define ASM_OUTFILE ASM_PREFIX ".output.gg"
 
 /* Helper macros for reporting test passings/failures */
 
@@ -106,14 +106,14 @@ static bool diff_files(const char *expected_path, const char *actual_path)
     Run a single ASM->ROM test, converting the given source file to a temporary
     output file, compared against the reference file.
 */
-static bool run_full_asm_test(const char *src_file, const char *ref_file)
+static bool run_asm_test(const char *src_file, const char *ref_file)
 {
-    char *cmd_prefix = "../crater --assemble " ASM_FULL;
+    char *cmd_prefix = "../crater --assemble " ASM_PREFIX;
     char *cmd = cr_malloc(sizeof(char) *
         (strlen(cmd_prefix) + strlen(ASM_OUTFILE) + strlen(src_file)) + 2);
 
     // Construct the command by concatenating:
-    //   ../crater --assemble asm/full/<src_file> asm/full/.output.gg
+    //   ../crater --assemble asm/<src_file> asm/.output.gg
     stpcpy(stpcpy(stpcpy(cmd, cmd_prefix), src_file), " " ASM_OUTFILE);
     unlink(ASM_OUTFILE);
     system(cmd);
@@ -122,55 +122,14 @@ static bool run_full_asm_test(const char *src_file, const char *ref_file)
     // Construct the full reference file path in a temporary variable and diff
     // it with the output file:
     char *ref_path = malloc(sizeof(char) *
-        (strlen(ASM_FULL) + strlen(ref_file) + 1));
-    stpcpy(stpcpy(ref_path, ASM_FULL), ref_file);
+        (strlen(ASM_PREFIX) + strlen(ref_file) + 1));
+    stpcpy(stpcpy(ref_path, ASM_PREFIX), ref_file);
     bool diff = diff_files(ref_path, ASM_OUTFILE);
     free(ref_path);
     return diff;
 }
 
-/*
-    Run all "full"/"complete" ASM->ROM tests.
-*/
-static bool run_full_asm_tests()
-{
-    FILE *fp = fopen(ASM_FULL "manifest", "r");
-    if (!fp) {
-        ERROR_ERRNO("couldn't open manifest file")
-        return false;
-    }
-
-    char *line = NULL, *split;
-    size_t cap = 0, lineno = 0;
-    ssize_t len;
-
-    while ((len = getline(&line, &cap, fp)) > 0) {
-        lineno++;
-        line[--len] = '\0';
-        if (!len)
-            continue;
-
-        // TODO: validate chars
-
-        split = strchr(line, ' ');
-        if (!split || strchr(split + 1, ' ')) {
-            READY_STDOUT()
-            ERROR("bad format in manifest file on line %zu", lineno)
-            return false;
-        }
-
-        *(split++) = '\0';
-        if (!run_full_asm_test(line, split)) {
-            fprintf(stderr, "test: %s -> %s\n", line, split);
-            return false;
-        }
-        PASS_TEST()
-    }
-
-    unlink(ASM_OUTFILE);
-    free(line);
-    return true;
-}
+/* --------------------------- Main test runners --------------------------- */
 
 /*
     Run tests for the Z80 CPU.
@@ -204,7 +163,42 @@ static bool test_psg()
 */
 static bool test_asm()
 {
-    return run_full_asm_tests();
+    FILE *fp = fopen(ASM_PREFIX "manifest", "r");
+    if (!fp) {
+        ERROR_ERRNO("couldn't open manifest file")
+        return false;
+    }
+
+    char *line = NULL, *split;
+    size_t cap = 0, lineno = 0;
+    ssize_t len;
+
+    while ((len = getline(&line, &cap, fp)) > 0) {
+        lineno++;
+        line[--len] = '\0';
+        if (!len)
+            continue;
+
+        // TODO: validate chars
+
+        split = strchr(line, ' ');
+        if (!split || strchr(split + 1, ' ')) {
+            READY_STDOUT()
+            ERROR("bad format in manifest file on line %zu", lineno)
+            return false;
+        }
+
+        *(split++) = '\0';
+        if (!run_asm_test(line, split)) {
+            fprintf(stderr, "test: %s -> %s\n", line, split);
+            return false;
+        }
+        PASS_TEST()
+    }
+
+    unlink(ASM_OUTFILE);
+    free(line);
+    return true;
 }
 
 /*

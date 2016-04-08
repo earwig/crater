@@ -42,7 +42,7 @@ all: $(BNRY)
 
 clean:
 	$(RM) $(BUILD) $(PROGRAM) $(PROGRAM)$(DEVEXT)
-	$(MAKE) -C tests clean
+	@$(MAKE) -C tests clean
 
 $(DIRS):
 	$(MKDIR) $@
