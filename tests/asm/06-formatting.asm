@@ -12,4 +12,5 @@ foo:	.inCLUde         "06.inc.asm"
 
 ayy: lmao:
 	   		    			   			di
+	   		    			 InC a
 ret
