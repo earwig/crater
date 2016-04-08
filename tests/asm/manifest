@@ -1,1 +1,5 @@
-empty.asm empty.gg
+01-empty.asm 01-empty.gg
+02-headers1.asm 02-headers1.gg
+03-headers2.asm 03-headers2.gg
+04-basic.asm 04-basic.gg
+05-includes.asm 05-includes.gg

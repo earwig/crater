@@ -23,12 +23,13 @@
         pending_nl = true; \
     } while(0);
 
-#define FAIL_TEST(format, ...)                                             \
-    do {                                                                   \
-        printf("F\n");                                                     \
-        fprintf(stderr, "***** FAILURE *****\n" format "\n", __VA_ARGS__); \
-        failed_tests++;                                                    \
-        pending_nl = false;                                                \
+#define FAIL_MSG "***** FAILURE *****"
+#define FAIL_TEST(format, ...)                                   \
+    do {                                                         \
+        printf("F\n");                                           \
+        fprintf(stderr, FAIL_MSG "\n" format "\n", __VA_ARGS__); \
+        failed_tests++;                                          \
+        pending_nl = false;                                      \
     } while(0);
 
 #define READY_STDOUT()          \
