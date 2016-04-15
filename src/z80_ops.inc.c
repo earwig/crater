@@ -149,7 +149,28 @@ static uint8_t z80_inst_ld_dd_nn(Z80 *z80, uint8_t opcode)
 
 // EX AF, AF′
 
-// EXX
+/*
+    EXX (0xD9):
+    Exchange the 2-byte registers with their shadows
+    (BC <=> BC', DE <=> DE', HL <=> HL').
+*/
+static uint8_t z80_inst_exx(Z80 *z80, uint8_t opcode)
+{
+    (void) opcode;
+    uint16_t bc = get_pair(z80, REG_BC),
+             de = get_pair(z80, REG_DE),
+             hl = get_pair(z80, REG_HL);
+
+    set_pair(z80, REG_BC, get_pair(z80, REG_BC_));
+    set_pair(z80, REG_DE, get_pair(z80, REG_DE_));
+    set_pair(z80, REG_HL, get_pair(z80, REG_HL_));
+
+    set_pair(z80, REG_BC_, bc);
+    set_pair(z80, REG_DE_, de);
+    set_pair(z80, REG_HL_, hl);
+    z80->regfile.pc++;
+    return 4;
+}
 
 // EX (SP), HL
 
@@ -253,11 +274,43 @@ static uint8_t z80_inst_nop(Z80 *z80, uint8_t opcode)
     return 4;
 }
 
-// HALT
+/*
+    HALT (0x76):
+    Suspend CPU operation by repeatedly executing NOPs until an interrupt or
+    reset.
+*/
+static uint8_t z80_inst_halt(Z80 *z80, uint8_t opcode)
+{
+    (void) z80;
+    (void) opcode;
+    return 4;
+}
 
-// DI
+/*
+    DI (0xF3):
+    Disable maskable interrupts by resetting both flip-flops.
+*/
+static uint8_t z80_inst_di(Z80 *z80, uint8_t opcode)
+{
+    (void) opcode;
+    z80->regfile.iff1 = false;
+    z80->regfile.iff2 = false;
+    z80->regfile.pc++;
+    return 4;
+}
 
-// EI
+/*
+    EI (0xFB):
+    Enable maskable interrupts by setting both flip-flops.
+*/
+static uint8_t z80_inst_ei(Z80 *z80, uint8_t opcode)
+{
+    (void) opcode;
+    z80->regfile.iff1 = true;
+    z80->regfile.iff2 = true;
+    z80->regfile.pc++;
+    return 4;
+}
 
 // IM 0
 
@@ -534,7 +587,7 @@ static uint8_t (*instruction_lookup_table[256])(Z80*, uint8_t) = {
     [0x73] = z80_inst_unimplemented,  // TODO
     [0x74] = z80_inst_unimplemented,  // TODO
     [0x75] = z80_inst_unimplemented,  // TODO
-    [0x76] = z80_inst_unimplemented,  // TODO
+    [0x76] = z80_inst_halt,
     [0x77] = z80_inst_unimplemented,  // TODO
     [0x78] = z80_inst_unimplemented,  // TODO
     [0x79] = z80_inst_unimplemented,  // TODO
@@ -633,7 +686,7 @@ static uint8_t (*instruction_lookup_table[256])(Z80*, uint8_t) = {
     [0xD6] = z80_inst_unimplemented,  // TODO
     [0xD7] = z80_inst_unimplemented,  // TODO
     [0xD8] = z80_inst_unimplemented,  // TODO
-    [0xD9] = z80_inst_unimplemented,  // TODO
+    [0xD9] = z80_inst_exx,
     [0xDA] = z80_inst_unimplemented,  // TODO
     [0xDB] = z80_inst_unimplemented,  // TODO
     [0xDC] = z80_inst_unimplemented,  // TODO
@@ -659,7 +712,7 @@ static uint8_t (*instruction_lookup_table[256])(Z80*, uint8_t) = {
     [0xF0] = z80_inst_unimplemented,  // TODO
     [0xF1] = z80_inst_unimplemented,  // TODO
     [0xF2] = z80_inst_unimplemented,  // TODO
-    [0xF3] = z80_inst_unimplemented,  // TODO
+    [0xF3] = z80_inst_di,
     [0xF4] = z80_inst_unimplemented,  // TODO
     [0xF5] = z80_inst_unimplemented,  // TODO
     [0xF6] = z80_inst_unimplemented,  // TODO
@@ -667,7 +720,7 @@ static uint8_t (*instruction_lookup_table[256])(Z80*, uint8_t) = {
     [0xF8] = z80_inst_unimplemented,  // TODO
     [0xF9] = z80_inst_unimplemented,  // TODO
     [0xFA] = z80_inst_unimplemented,  // TODO
-    [0xFB] = z80_inst_unimplemented,  // TODO
+    [0xFB] = z80_inst_ei,
     [0xFC] = z80_inst_unimplemented,  // TODO
     [0xFD] = z80_inst_unimplemented,  // TODO
     [0xFE] = z80_inst_unimplemented,  // TODO
