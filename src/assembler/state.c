@@ -1,4 +1,4 @@
-/* Copyright (C) 2014-2015 Ben Kurtovic <ben.kurtovic@gmail.com>
+/* Copyright (C) 2014-2016 Ben Kurtovic <ben.kurtovic@gmail.com>
    Released under the terms of the MIT License. See LICENSE for details. */
 
 #include <stdlib.h>
@@ -196,17 +196,16 @@ bool asm_deftable_remove(
     return hash_table_remove(tab, key, size);
 }
 
-#ifdef DEBUG_MODE
 /*
-    DEBUG FUNCTION: Print out an ASMLine list to stdout.
+    @TRACE_LEVEL
+    Print out an ASMLine list to stdout.
 */
 void asm_lines_print(const ASMLine *line)
 {
-    DEBUG("Dumping ASMLines:")
+    TRACE("Dumping ASMLines:")
     while (line) {
-        DEBUG("- %-40.*s [%s:%02zu]", (int) line->length, line->data,
+        TRACE("- %-40.*s [%s:%02zu]", (int) line->length, line->data,
               line->filename, line->original->lineno)
         line = line->next;
     }
 }
-#endif

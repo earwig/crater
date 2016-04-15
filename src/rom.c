@@ -1,4 +1,4 @@
-/* Copyright (C) 2014-2015 Ben Kurtovic <ben.kurtovic@gmail.com>
+/* Copyright (C) 2014-2016 Ben Kurtovic <ben.kurtovic@gmail.com>
    Released under the terms of the MIT License. See LICENSE for details. */
 
 #include <ctype.h>
@@ -18,11 +18,29 @@
 
 static size_t header_locations[NUM_LOCATIONS] = {0x7FF0, 0x3FF0, 0x1FF0};
 
-#ifdef DEBUG_MODE
 /*
-    DEBUG FUNCTION: Print out the header to stdout.
+    @DEBUG_LEVEL
+    Given a ROM size, return a pretty string.
 */
-static void print_header(const uint8_t *header)
+static const char* size_to_string(size_t size)
+{
+    static char buffer[SIZE_CODE_BUF];
+
+    if (!size)
+        strncpy(buffer, "unknown", SIZE_CODE_BUF);
+    else if (size >= (1 << 20))
+        snprintf(buffer, SIZE_CODE_BUF, "%zu MB", size >> 20);
+    else
+        snprintf(buffer, SIZE_CODE_BUF, "%zu KB", size >> 10);
+
+    return buffer;
+}
+
+/*
+    @DEBUG_LEVEL
+    Print out the raw header to stdout.
+*/
+static void print_header_dump(const uint8_t *header)
 {
     char header_hex[3 * HEADER_SIZE], header_chr[3 * HEADER_SIZE];
 
@@ -40,26 +58,27 @@ static void print_header(const uint8_t *header)
     DEBUG("- header dump (hex): %s", header_hex)
     DEBUG("- header dump (chr): %s", header_chr)
 }
-#endif
 
-#ifdef DEBUG_MODE
 /*
-    DEBUG FUNCTION: Given a ROM size, return a pretty string.
+    @DEBUG_LEVEL
+    Print out the analyzed header to stdout.
 */
-static const char* size_to_string(size_t size)
+static void print_header_contents(const ROM *rom, const uint8_t *header)
 {
-    static char buffer[SIZE_CODE_BUF];
-
-    if (!size)
-        strncpy(buffer, "unknown", SIZE_CODE_BUF);
-    else if (size >= (1 << 20))
-        snprintf(buffer, SIZE_CODE_BUF, "%zu MB", size >> 20);
+    DEBUG("- header info:")
+    if (rom->reported_checksum == rom->expected_checksum)
+        DEBUG("  - checksum:      0x%04X (valid)", rom->reported_checksum)
     else
-        snprintf(buffer, SIZE_CODE_BUF, "%zu KB", size >> 10);
-
-    return buffer;
+        DEBUG("  - checksum:      0x%04X (invalid, expected 0x%04X)",
+              rom->reported_checksum, rom->expected_checksum)
+    DEBUG("  - product code:  %u (%s)", rom->product_code,
+          rom_product(rom) ? rom_product(rom) : "unknown")
+    DEBUG("  - version:       %u", rom->version)
+    DEBUG("  - region code:   %u (%s)", rom->region_code,
+          rom_region(rom) ? rom_region(rom) : "unknown")
+    DEBUG("  - reported size: %s",
+          size_to_string(size_code_to_bytes(header[0xF] & 0xF)))
 }
-#endif
 
 /*
     Parse a ROM image's header, and return whether or not it is valid.
@@ -88,9 +107,8 @@ static const char* size_to_string(size_t size)
 */
 static bool parse_header(ROM *rom, const uint8_t *header)
 {
-#ifdef DEBUG_MODE
-    print_header(header);
-#endif
+    if (DEBUG_LEVEL)
+        print_header_dump(header);
 
     rom->reported_checksum = header[0xA] + (header[0xB] << 8);
     rom->expected_checksum = compute_checksum(rom->data, rom->size, header[0xF]);
@@ -99,19 +117,8 @@ static bool parse_header(ROM *rom, const uint8_t *header)
     rom->version = header[0xE] & 0x0F;
     rom->region_code = header[0xF] >> 4;
 
-    DEBUG("- header info:")
-    if (rom->reported_checksum == rom->expected_checksum)
-        DEBUG("  - checksum:      0x%04X (valid)", rom->reported_checksum)
-    else
-        DEBUG("  - checksum:      0x%04X (invalid, expected 0x%04X)",
-              rom->reported_checksum, rom->expected_checksum)
-    DEBUG("  - product code:  %u (%s)", rom->product_code,
-          rom_product(rom) ? rom_product(rom) : "unknown")
-    DEBUG("  - version:       %u", rom->version)
-    DEBUG("  - region code:   %u (%s)", rom->region_code,
-          rom_region(rom) ? rom_region(rom) : "unknown")
-    DEBUG("  - reported size: %s",
-          size_to_string(size_code_to_bytes(header[0xF] & 0xF)))
+    if (DEBUG_LEVEL)
+        print_header_contents(rom, header);
     return true;
 }
 

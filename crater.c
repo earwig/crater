@@ -1,4 +1,4 @@
-/* Copyright (C) 2014-2015 Ben Kurtovic <ben.kurtovic@gmail.com>
+/* Copyright (C) 2014-2016 Ben Kurtovic <ben.kurtovic@gmail.com>
    Released under the terms of the MIT License. See LICENSE for details. */
 
 #include <stdlib.h>
@@ -24,15 +24,15 @@ int main(int argc, char *argv[])
     if (retval != CONFIG_OK)
         return retval == CONFIG_EXIT_SUCCESS ? EXIT_SUCCESS : EXIT_FAILURE;
 
-#ifdef DEBUG_MODE
-    config_dump_args(config);
-#endif
+    SET_LOG_LEVEL(config->debug)
+    if (DEBUG_LEVEL)
+        config_dump_args(config);
 
-    if (config->assemble || config->disassemble) {
-        if (config->assemble)
-            retval = assemble_file(config->src_path, config->dst_path);
-        else
-            retval = disassemble_file(config->src_path, config->dst_path);
+    if (config->assemble) {
+        retval = assemble_file(config->src_path, config->dst_path);
+        retval = retval ? EXIT_SUCCESS : EXIT_FAILURE;
+    } else if (config->disassemble) {
+        retval = disassemble_file(config->src_path, config->dst_path);
         retval = retval ? EXIT_SUCCESS : EXIT_FAILURE;
     } else {
         ROM *rom;

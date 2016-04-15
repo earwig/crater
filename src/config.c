@@ -1,4 +1,4 @@
-/* Copyright (C) 2014-2015 Ben Kurtovic <ben.kurtovic@gmail.com>
+/* Copyright (C) 2014-2016 Ben Kurtovic <ben.kurtovic@gmail.com>
    Released under the terms of the MIT License. See LICENSE for details. */
 
 #include <dirent.h>
@@ -24,15 +24,14 @@ static void print_help(const char *arg1)
 "    -h, --help        show this help message and exit\n"
 "    -v, --version     show crater's version number and exit\n"
 "    -f, --fullscreen  enable fullscreen mode\n"
-"    -s, --scale <n>   scale the game screen by an integer factor\n"
-"                      (applies to windowed mode only)\n"
 "    <rom_path>        path to the rom file to execute; if not given, will look\n"
 "                      in the roms/ directory and prompt the user\n"
 "\n"
 "advanced options:\n"
-"    -g, --debug       display information about emulation state while running,\n"
-"                      including register and memory values; can also pause\n"
-"                      emulation, set breakpoints, and change state\n"
+"    -g, --debug       show logging information while running; add twice (-g -g)\n"
+"                      to show more detailed logs, including an emulator trace\n"
+"    -s, --scale <n>   scale the game screen by an integer factor\n"
+"                      (applies to windowed mode only)\n"
 "    -a, --assemble <in> [<out>]     convert z80 assembly source code into a\n"
 "                                    binary file that can be run by crater\n"
 "    -d, --disassemble <in> [<out>]  convert a binary file into z80 assembly\n"
@@ -202,7 +201,7 @@ static int parse_args(Config *config, int argc, char *argv[])
             }
             config->scale = scale;
         } else if (!strcmp(arg, "g") || !strcmp(arg, "debug")) {
-            config->debug = true;
+            config->debug++;
         } else if (!strcmp(arg, "a") || !strcmp(arg, "assemble")) {
             if (paths_read >= 1) {
                 config->src_path = config->rom_path;
@@ -277,7 +276,7 @@ static bool sanity_check(Config* config)
     } else if (config->assemble && config->disassemble) {
         ERROR("cannot assemble and disassemble at the same time")
         return false;
-    } else if (assembler && (config->debug || config->fullscreen || config->scale > 1)) {
+    } else if (assembler && (config->fullscreen || config->scale > 1)) {
         ERROR("cannot specify emulator options in assembler mode")
         return false;
     } else if (assembler && !config->src_path) {
@@ -309,7 +308,7 @@ int config_create(Config** config_ptr, int argc, char* argv[])
     Config *config = cr_malloc(sizeof(Config));
     int retval;
 
-    config->debug = false;
+    config->debug = 0;
     config->assemble = false;
     config->disassemble = false;
     config->fullscreen = false;
@@ -342,21 +341,20 @@ void config_destroy(Config *config)
     free(config);
 }
 
-#ifdef DEBUG_MODE
 /*
-    DEBUG FUNCTION: Print out all config arguments to stdout.
+    @DEBUG_LEVEL
+    Print out all config arguments to stdout.
 */
 void config_dump_args(const Config* config)
 {
     DEBUG("Dumping arguments:")
-    DEBUG("- fullscreen:  %s", config->fullscreen ? "true" : "false")
-    DEBUG("- scale:       %d", config->scale)
-    DEBUG("- debug:       %s", config->debug ? "true" : "false")
+    DEBUG("- debug:       %d", config->debug)
     DEBUG("- assemble:    %s", config->assemble ? "true" : "false")
     DEBUG("- disassemble: %s", config->disassemble ? "true" : "false")
+    DEBUG("- fullscreen:  %s", config->fullscreen ? "true" : "false")
+    DEBUG("- scale:       %d", config->scale)
     DEBUG("- rom_path:    %s", config->rom_path ? config->rom_path : "(null)")
     DEBUG("- src_path:    %s", config->src_path ? config->src_path : "(null)")
     DEBUG("- dst_path:    %s", config->dst_path ? config->dst_path : "(null)")
     DEBUG("- overwrite:   %s", config->overwrite ? "true" : "false")
 }
-#endif

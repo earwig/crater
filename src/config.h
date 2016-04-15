@@ -1,4 +1,4 @@
-/* Copyright (C) 2014-2015 Ben Kurtovic <ben.kurtovic@gmail.com>
+/* Copyright (C) 2014-2016 Ben Kurtovic <ben.kurtovic@gmail.com>
    Released under the terms of the MIT License. See LICENSE for details. */
 
 #pragma once
@@ -21,7 +21,7 @@
 /* Structs */
 
 typedef struct {
-    bool debug;
+    int debug;
     bool assemble;
     bool disassemble;
     bool fullscreen;
@@ -36,7 +36,4 @@ typedef struct {
 
 int config_create(Config**, int, char*[]);
 void config_destroy(Config*);
-
-#ifdef DEBUG_MODE
 void config_dump_args(const Config*);
-#endif

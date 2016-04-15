@@ -28,8 +28,7 @@ Only OS X and Linux are tested. You'll need a modern compiler that supports C11
 `brew install sdl2`; using apt, you can `apt-get install libsdl2-dev`.
 
 Run `make` to create `./crater`. To build the development version with debug
-symbols and extra diagnostic info (they can exist simultaneously), run
-`make DEBUG=1`, which creates `./crater-dev`.
+symbols and no optimizations, run `make DEBUG=1`, which creates `./crater-dev`.
 
 crater has a number of test cases. Run the entire suite with `make test`;
 individual components can be tested by doing `make test-{component}`, where
@@ -51,9 +50,8 @@ Add or symlink ROMs to `roms/` at your leisure. Note that they must end in
 Add `--fullscreen` (`-f`) to enable fullscreen mode, or `--scale <n>`
 (`-s <n>`) to scale the game screen by an integer factor.
 
-Add `--debug` (`-g`) to display detailed information about emulation state
-while running, including register values and memory contents. You can also
-pause emulation to set breakpoints and change state.
+Add `--debug` (`-g`) to show logging information while running. Pass it twice
+(`-g -g`) to show more detailed logs, including an emulator trace.
 
 `./crater -h` gives (fairly basic) command-line usage, and `./crater -v` gives
 the current version.

@@ -1,4 +1,4 @@
-/* Copyright (C) 2014-2015 Ben Kurtovic <ben.kurtovic@gmail.com>
+/* Copyright (C) 2014-2016 Ben Kurtovic <ben.kurtovic@gmail.com>
    Released under the terms of the MIT License. See LICENSE for details. */
 
 #include <stdlib.h>
@@ -38,6 +38,7 @@ static size_t bounding_rom_size(size_t size)
 */
 static ErrorInfo* resolve_defaults(AssemblerState *state)
 {
+    DEBUG("Resolving defaults")
     if (!state->rom_size) {
         state->rom_size = ROM_SIZE_MIN;
 
@@ -82,6 +83,7 @@ static ErrorInfo* resolve_symbols(AssemblerState *state)
     ASMInstruction *inst = state->instructions;
     const ASMSymbol *symbol;
 
+    DEBUG("Resolving symbols")
     while (inst) {
         if (inst->symbol) {
             symbol = asm_symtable_find(state->symtable, inst->symbol);
@@ -145,6 +147,7 @@ static void write_header(const ASMHeaderInfo *info, uint8_t *binary)
 */
 static void serialize_binary(const AssemblerState *state, uint8_t *binary)
 {
+    DEBUG("Serializing binary data")
     memset(binary, 0xFF, state->rom_size);
 
     const ASMInstruction *inst = state->instructions;
@@ -188,16 +191,13 @@ size_t assemble(const LineBuffer *source, uint8_t **binary_ptr, ErrorInfo **ei_p
 
     asm_symtable_init(&state.symtable);
 
-#ifdef DEBUG_MODE
-    asm_lines_print(state.lines);
-#endif
+    if (TRACE_LEVEL)
+        asm_lines_print(state.lines);
 
     if ((error_info = tokenize(&state)))
         goto error;
-
     if ((error_info = resolve_defaults(&state)))
         goto error;
-
     if ((error_info = resolve_symbols(&state)))
         goto error;
 
@@ -240,6 +240,7 @@ bool assemble_file(const char *src_path, const char *dst_path)
         return false;
     }
 
+    DEBUG("Writing output file")
     bool success = write_binary_file(dst_path, binary, size);
     free(binary);
     return success;

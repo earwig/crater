@@ -1,8 +1,9 @@
-/* Copyright (C) 2014-2015 Ben Kurtovic <ben.kurtovic@gmail.com>
+/* Copyright (C) 2014-2016 Ben Kurtovic <ben.kurtovic@gmail.com>
    Released under the terms of the MIT License. See LICENSE for details. */
 
-#include "logging.h"
 #include "z80.h"
+#include "disassembler.h"
+#include "logging.h"
 
 #define REG_AF 0
 #define REG_BC 1
@@ -19,7 +20,6 @@
 #define FLAG_ZERO      6
 #define FLAG_SIGN      7
 
-#ifdef DEBUG_MODE
 #define BINARY_FMT "0b%u%u%u%u%u%u%u%u"  // Used by z80_dump_registers()
 #define BINARY_VAL(data)       \
     (data & (1 << 7) ? 1 : 0), \
@@ -30,7 +30,6 @@
     (data & (1 << 2) ? 1 : 0), \
     (data & (1 << 1) ? 1 : 0), \
     (data & (1 << 0) ? 1 : 0)
-#endif
 
 /*
     Initialize a Z80 object.
@@ -92,6 +91,7 @@ static inline uint16_t get_pair(Z80 *z80, uint8_t pair)
         case REG_HL: return (z80->regfile.h << 8) + z80->regfile.l;
         default: FATAL("invalid call: get_pair(z80, %u)", pair)
     }
+    return 0;
 }
 
 /*
@@ -164,6 +164,16 @@ static inline void increment_refresh_counter(Z80 *z80)
 #include "z80_ops.inc.c"
 
 /*
+    @TRACE_LEVEL
+    Trace the instruction about to be executed by the CPU.
+*/
+static inline void trace_instruction(const Z80 *z80)
+{
+    TRACE("PC @ 0x%04X", z80->regfile.pc)
+    // TODO
+}
+
+/*
     Emulate the given number of cycles of the Z80, or until an exception.
 
     The return value indicates whether the exception flag is set. If it is,
@@ -175,6 +185,8 @@ bool z80_do_cycles(Z80 *z80, double cycles)
     cycles -= z80->pending_cycles;
     while (cycles > 0 && !z80->except) {
         uint8_t opcode = mmu_read_byte(z80->mmu, z80->regfile.pc);
+        if (TRACE_LEVEL)
+            trace_instruction(z80);
         increment_refresh_counter(z80);
         cycles -= (*instruction_lookup_table[opcode])(z80, opcode);
     }
@@ -183,9 +195,9 @@ bool z80_do_cycles(Z80 *z80, double cycles)
     return z80->except;
 }
 
-#ifdef DEBUG_MODE
 /*
-    DEBUG FUNCTION: Print out all register values to stdout.
+    @DEBUG_LEVEL
+    Print out all register values to stdout.
 */
 void z80_dump_registers(const Z80 *z80)
 {
@@ -233,4 +245,3 @@ void z80_dump_registers(const Z80 *z80)
     DEBUG("- IFF1: %u", rf->iff1)
     DEBUG("- IFF2: %u", rf->iff2)
 }
-#endif

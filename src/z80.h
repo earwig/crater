@@ -1,4 +1,4 @@
-/* Copyright (C) 2014-2015 Ben Kurtovic <ben.kurtovic@gmail.com>
+/* Copyright (C) 2014-2016 Ben Kurtovic <ben.kurtovic@gmail.com>
    Released under the terms of the MIT License. See LICENSE for details. */
 
 #pragma once
@@ -35,7 +35,4 @@ typedef struct {
 void z80_init(Z80*, MMU*);
 void z80_power(Z80*);
 bool z80_do_cycles(Z80*, double);
-
-#ifdef DEBUG_MODE
 void z80_dump_registers(const Z80*);
-#endif

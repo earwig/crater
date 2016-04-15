@@ -1,4 +1,4 @@
-/* Copyright (C) 2014-2015 Ben Kurtovic <ben.kurtovic@gmail.com>
+/* Copyright (C) 2014-2016 Ben Kurtovic <ben.kurtovic@gmail.com>
    Released under the terms of the MIT License. See LICENSE for details. */
 
 #include <signal.h>
@@ -36,9 +36,8 @@ void iomanager_emulate(GameGear *gg)
     while (!caught_signal) {
         if (gamegear_simulate(gg)) {
             ERROR("caught exception: %s", gamegear_get_exception(gg))
-#ifdef DEBUG_MODE
-            z80_dump_registers(&gg->cpu);
-#endif
+            if (DEBUG_LEVEL)
+                z80_dump_registers(&gg->cpu);
             break;
         }
         usleep(1000 * 1000 / 60);
@@ -46,9 +45,8 @@ void iomanager_emulate(GameGear *gg)
 
     if (caught_signal) {
         WARN("caught signal, stopping...")
-#ifdef DEBUG_MODE
-        z80_dump_registers(&gg->cpu);
-#endif
+        if (DEBUG_LEVEL)
+            z80_dump_registers(&gg->cpu);
     }
 
     DEBUG("IOManager unpowering GameGear")

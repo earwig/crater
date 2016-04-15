@@ -1,4 +1,4 @@
-/* Copyright (C) 2014-2015 Ben Kurtovic <ben.kurtovic@gmail.com>
+/* Copyright (C) 2014-2016 Ben Kurtovic <ben.kurtovic@gmail.com>
    Released under the terms of the MIT License. See LICENSE for details. */
 
 #pragma once
@@ -112,6 +112,4 @@ const ASMDefine* asm_deftable_find(const ASMDefineTable*, const char*, size_t);
 void asm_deftable_insert(ASMDefineTable*, ASMDefine*);
 bool asm_deftable_remove(ASMDefineTable*, const char*, size_t);
 
-#ifdef DEBUG_MODE
 void asm_lines_print(const ASMLine*);
-#endif

@@ -373,7 +373,7 @@ static inline bool is_header_offset_valid(uint16_t offset)
 ErrorInfo* preprocess(AssemblerState *state, const LineBuffer *source)
 {
     ErrorInfo* ei = NULL;
-    DEBUG("Running preprocessor:")
+    DEBUG("Running preprocessor")
 
     if ((ei = build_asm_lines(source, &state->lines, NULL, &state->includes, 0)))
         return ei;

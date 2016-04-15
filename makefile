@@ -8,17 +8,16 @@ DEVEXT  = -dev
 TESTS   = cpu vdp psg asm dis integrate
 
 CC     = clang
-FLAGS  = -O2 -Wall -Wextra -pedantic -std=c11
+FLAGS  = -Wall -Wextra -pedantic -std=c11
 CFLAGS = $(shell sdl2-config --cflags)
 LIBS   = $(shell sdl2-config --libs)
-DFLAGS = -g -DDEBUG_MODE
+DFLAGS = -g
+RFLAGS = -O2
+
 MKDIR  = mkdir -p
 RM     = rm -rf
 ASM_UP = scripts/update_asm_instructions.py
 
-MODE = release
-BNRY = $(PROGRAM)
-FLGS = $(FLAGS)
 SDRS = $(shell find $(SOURCES) -type d | xargs echo)
 SRCS = $(filter-out %.inc.c,$(foreach d,. $(SDRS),$(wildcard $(addprefix $(d)/*,.c))))
 OBJS = $(patsubst %.c,%.o,$(addprefix $(BUILD)/$(MODE)/,$(SRCS)))
@@ -27,9 +26,13 @@ DIRS = $(sort $(dir $(OBJS)))
 TCPS = $(addprefix test-,$(TESTS))
 
 ifdef DEBUG
-	BNRY := $(BNRY)$(DEVEXT)
-	FLGS += $(DFLAGS)
+	BNRY := $(PROGRAM)$(DEVEXT)
+	FLGS += $(DFLAGS) $(FLAGS)
 	MODE  = debug
+else
+	BNRY := $(PROGRAM)
+	FLGS += $(RFLAGS) $(FLAGS)
+	MODE  = release
 endif
 
 export CC

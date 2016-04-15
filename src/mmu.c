@@ -1,9 +1,10 @@
-/* Copyright (C) 2014-2015 Ben Kurtovic <ben.kurtovic@gmail.com>
+/* Copyright (C) 2014-2016 Ben Kurtovic <ben.kurtovic@gmail.com>
    Released under the terms of the MIT License. See LICENSE for details. */
 
 #include <stdlib.h>
 #include <string.h>
 
+#include "mmu.h"
 #include "logging.h"
 #include "util.h"
 #include "z80.h"
@@ -31,6 +32,27 @@ void mmu_free(MMU *mmu)
 }
 
 /*
+    @DEBUG_LEVEL
+    Print out the bank mapping.
+*/
+static void dump_bank_table(const MMU *mmu, const uint8_t *data)
+{
+    char buffer[49];
+    size_t group, elem, bank;
+
+    DEBUG("Dumping MMU bank table:")
+    for (group = 0; group < MMU_NUM_ROM_BANKS / 8; group++) {
+        for (elem = 0; elem < 8; elem++) {
+            bank = 8 * group + elem;
+            snprintf(buffer + 6 * elem, 7, "%02zX=%02zX ", bank,
+                     (mmu->rom_banks[bank] - data) >> 14);
+        }
+        buffer[47] = '\0';
+        DEBUG("- %s", buffer)
+    }
+}
+
+/*
     Load a block of ROM into the MMU.
 
     size must be a multiple of MMU_ROM_BANK_SIZE (16 KB), the load will fail
@@ -55,19 +77,8 @@ void mmu_load_rom(MMU *mmu, const uint8_t *data, size_t size)
             mmu->rom_banks[mirror] = data + (bank * MMU_ROM_BANK_SIZE);
     }
 
-#ifdef DEBUG_MODE
-    char temp_str[64];
-    DEBUG("Dumping MMU bank table:")
-    for (size_t group = 0; group < MMU_NUM_ROM_BANKS / 8; group++) {
-        for (size_t elem = 0; elem < 8; elem++) {
-            bank = 8 * group + elem;
-            snprintf(temp_str + 6 * elem, 7, "%02zX=%02zX ", bank,
-                     (mmu->rom_banks[bank] - data) >> 14);
-        }
-        temp_str[47] = '\0';
-        DEBUG("- %s", temp_str)
-    }
-#endif
+    if (DEBUG_LEVEL)
+        dump_bank_table(mmu, data);
 }
 
 /*

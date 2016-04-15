@@ -1,4 +1,4 @@
-/* Copyright (C) 2014-2015 Ben Kurtovic <ben.kurtovic@gmail.com>
+/* Copyright (C) 2014-2016 Ben Kurtovic <ben.kurtovic@gmail.com>
    Released under the terms of the MIT License. See LICENSE for details. */
 
 #include <stdlib.h>
@@ -468,6 +468,7 @@ ErrorInfo* tokenize(AssemblerState *state)
     const ASMLine *line = state->lines;
     size_t offset = 0;
 
+    DEBUG("Running tokenizer")
     init_layout_info(&li, state);
     memset(si.slots, -1, MMU_NUM_ROM_BANKS);
 
