@@ -92,9 +92,11 @@ static ASMErrorDesc parse_inst_##mnemonic(                                    \
     }
 
 #define INST_IMM_U16_B1(imm)                                                  \
-    ((imm).is_label ? (*symbol = cr_strdup((imm).label), 0) : (imm).uval >> 8)
+    ((imm).is_label ?                                                         \
+        (*symbol = cr_strdup((imm).label), 0) :                               \
+        (imm).uval & 0xFF)
 #define INST_IMM_U16_B2(imm)                                                  \
-    ((imm).is_label ? 0 : (imm).uval & 0xFF)
+    ((imm).is_label ? 0 : (imm).uval >> 8)
 
 #define INST_INDEX_PREFIX(n) INST_PREFIX_(INST_INDEX(n).reg)
 

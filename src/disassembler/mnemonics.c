@@ -18,7 +18,7 @@ static char* instr_mnemonics[256] = {
     /* 58 */ "ld",   "ld",   "ld",   "ld",   "ld",   "ld",   "ld",   "ld",
     /* 60 */ "ld",   "ld",   "ld",   "ld",   "ld",   "ld",   "ld",   "ld",
     /* 68 */ "ld",   "ld",   "ld",   "ld",   "ld",   "ld",   "ld",   "ld",
-    /* 70 */ "ld",   "ld",   "ld",   "ld",   "ld",   "ld",   "ld",   "ld",
+    /* 70 */ "ld",   "ld",   "ld",   "ld",   "ld",   "ld",   "halt", "ld",
     /* 78 */ "ld",   "ld",   "ld",   "ld",   "ld",   "ld",   "ld",   "ld",
     /* 80 */ "add",  "add",  "add",  "add",  "add",  "add",  "add",  "add",
     /* 88 */ "adc",  "adc",  "adc",  "adc",  "adc",  "adc",  "adc",  "adc",
