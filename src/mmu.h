@@ -28,3 +28,4 @@ void mmu_load_rom(MMU*, const uint8_t*, size_t);
 void mmu_power(MMU*);
 uint8_t mmu_read_byte(MMU*, uint16_t);
 bool mmu_write_byte(MMU*, uint16_t, uint8_t);
+uint32_t mmu_read_quad(MMU*, uint16_t);

@@ -161,3 +161,15 @@ bool mmu_write_byte(MMU *mmu, uint16_t addr, uint8_t value)
         return true;
     }
 }
+
+/*
+    Read four bytes of memory from the given address.
+*/
+uint32_t mmu_read_quad(MMU *mmu, uint16_t addr)
+{
+    return (
+         mmu_read_byte(mmu, addr) +
+        (mmu_read_byte(mmu, addr + 1) <<  8) +
+        (mmu_read_byte(mmu, addr + 2) << 16) +
+        (mmu_read_byte(mmu, addr + 3) << 24));
+}

@@ -169,8 +169,12 @@ static inline void increment_refresh_counter(Z80 *z80)
 */
 static inline void trace_instruction(const Z80 *z80)
 {
-    TRACE("PC @ 0x%04X", z80->regfile.pc)
-    // TODO
+    uint32_t quad = mmu_read_quad(z80->mmu, z80->regfile.pc);
+    uint8_t bytes[4] = {quad, quad >> 8, quad >> 16, quad >> 24};
+    DisasInstr *instr = disassemble_instruction(bytes);
+
+    TRACE("0x%04X:  %11s    %s", z80->regfile.pc, instr->bytestr, instr->line)
+    disas_instr_free(instr);
 }
 
 /*
@@ -185,9 +189,9 @@ bool z80_do_cycles(Z80 *z80, double cycles)
     cycles -= z80->pending_cycles;
     while (cycles > 0 && !z80->except) {
         uint8_t opcode = mmu_read_byte(z80->mmu, z80->regfile.pc);
+        increment_refresh_counter(z80);
         if (TRACE_LEVEL)
             trace_instruction(z80);
-        increment_refresh_counter(z80);
         cycles -= (*instruction_lookup_table[opcode])(z80, opcode);
     }
 
