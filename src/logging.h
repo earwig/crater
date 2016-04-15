@@ -14,17 +14,19 @@
     do {                                               \
         if (logging_level_ >= level) {                 \
             fprintf(dest, type " " __VA_ARGS__);       \
-            extra;                                     \
+            extra                                      \
             fprintf(dest, "\n");                       \
-            after;                                     \
+            after                                      \
         }                                              \
     } while (0);
 
 #define LOG_ERR_(...) LOG_MSG_(stderr, __VA_ARGS__)
 #define LOG_OUT_(...) LOG_MSG_(stdout, __VA_ARGS__)
 
-#define PRINT_ERR_ fprintf(stderr, ": %s", strerror(errno))
-#define EXIT_FAIL_ exit(EXIT_FAILURE)
+#define PRINT_ERR_ fprintf(stderr, ": %s", strerror(errno));
+#define EXIT_FAIL_ exit(EXIT_FAILURE);
+#define NO_EOL_    if (0)
+#define FLUSH_OUT_ fflush(stdout);
 
 #define FATAL_TEXT_ "\x1b[1m\x1b[31m" "fatal:"   "\x1b[0m"
 #define ERROR_TEXT_ "\x1b[1m\x1b[31m" "error:"   "\x1b[0m"
@@ -44,6 +46,7 @@ unsigned logging_level_;
 #define WARN_ERRNO(...)  LOG_ERR_(0,  WARN_TEXT_, PRINT_ERR_, {},         __VA_ARGS__)
 #define DEBUG(...)       LOG_OUT_(1, DEBUG_TEXT_, {},         {},         __VA_ARGS__)
 #define TRACE(...)       LOG_OUT_(2, TRACE_TEXT_, {},         {},         __VA_ARGS__)
+#define TRACE_NOEOL(...) LOG_OUT_(2, TRACE_TEXT_, NO_EOL_,    FLUSH_OUT_, __VA_ARGS__)
 
 #define SET_LOG_LEVEL(level) logging_level_ = (level);
 #define DEBUG_LEVEL (logging_level_ >= 1)

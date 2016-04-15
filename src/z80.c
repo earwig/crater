@@ -82,6 +82,10 @@ void z80_power(Z80 *z80)
 
     z80->except = false;
     z80->pending_cycles = 0;
+
+    z80->trace.fresh = true;
+    z80->trace.last_addr = 0;
+    z80->trace.counter = 0;
 }
 
 /*
@@ -182,8 +186,19 @@ static inline void increment_refresh_counter(Z80 *z80)
     @TRACE_LEVEL
     Trace the instruction about to be executed by the CPU.
 */
-static inline void trace_instruction(const Z80 *z80)
+static inline void trace_instruction(Z80 *z80)
 {
+    if (z80->regfile.pc == z80->trace.last_addr && !z80->trace.fresh) {
+        z80->trace.counter++;
+        if (!(z80->trace.counter % (1 << 14)))
+            TRACE_NOEOL("repeat last: %llu times\r", z80->trace.counter);
+        return;
+    }
+    if (z80->trace.fresh)
+        z80->trace.fresh = false;
+    z80->trace.last_addr = z80->regfile.pc;
+    z80->trace.counter = 0;
+
     uint32_t quad = mmu_read_quad(z80->mmu, z80->regfile.pc);
     uint8_t bytes[4] = {quad, quad >> 8, quad >> 16, quad >> 24};
     DisasInstr *instr = disassemble_instruction(bytes);

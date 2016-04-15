@@ -23,11 +23,18 @@ typedef struct {
 } Z80RegFile;
 
 typedef struct {
+    bool fresh;
+    uint16_t last_addr;
+    uint64_t counter;
+} Z80TraceInfo;
+
+typedef struct {
     Z80RegFile regfile;
     MMU *mmu;
     bool except;
     uint8_t exc_code, exc_data;
     double pending_cycles;
+    Z80TraceInfo trace;
 } Z80;
 
 /* Functions */
