@@ -119,7 +119,7 @@ static inline uint8_t bank_byte_read(const uint8_t* bank, uint16_t addr)
     - http://www.smspower.org/Development/MemoryMap
     - http://www.smspower.org/Development/Mappers
 */
-uint8_t mmu_read_byte(MMU *mmu, uint16_t addr)
+uint8_t mmu_read_byte(const MMU *mmu, uint16_t addr)
 {
     if (addr < 0x0400)  // First kilobyte is unpaged, for interrupt handlers
         return bank_byte_read(mmu->rom_banks[0], addr);
@@ -133,6 +133,26 @@ uint8_t mmu_read_byte(MMU *mmu, uint16_t addr)
         return mmu->system_ram[addr - 0xC000];
     else  // System RAM, mirrored (0xE000 - 0xFFFF)
         return mmu->system_ram[addr - 0xE000];
+}
+
+/*
+    Read two bytes of memory from the given address.
+*/
+uint16_t mmu_read_double(const MMU *mmu, uint16_t addr)
+{
+    return mmu_read_byte(mmu, addr) + (mmu_read_byte(mmu, addr + 1) << 8);
+}
+
+/*
+    Read four bytes of memory from the given address.
+*/
+uint32_t mmu_read_quad(const MMU *mmu, uint16_t addr)
+{
+    return (
+         mmu_read_byte(mmu, addr) +
+        (mmu_read_byte(mmu, addr + 1) <<  8) +
+        (mmu_read_byte(mmu, addr + 2) << 16) +
+        (mmu_read_byte(mmu, addr + 3) << 24));
 }
 
 /*
@@ -160,16 +180,4 @@ bool mmu_write_byte(MMU *mmu, uint16_t addr, uint8_t value)
         mmu->system_ram[addr - 0xE000] = value;
         return true;
     }
-}
-
-/*
-    Read four bytes of memory from the given address.
-*/
-uint32_t mmu_read_quad(MMU *mmu, uint16_t addr)
-{
-    return (
-         mmu_read_byte(mmu, addr) +
-        (mmu_read_byte(mmu, addr + 1) <<  8) +
-        (mmu_read_byte(mmu, addr + 2) << 16) +
-        (mmu_read_byte(mmu, addr + 3) << 24));
 }
