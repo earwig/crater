@@ -13,6 +13,13 @@
 #include "util.h"
 #include "version.h"
 
+typedef struct {
+    int argc;
+    char **argv;
+    int i, j;
+    int paths_read;
+} Arguments;
+
 /*
     Print command-line help/usage.
 */
@@ -28,7 +35,7 @@ static void print_help(const char *arg1)
 "                      in the roms/ directory and prompt the user\n"
 "\n"
 "advanced options:\n"
-"    -g, --debug       show logging information while running; add twice (-g -g)\n"
+"    -g, --debug       show logging information while running; add twice (-gg)\n"
 "                      to show more detailed logs, including an emulator trace\n"
 "    -s, --scale <n>   scale the game screen by an integer factor\n"
 "                      (applies to windowed mode only)\n"
@@ -135,99 +142,156 @@ static char* get_rom_path_from_user()
 }
 
 /*
+    Consume and return the next argument, or NULL if it is at the end.
+*/
+static const char* consume_next(Arguments *args)
+{
+    static char partial[3] = {'-', '\0', '\0'};
+    char *curr = args->argv[args->i];
+    if (!curr)
+        return NULL;
+
+    if (curr[0] == '-' && curr[1] != '-' && curr[1] != '\0') {
+        // Need to handle single dash arg clusters like -asdf <=> -a -s -d -f
+        if (curr[args->j]) {
+            partial[1] = curr[args->j];
+            args->j++;
+            return partial;
+        }
+        args->i++;
+        args->j = 1;
+        return consume_next(args);
+    }
+
+    args->i++;
+    return curr;
+}
+
+/*
+    Parse a single positional (typically a path) command-line argument.
+*/
+static int parse_pos_arg(Config *config, Arguments *args, const char *arg)
+{
+    if (args->paths_read >= 2) {
+        ERROR("too many arguments given: emulator mode accepts one ROM file,\n"
+              "and assembler mode accepts one input file and one output file")
+        return CONFIG_EXIT_FAILURE;
+    }
+
+    char *path = cr_malloc(sizeof(char) * (strlen(arg) + 1));
+    strcpy(path, arg);
+
+    if (args->paths_read == 1) {
+        /* If this is the second path given, it can only be an output file for
+           the assembler. If the assembler is not enabled by subsequent
+           arguments, we'll throw an error. */
+        config->dst_path = path;
+    } else {
+        /* Otherwise, put the argument in the expected place. If we put it in
+           rom_path and the assembler is enabled by later arguments, we'll
+           move it. */
+        if (config->assemble || config->disassemble)
+            config->src_path = path;
+        else
+            config->rom_path = path;
+    }
+
+    args->paths_read++;
+    return CONFIG_OK;
+}
+
+/*
+    Check if the given argument matches the given short or long form.
+*/
+static bool arg_check(const char *arg, const char *t1, const char *t2)
+{
+    return !strcmp(arg, t1) || !strcmp(arg, t2);
+}
+
+/*
+    Parse a single optional ("flag") command-line argument.
+*/
+static int parse_opt_arg(Config *config, Arguments *args, const char *arg)
+{
+    do
+        arg++;
+    while (*arg == '-');
+
+    if (arg_check(arg, "h", "help")) {
+        print_help(args->argv[0]);
+        return CONFIG_EXIT_SUCCESS;
+    }
+    else if (arg_check(arg, "v", "version")) {
+        print_version();
+        return CONFIG_EXIT_SUCCESS;
+    }
+    else if (arg_check(arg, "f", "fullscreen")) {
+        config->fullscreen = true;
+    }
+    else if (arg_check(arg, "s", "scale")) {
+        const char *next = consume_next(args);
+        if (!next) {
+            ERROR("the scale option requires an argument")
+            return CONFIG_EXIT_FAILURE;
+        }
+        long scale = strtol(next, NULL, 10);
+        if (scale <= 0 || scale > SCALE_MAX) {
+            ERROR("scale factor of %s is not an integer or is out of range", next)
+            return CONFIG_EXIT_FAILURE;
+        }
+        config->scale = scale;
+    }
+    else if (arg_check(arg, "g", "debug")) {
+        config->debug++;
+    }
+    else if (arg_check(arg, "a", "assemble")) {
+        if (args->paths_read >= 1) {
+            config->src_path = config->rom_path;
+            config->rom_path = NULL;
+        }
+        config->assemble = true;
+    }
+    else if (arg_check(arg, "d", "disassemble")) {
+        if (args->paths_read >= 1) {
+            config->src_path = config->rom_path;
+            config->rom_path = NULL;
+        }
+        config->disassemble = true;
+    }
+    else if (arg_check(arg, "r", "overwrite")) {
+        config->overwrite = true;
+    }
+    else {
+        ERROR("unknown argument: %s", arg)
+        return CONFIG_EXIT_FAILURE;
+    }
+    return CONFIG_OK;
+}
+
+/*
     Parse the command-line arguments for any special flags.
 */
 static int parse_args(Config *config, int argc, char *argv[])
 {
-    char *arg, *path;
-    int i, paths_read = 0;
+    Arguments args = {argc, argv, 1, 1, 0};
+    const char *arg;
+    int retval;
 
-    for (i = 1; i < argc; i++) {
-        arg = argv[i];
-        if (arg[0] != '-') {
-            // Parsing a path or other variable:
-            if (paths_read >= 2) {
-                ERROR("too many arguments given - emulator mode accepts one "
-                      "ROM file,\nand assembler mode accepts one input file "
-                      "and one output file")
-                return CONFIG_EXIT_FAILURE;
-            }
-
-            path = cr_malloc(sizeof(char) * (strlen(arg) + 1));
-            strcpy(path, arg);
-
-            if (paths_read == 1) {
-                /* If this is the second path given, it can only be an output
-                   file for the assembler. If the assembler is not enabled by
-                   subsequent arguments, we'll throw an error. */
-                config->dst_path = path;
-            } else {
-                /* Otherwise, put the argument in the expected place. If we put
-                   it in rom_path and the assembler is enabled by later
-                   arguments, we'll move it. */
-                if (config->assemble || config->disassemble)
-                    config->src_path = path;
-                else
-                    config->rom_path = path;
-            }
-
-            paths_read++;
-            continue;
-        }
-
-        // Parsing an option:
-        do
-            arg++;
-        while (arg[0] == '-');
-
-        if (!strcmp(arg, "h") || !strcmp(arg, "help")) {
-            print_help(argv[0]);
-            return CONFIG_EXIT_SUCCESS;
-        } else if (!strcmp(arg, "v") || !strcmp(arg, "version")) {
-            print_version();
-            return CONFIG_EXIT_SUCCESS;
-        } else if (!strcmp(arg, "f") || !strcmp(arg, "fullscreen")) {
-            config->fullscreen = true;
-        } else if (!strcmp(arg, "s") || !strcmp(arg, "scale")) {
-            if (i++ >= argc) {
-                ERROR("the scale option requires an argument")
-                return CONFIG_EXIT_FAILURE;
-            }
-            arg = argv[i];
-            long scale = strtol(arg, NULL, 10);
-            if (scale <= 0 || scale > SCALE_MAX) {
-                ERROR("scale factor of %s is not an integer or is out of range", arg)
-                return CONFIG_EXIT_FAILURE;
-            }
-            config->scale = scale;
-        } else if (!strcmp(arg, "g") || !strcmp(arg, "debug")) {
-            config->debug++;
-        } else if (!strcmp(arg, "a") || !strcmp(arg, "assemble")) {
-            if (paths_read >= 1) {
-                config->src_path = config->rom_path;
-                config->rom_path = NULL;
-            }
-            config->assemble = true;
-        } else if (!strcmp(arg, "d") || !strcmp(arg, "disassemble")) {
-            if (paths_read >= 1) {
-                config->src_path = config->rom_path;
-                config->rom_path = NULL;
-            }
-            config->disassemble = true;
-        } else if (!strcmp(arg, "r") || !strcmp(arg, "overwrite")) {
-            config->overwrite = true;
-        } else {
-            ERROR("unknown argument: %s", argv[i])
-            return CONFIG_EXIT_FAILURE;
-        }
+    while ((arg = consume_next(&args))) {
+        if (arg[0] != '-')
+            retval = parse_pos_arg(config, &args, arg);
+        else
+            retval = parse_opt_arg(config, &args, arg);
+        if (retval != CONFIG_OK)
+            return retval;
     }
 
-    if (!config->assemble && !config->disassemble && paths_read >= 2) {
+    if (!config->assemble && !config->disassemble && args.paths_read >= 2) {
         ERROR("too many arguments given - emulator mode accepts one ROM file")
         return CONFIG_EXIT_FAILURE;
     }
-    if (!config->assemble && !config->disassemble && paths_read == 0) {
-        path = get_rom_path_from_user();
+    if (!config->assemble && !config->disassemble && args.paths_read == 0) {
+        char *path = get_rom_path_from_user();
         if (path[0] == '\0') {
             ERROR("no ROM image given")
             return CONFIG_EXIT_FAILURE;

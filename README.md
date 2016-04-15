@@ -51,7 +51,7 @@ Add `--fullscreen` (`-f`) to enable fullscreen mode, or `--scale <n>`
 (`-s <n>`) to scale the game screen by an integer factor.
 
 Add `--debug` (`-g`) to show logging information while running. Pass it twice
-(`-g -g`) to show more detailed logs, including an emulator trace.
+(`-gg`) to show more detailed logs, including an emulator trace.
 
 `./crater -h` gives (fairly basic) command-line usage, and `./crater -v` gives
 the current version.

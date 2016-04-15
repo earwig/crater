@@ -266,6 +266,7 @@ int main(int argc, char *argv[])
         func = test_integrate;
     } else {
         FATAL("unknown component: %s", component)
+        return EXIT_FAILURE;
     }
 
     printf("crater: running %s tests\n", name);
