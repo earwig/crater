@@ -5,11 +5,15 @@
 #include "disassembler.h"
 #include "logging.h"
 
-#define REG_AF 0
-#define REG_BC 1
-#define REG_DE 2
-#define REG_HL 3
-#define REG_SP 4
+#define REG_AF  0
+#define REG_BC  1
+#define REG_DE  2
+#define REG_HL  3
+#define REG_SP  4
+#define REG_AF_ 5
+#define REG_BC_ 6
+#define REG_DE_ 7
+#define REG_HL_ 8
 
 #define FLAG_CARRY     0
 #define FLAG_SUBTRACT  1
@@ -86,11 +90,15 @@ void z80_power(Z80 *z80)
 static inline uint16_t get_pair(Z80 *z80, uint8_t pair)
 {
     switch (pair) {
-        case REG_AF: return (z80->regfile.a << 8) + z80->regfile.f;
-        case REG_BC: return (z80->regfile.b << 8) + z80->regfile.c;
-        case REG_DE: return (z80->regfile.d << 8) + z80->regfile.e;
-        case REG_HL: return (z80->regfile.h << 8) + z80->regfile.l;
-        case REG_SP: return z80->regfile.sp;
+        case REG_AF:  return (z80->regfile.a  << 8) + z80->regfile.f;
+        case REG_BC:  return (z80->regfile.b  << 8) + z80->regfile.c;
+        case REG_DE:  return (z80->regfile.d  << 8) + z80->regfile.e;
+        case REG_HL:  return (z80->regfile.h  << 8) + z80->regfile.l;
+        case REG_AF_: return (z80->regfile.a_ << 8) + z80->regfile.f_;
+        case REG_BC_: return (z80->regfile.b_ << 8) + z80->regfile.c_;
+        case REG_DE_: return (z80->regfile.d_ << 8) + z80->regfile.e_;
+        case REG_HL_: return (z80->regfile.h_ << 8) + z80->regfile.l_;
+        case REG_SP:  return z80->regfile.sp;
         default: FATAL("invalid call: get_pair(z80, %u)", pair)
     }
     return 0;
@@ -102,11 +110,15 @@ static inline uint16_t get_pair(Z80 *z80, uint8_t pair)
 static inline void set_pair(Z80 *z80, uint8_t pair, uint16_t value)
 {
     switch (pair) {
-        case REG_AF: z80->regfile.a = value >> 8; z80->regfile.f = value; break;
-        case REG_BC: z80->regfile.b = value >> 8; z80->regfile.c = value; break;
-        case REG_DE: z80->regfile.d = value >> 8; z80->regfile.e = value; break;
-        case REG_HL: z80->regfile.h = value >> 8; z80->regfile.l = value; break;
-        case REG_SP: z80->regfile.sp = value; break;
+        case REG_AF:  z80->regfile.a  = value >> 8; z80->regfile.f  = value; break;
+        case REG_BC:  z80->regfile.b  = value >> 8; z80->regfile.c  = value; break;
+        case REG_DE:  z80->regfile.d  = value >> 8; z80->regfile.e  = value; break;
+        case REG_HL:  z80->regfile.h  = value >> 8; z80->regfile.l  = value; break;
+        case REG_AF_: z80->regfile.a_ = value >> 8; z80->regfile.f_ = value; break;
+        case REG_BC_: z80->regfile.b_ = value >> 8; z80->regfile.c_ = value; break;
+        case REG_DE_: z80->regfile.d_ = value >> 8; z80->regfile.e_ = value; break;
+        case REG_HL_: z80->regfile.h_ = value >> 8; z80->regfile.l_ = value; break;
+        case REG_SP:  z80->regfile.sp = value; break;
         default: FATAL("invalid call: set_pair(z80, %u, 0x%04X)", pair, value)
     }
 }
@@ -249,6 +261,5 @@ void z80_dump_registers(const Z80 *z80)
 
     DEBUG("- IM:   0b%u%u (mode: %u)", rf->im_a, rf->im_b,
           get_interrupt_mode(z80))
-    DEBUG("- IFF1: %u", rf->iff1)
-    DEBUG("- IFF2: %u", rf->iff2)
+    DEBUG("- IFF:  1: %u, 2: %u", rf->iff1, rf->iff2)
 }
