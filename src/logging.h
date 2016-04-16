@@ -12,7 +12,7 @@
 
 #define LOG_MSG_(dest, level, type, extra, after, ...) \
     do {                                               \
-        if (logging_level_ >= level) {                 \
+        if (!level || logging_level_ >= level) {       \
             fprintf(dest, type " " __VA_ARGS__);       \
             extra                                      \
             fprintf(dest, "\n");                       \

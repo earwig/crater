@@ -103,9 +103,8 @@ static inline uint16_t get_pair(Z80 *z80, uint8_t pair)
         case REG_DE_: return (z80->regfile.d_ << 8) + z80->regfile.e_;
         case REG_HL_: return (z80->regfile.h_ << 8) + z80->regfile.l_;
         case REG_SP:  return z80->regfile.sp;
-        default: FATAL("invalid call: get_pair(z80, %u)", pair)
     }
-    return 0;
+    FATAL("invalid call: get_pair(z80, %u)", pair)
 }
 
 /*
@@ -123,7 +122,8 @@ static inline void set_pair(Z80 *z80, uint8_t pair, uint16_t value)
         case REG_DE_: z80->regfile.d_ = value >> 8; z80->regfile.e_ = value; break;
         case REG_HL_: z80->regfile.h_ = value >> 8; z80->regfile.l_ = value; break;
         case REG_SP:  z80->regfile.sp = value; break;
-        default: FATAL("invalid call: set_pair(z80, %u, 0x%04X)", pair, value)
+        default:
+            FATAL("invalid call: set_pair(z80, %u, 0x%04X)", pair, value)
     }
 }
 
@@ -158,6 +158,37 @@ static inline void update_flags(Z80 *z80, bool c, bool n, bool pv, bool f3,
         f5 << FLAG_UNDOC_5   |
         z  << FLAG_ZERO      |
         s  << FLAG_SIGN));
+}
+
+/*
+    Extract an 8-bit register from the given opcode and return a pointer to it.
+*/
+static inline uint8_t* extract_reg(Z80 *z80, uint8_t opcode)
+{
+    switch (opcode & 0x38) {
+        case 0x00: return &z80->regfile.b;
+        case 0x08: return &z80->regfile.c;
+        case 0x10: return &z80->regfile.d;
+        case 0x18: return &z80->regfile.e;
+        case 0x20: return &z80->regfile.h;
+        case 0x28: return &z80->regfile.l;
+        case 0x38: return &z80->regfile.a;
+    }
+    FATAL("invalid call: extract_reg(z80, 0x%02X)", opcode)
+}
+
+/*
+    Extract a register pair from the given opcode and return its identifer.
+*/
+static inline uint8_t extract_pair(uint8_t opcode)
+{
+    switch (opcode & 0x30) {
+        case 0x00: return REG_BC;
+        case 0x10: return REG_DE;
+        case 0x20: return REG_HL;
+        case 0x30: return REG_SP;
+    }
+    FATAL("invalid call: extract_pair(0x%02X)", opcode)
 }
 
 /*

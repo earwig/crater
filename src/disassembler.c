@@ -13,6 +13,7 @@
 */
 static char* format_bytestring(const uint8_t *bytes, size_t size)
 {
+    // TODO: smarter alignment; pad to full len (then remove pad from TRACE())
     if (!size)
         return NULL;
 
