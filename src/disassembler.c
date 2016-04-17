@@ -2,6 +2,7 @@
    Released under the terms of the MIT License. See LICENSE for details. */
 
 #include "disassembler.h"
+#include "disassembler/arguments.h"
 #include "disassembler/mnemonics.h"
 #include "disassembler/sizes.h"
 #include "util.h"
@@ -29,18 +30,6 @@ static char* format_bytestring(const uint8_t *bytes, size_t size)
 }
 
 /*
-    Extract the arguments for the given instruction.
-
-    The return value must be free()d.
-*/
-static char* decode_argument(const uint8_t *bytes)
-{
-    // TODO
-    (void) bytes;
-    return NULL;
-}
-
-/*
     Free the given DisasInstr struct.
 */
 void disas_instr_free(DisasInstr *instr)
@@ -61,13 +50,13 @@ DisasInstr* disassemble_instruction(const uint8_t *bytes)
     size_t size = get_instr_size(bytes);
     char *bytestr = format_bytestring(bytes, size);
     char *mnemonic = decode_mnemonic(bytes);
-    char *arg = decode_argument(bytes);
+    char *args = decode_arguments(bytes);
     char *line;
 
-    if (arg) {
-        line = cr_malloc(strlen(mnemonic) + strlen(arg) + 2);
-        sprintf(line, "%s\t%s", mnemonic, arg);
-        free(arg);
+    if (args) {
+        line = cr_malloc(strlen(mnemonic) + strlen(args) + 2);
+        sprintf(line, "%s\t%s", mnemonic, args);
+        free(args);
     } else {
         line = cr_strdup(mnemonic);
     }
