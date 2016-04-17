@@ -225,8 +225,12 @@ static inline void trace_instruction(Z80 *z80)
             TRACE_NOEOL("repeat last: %llu times\r", z80->trace.counter);
         return;
     }
-    if (z80->trace.fresh)
+    if (z80->trace.fresh) {
+        TRACE("PC ADDR          RAW    INSTR\tARGS")
+        TRACE("-------          ---    -----\t----")
         z80->trace.fresh = false;
+    }
+
     z80->trace.last_addr = z80->regfile.pc;
     z80->trace.counter = 0;
 
