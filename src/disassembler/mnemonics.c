@@ -3,7 +3,7 @@
 
 #include "mnemonics.h"
 
-static char* instr_mnemonics[256] = {
+static char* const instr_mnemonics[256] = {
     /* 00 */ "nop",  "ld",   "ld",   "inc",  "inc",  "dec",  "ld",   "rlca",
     /* 08 */ "ex",   "add",  "ld",   "dec",  "inc",  "dec",  "ld",   "rrca",
     /* 10 */ "djnz", "ld",   "ld",   "inc",  "inc",  "dec",  "ld",   "rla",
@@ -38,7 +38,7 @@ static char* instr_mnemonics[256] = {
     /* F8 */ "ret",  "ld",   "jp",   "ei",   "call", "",     "cp",   "rst"
 };
 
-static char* instr_mnemonics_extended[256] = {
+static char* const instr_mnemonics_extended[256] = {
     /* 00 */ "nop",  "nop",  "nop",  "nop",  "nop",  "nop",  "nop",  "nop",
     /* 08 */ "nop",  "nop",  "nop",  "nop",  "nop",  "nop",  "nop",  "nop",
     /* 10 */ "nop",  "nop",  "nop",  "nop",  "nop",  "nop",  "nop",  "nop",
@@ -73,7 +73,7 @@ static char* instr_mnemonics_extended[256] = {
     /* F8 */ "nop",  "nop",  "nop",  "nop",  "nop",  "nop",  "nop",  "nop"
 };
 
-static char* instr_mnemonics_bits[256] = {
+static char* const instr_mnemonics_bits[256] = {
     /* 00 */ "rlc",  "rlc",  "rlc",  "rlc",  "rlc",  "rlc",  "rlc",  "rlc",
     /* 08 */ "rrc",  "rrc",  "rrc",  "rrc",  "rrc",  "rrc",  "rrc",  "rrc",
     /* 10 */ "rl",   "rl",   "rl",   "rl",   "rl",   "rl",   "rl",   "rl",
@@ -108,7 +108,7 @@ static char* instr_mnemonics_bits[256] = {
     /* F8 */ "set",  "set",  "set",  "set",  "set",  "set",  "set",  "set"
 };
 
-static char* instr_mnemonics_index[256] = {
+static char* const instr_mnemonics_index[256] = {
     /* 00 */ "nop",  "nop",  "nop",  "nop",  "nop",  "nop",  "nop",  "nop",
     /* 08 */ "nop",  "add",  "nop",  "nop",  "nop",  "nop",  "nop",  "nop",
     /* 10 */ "nop",  "nop",  "nop",  "nop",  "nop",  "nop",  "nop",  "nop",
