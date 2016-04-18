@@ -3,6 +3,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <time.h>
 
 #include "disassembler.h"
@@ -19,6 +20,7 @@
 
 #define NUM_BANKS(rom) \
     (((rom)->size + MMU_ROM_BANK_SIZE - 1) / MMU_ROM_BANK_SIZE)
+#define MAX_BYTES_PER_LINE 16
 
 /* Structs and things */
 
@@ -167,7 +169,7 @@ static void disassemble_header(Disassembly *dis, const ROM *rom)
     DEBUG("Disassembling header")
 
     WRITE_LINE(dis, ".rom_size\t\"%s\"\t\t; $%zX bytes in %zu banks",
-        size_to_string(buf, rom->size), rom->size, NUM_BANKS(rom))
+        size_to_string(buf, rom->size), rom->size, NUM_BANKS(rom))  // TODO: fix alignment
     WRITE_LINE(dis, ".rom_header\t$%04X",
         rom->header_location)
     WRITE_LINE(dis, ".rom_checksum\t%s",
@@ -225,21 +227,77 @@ static void mark_header(const ROM *rom, ROMBank *banks)
 }
 
 /*
+    Render a line of binary data within a block.
+*/
+static void render_binary(Disassembly *dis, size_t *idx, const ROMBank *bank)
+{
+    size_t span = 1, i;
+    while (span < MAX_BYTES_PER_LINE && bank->types[*idx + span] == DT_BINARY)
+        span++;
+
+    char buf[4 * MAX_BYTES_PER_LINE + 1];
+    for (i = 0; i < span; i++)
+        sprintf(buf + 4 * i, "$%02X ", bank->data[*idx + i]);
+    buf[4 * span - 1] = '\0';
+
+    WRITE_LINE(dis, ".byte %s", buf)
+    (*idx) += span;
+}
+
+/*
+    Render a single instruction within a block.
+*/
+static void render_code(Disassembly *dis, size_t *idx, const ROMBank *bank)
+{
+    DisasInstr *instr = disassemble_instruction(bank->data + *idx);
+    char padding[16], *split;
+
+    if ((split = strchr(instr->line, '\t'))) {
+        size_t tabs = (40 - (instr->line + strlen(instr->line) - split)) / 8;
+        padding[tabs] = '\0';
+        while (tabs-- > 0)
+            padding[tabs] = '\t';
+    } else {
+        strcpy(padding, "\t\t\t\t\t");
+    }
+
+    WRITE_LINE(dis, "\t%s%s\t; %s", instr->line, padding, instr->bytestr)
+    (*idx) += instr->size;
+    disas_instr_free(instr);
+}
+
+/*
     Render fully analyzed banks into lines of disassembly.
 */
-static void render_banks(Disassembly *dis, ROMBank *banks)
+static void render_banks(Disassembly *dis, const ROMBank *banks)
 {
-    size_t bn = 0, i;
+    size_t bn = 0, idx;
+    DEBUG("Rendering lines")
 
     while (banks[bn].data) {
+        TRACE("Rendering bank 0x%02zX (0x%06zX-0x%06zX)", bn,
+            bn * MMU_ROM_BANK_SIZE, bn * MMU_ROM_BANK_SIZE + banks[bn].size)
         WRITE_LINE(dis, "")
         WRITE_LINE(dis, ";; " HRULE)
         WRITE_LINE(dis, "")
         WRITE_LINE(dis, ".block $%02zX", bn)
 
-        for (i = 0; i < banks[bn].size; i++) {
-            if (banks[bn].types[i] == DT_BINARY)
-                WRITE_LINE(dis, ".byte $%02X", banks[bn].data[i])
+        idx = 0;
+        while (idx < banks[bn].size) {
+            switch (banks[bn].types[idx]) {
+                case DT_BINARY:
+                    render_binary(dis, &idx, &banks[bn]);
+                    break;
+                case DT_CODE:
+                    render_code(dis, &idx, &banks[bn]);
+                    break;
+                case DT_HEADER:
+                    idx += HEADER_SIZE;
+                    break;
+                default:
+                    FATAL("invalid data type %d at addr 0x%06zX",
+                        banks[bn].types[idx], bn * MMU_ROM_BANK_SIZE + idx)
+            }
         }
         bn++;
     }
@@ -261,7 +319,11 @@ char** disassemble(const ROM *rom)
 
     ROMBank *banks = init_banks(rom);
     mark_header(rom, banks);
+
     // TODO: analyze(): set DT_CODE (future: make labels, slots) where appropriate
+    for (size_t i = 0; i < 0x1000; i++)
+        banks[0].types[i] = DT_CODE;
+
     render_banks(&dis, banks);
     free_banks(banks);
 
