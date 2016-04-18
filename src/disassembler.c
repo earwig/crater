@@ -36,10 +36,11 @@ typedef enum {
 } DataType;
 
 typedef struct {
-    const uint8_t *data;
-    DataType *types;
+    size_t index;
     size_t size;
     int8_t slot;
+    const uint8_t *data;
+    DataType *types;
 } ROMBank;
 
 /*
@@ -166,12 +167,13 @@ static char* size_to_string(char *output, size_t size)
 static void disassemble_header(Disassembly *dis, const ROM *rom)
 {
     char buf[64];
-    const char *size, *product, *region;
+    const char *size, *product, *region, *declsize;
 
     DEBUG("Disassembling header")
     size = size_to_string(buf, rom->size);
     product = rom_product(rom);
     region = rom_region(rom);
+    declsize = size_to_string(buf, size_code_to_bytes(rom->declared_size));
 
     WRITE_LINE(dis, ".rom_size\t\"%s\"%s\t; $%zX bytes in %zu banks",
         size, strlen(size) < 6 ? "\t" : "", rom->size, NUM_BANKS(rom))
@@ -186,8 +188,7 @@ static void disassemble_header(Disassembly *dis, const ROM *rom)
     WRITE_LINE(dis, ".rom_region\t%u\t\t; %s",
         rom->region_code, region ? region : "(unknown)")
     WRITE_LINE(dis, ".rom_declsize\t$%X\t\t; %s",
-        rom->declared_size,
-        size_to_string(buf, size_code_to_bytes(rom->declared_size)))
+        rom->declared_size, declsize)
 }
 
 /*
@@ -200,14 +201,16 @@ static ROMBank* init_banks(const ROM *rom)
     DataType *types = cr_calloc(sizeof(DataType), rom->size);
 
     for (i = 0; i < nbanks; i++) {
+        banks[i].index = i;
         if (i == nbanks - 1 && rom->size % MMU_ROM_BANK_SIZE)
             banks[i].size = rom->size % MMU_ROM_BANK_SIZE;
         else
             banks[i].size = MMU_ROM_BANK_SIZE;
+        banks[i].slot = -1;
         banks[i].data = rom->data + (i * MMU_ROM_BANK_SIZE);
         banks[i].types = types + (i * MMU_ROM_BANK_SIZE);
-        banks[i].slot = -1;
     }
+
     banks[nbanks].data = NULL;  // Sentinel
     return banks;
 }
@@ -219,6 +222,15 @@ static void free_banks(ROMBank *banks)
 {
     free(banks[0].types);
     free(banks);
+}
+
+/*
+    Return the offset in bytes of the first address in the given bank.
+*/
+static size_t get_bank_offset(const ROMBank *bank)
+{
+    return MMU_ROM_BANK_SIZE * ((bank->slot >= 0) ? bank->slot :
+                                (bank->index > 2) ? 2 : bank->index);
 }
 
 /*
@@ -266,7 +278,8 @@ static void render_code(Disassembly *dis, size_t *idx, const ROMBank *bank)
         strcpy(padding, "\t\t\t\t\t");
     }
 
-    WRITE_LINE(dis, "\t%s%s\t; %s", instr->line, padding, instr->bytestr)
+    WRITE_LINE(dis, "\t%s%s\t; $%04zX: %s",
+        instr->line, padding, get_bank_offset(bank) + *idx, instr->bytestr)
     (*idx) += instr->size;
     disas_instr_free(instr);
 }
