@@ -166,20 +166,25 @@ static char* size_to_string(char *output, size_t size)
 static void disassemble_header(Disassembly *dis, const ROM *rom)
 {
     char buf[64];
-    DEBUG("Disassembling header")
+    const char *size, *product, *region;
 
-    WRITE_LINE(dis, ".rom_size\t\"%s\"\t\t; $%zX bytes in %zu banks",
-        size_to_string(buf, rom->size), rom->size, NUM_BANKS(rom))  // TODO: fix alignment
+    DEBUG("Disassembling header")
+    size = size_to_string(buf, rom->size);
+    product = rom_product(rom);
+    region = rom_region(rom);
+
+    WRITE_LINE(dis, ".rom_size\t\"%s\"%s\t; $%zX bytes in %zu banks",
+        size, strlen(size) < 6 ? "\t" : "", rom->size, NUM_BANKS(rom))
     WRITE_LINE(dis, ".rom_header\t$%04X",
         rom->header_location)
     WRITE_LINE(dis, ".rom_checksum\t%s",
         (rom->reported_checksum == rom->expected_checksum) ? "on" : "off")
     WRITE_LINE(dis, ".rom_product\t%u\t\t; %s",
-        rom->product_code, rom_product(rom) ? rom_product(rom) : "(unknown)")
+        rom->product_code, product ? product : "(unknown)")
     WRITE_LINE(dis, ".rom_version\t%u",
         rom->version)
     WRITE_LINE(dis, ".rom_region\t%u\t\t; %s",
-        rom->region_code, rom_region(rom) ? rom_region(rom) : "(unknown)")
+        rom->region_code, region ? region : "(unknown)")
     WRITE_LINE(dis, ".rom_declsize\t$%X\t\t; %s",
         rom->declared_size,
         size_to_string(buf, size_code_to_bytes(rom->declared_size)))
