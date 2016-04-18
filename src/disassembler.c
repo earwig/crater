@@ -257,8 +257,9 @@ static void mark_header(const ROM *rom, ROMBank *banks)
 */
 static void render_binary(Disassembly *dis, size_t *idx, const ROMBank *bank)
 {
-    size_t span = 1, i;
-    while (span < MAX_BYTES_PER_LINE && bank->types[*idx + span] == DT_BINARY)
+    size_t span = 1, tabs, i;
+    while (span < MAX_BYTES_PER_LINE && *idx + span < bank->size &&
+           bank->types[*idx + span] == DT_BINARY)
         span++;
 
     char buf[4 * MAX_BYTES_PER_LINE + 1];
@@ -266,7 +267,13 @@ static void render_binary(Disassembly *dis, size_t *idx, const ROMBank *bank)
         sprintf(buf + 4 * i, "$%02X ", bank->data[*idx + i]);
     buf[4 * span - 1] = '\0';
 
-    WRITE_LINE(dis, ".byte %s", buf)
+    char padding[16];
+    tabs = span <= 16 ? 8 - (span - 1) / 2 : 1;
+    padding[tabs] = '\0';
+    while (tabs-- > 0)
+        padding[tabs] = '\t';
+
+    WRITE_LINE(dis, ".byte %s%s; $%04zX", buf, padding, *idx)
     (*idx) += span;
 }
 
