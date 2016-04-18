@@ -55,7 +55,7 @@ static void dump_bank_table(const MMU *mmu, const uint8_t *data)
 /*
     Load a block of ROM into the MMU.
 
-    size must be a multiple of MMU_ROM_BANK_SIZE (16 KB), the load will fail
+    size must be a multiple of MMU_ROM_BANK_SIZE (16 KB), or the load will fail
     silently. It should also be a power of two, or problems might occur with
     ROM mirroring logic. It should not be larger than
     MMU_ROM_BANK_SIZE * MMU_NUM_ROM_BANKS, or the extra banks will be ignored.

@@ -63,7 +63,7 @@ static void print_header_dump(const uint8_t *header)
     @DEBUG_LEVEL
     Print out the analyzed header to stdout.
 */
-static void print_header_contents(const ROM *rom, const uint8_t *header)
+static void print_header_contents(const ROM *rom)
 {
     DEBUG("- header info:")
     if (rom->reported_checksum == rom->expected_checksum)
@@ -77,7 +77,7 @@ static void print_header_contents(const ROM *rom, const uint8_t *header)
     DEBUG("  - region code:   %u (%s)", rom->region_code,
           rom_region(rom) ? rom_region(rom) : "unknown")
     DEBUG("  - reported size: %s",
-          size_to_string(size_code_to_bytes(header[0xF] & 0xF)))
+          size_to_string(size_code_to_bytes(rom->declared_size)))
 }
 
 /*
@@ -116,9 +116,10 @@ static bool parse_header(ROM *rom, const uint8_t *header)
         (bcd_decode(header[0xD]) * 100) + ((header[0xE] >> 4) * 10000);
     rom->version = header[0xE] & 0x0F;
     rom->region_code = header[0xF] >> 4;
+    rom->declared_size = header[0xF] & 0xF;
 
     if (DEBUG_LEVEL)
-        print_header_contents(rom, header);
+        print_header_contents(rom);
     return true;
 }
 
@@ -144,6 +145,7 @@ static bool find_and_read_header(ROM *rom)
         }
         else {
             DEBUG("    - magic found")
+            rom->header_location = location;
             return parse_header(rom, header);
         }
     }
@@ -182,11 +184,13 @@ const char* rom_open(ROM **rom_ptr, const char *path)
     rom->name = NULL;
     rom->data = NULL;
     rom->size = 0;
+    rom->header_location = 0;
     rom->reported_checksum = 0;
     rom->expected_checksum = 0;
     rom->product_code = 0;
     rom->version = 0;
     rom->region_code = 0;
+    rom->declared_size = 0;
 
     // Set rom->name:
     rom->name = cr_malloc(sizeof(char) * (strlen(path) + 1));

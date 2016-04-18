@@ -31,11 +31,13 @@ typedef struct {
     char *name;
     uint8_t *data;
     size_t size;
+    uint16_t header_location;
     uint16_t reported_checksum;
     uint16_t expected_checksum;
     uint32_t product_code;
     uint8_t version;
     uint8_t region_code;
+    uint8_t declared_size;
 } ROM;
 
 /* Functions */
