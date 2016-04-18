@@ -104,7 +104,7 @@ static ArgType instr_args[3][256] = {
         __, __, __, __, __, __, __, __, B_, C_, D_, E_, H_, L_, NH, A_,
         __, __, __, __, __, __, __, __, __, __, __, __, __, __, __, __,
         __, __, __, __, __, __, __, __, __, __, __, __, __, __, __, __,
-        __, __, M2, M2, M2, __, M1, __, __, __, M2, __, M2, __, M1, __,
+        __, __, M2, __, M2, __, M1, __, __, __, M2, __, M2, __, M1, __,
         __, __, M2, A_, M2, __, __, __, __, __, M2, PM, M2, __, M1, __,
         __, __, M2, HL, M2, __, __, __, __, __, M2, HL, M2, __, __, __,
         __, __, M2, __, M2, __, __, __, __, HL, M2, __, M2, __, __, __
@@ -374,7 +374,7 @@ static void decode_immediate(
             sprintf(arg, format, (int8_t) bytes[shift + 1]);
             break;
         case AT_PORT_IM:  // Immediate port
-            sprintf(arg, "(%u)", bytes[shift + 1]);
+            sprintf(arg, "($%02X)", bytes[shift + 1]);
             break;
         default:
             FATAL("invalid call: decode_immediate(arg, %d, ...)", type)
