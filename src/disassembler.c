@@ -35,7 +35,7 @@ typedef enum {
 
 typedef struct {
     const uint8_t *data;
-    DataType *type;
+    DataType *types;
     size_t size;
     int8_t slot;
 } ROMBank;
@@ -189,7 +189,8 @@ static void disassemble_header(Disassembly *dis, const ROM *rom)
 static ROMBank* init_banks(const ROM *rom)
 {
     size_t nbanks = NUM_BANKS(rom), i;
-    ROMBank *banks = cr_malloc(sizeof(ROMBank) * nbanks);
+    ROMBank *banks = cr_malloc(sizeof(ROMBank) * (nbanks + 1));
+    DataType *types = cr_calloc(sizeof(DataType), rom->size);
 
     for (i = 0; i < nbanks; i++) {
         if (i == nbanks - 1 && rom->size % MMU_ROM_BANK_SIZE)
@@ -197,21 +198,51 @@ static ROMBank* init_banks(const ROM *rom)
         else
             banks[i].size = MMU_ROM_BANK_SIZE;
         banks[i].data = rom->data + (i * MMU_ROM_BANK_SIZE);
-        banks[i].type = cr_calloc(sizeof(DataType), banks[i].size);
+        banks[i].types = types + (i * MMU_ROM_BANK_SIZE);
         banks[i].slot = -1;
     }
+    banks[nbanks].data = NULL;  // Sentinel
     return banks;
 }
 
 /*
     Deallocate the given array of ROM banks.
 */
-static void free_banks(const ROM *rom, ROMBank *banks)
+static void free_banks(ROMBank *banks)
 {
-    size_t nbanks = NUM_BANKS(rom), i;
-    for (i = 0; i < nbanks; i++)
-        free(banks[i].type);
+    free(banks[0].types);
     free(banks);
+}
+
+/*
+    Mark the ROM's header as non-binary/non-code inside of the relevant bank.
+*/
+static void mark_header(const ROM *rom, ROMBank *banks)
+{
+    size_t i;
+    for (i = 0; i < HEADER_SIZE; i++)
+        banks[0].types[rom->header_location + i] = DT_HEADER;
+}
+
+/*
+    Render fully analyzed banks into lines of disassembly.
+*/
+static void render_banks(Disassembly *dis, ROMBank *banks)
+{
+    size_t bn = 0, i;
+
+    while (banks[bn].data) {
+        WRITE_LINE(dis, "")
+        WRITE_LINE(dis, ";; " HRULE)
+        WRITE_LINE(dis, "")
+        WRITE_LINE(dis, ".block $%02zX", bn)
+
+        for (i = 0; i < banks[bn].size; i++) {
+            if (banks[bn].types[i] == DT_BINARY)
+                WRITE_LINE(dis, ".byte $%02X", banks[bn].data[i])
+        }
+        bn++;
+    }
 }
 
 /*
@@ -229,11 +260,10 @@ char** disassemble(const ROM *rom)
     disassemble_header(&dis, rom);
 
     ROMBank *banks = init_banks(rom);
-    // TODO
-    // mark_header(): set DT_HEADER where appropriate
-    // analyze(): set DT_CODE (future: make labels, slots) where appropriate
-    // render(): WRITE_LINE a bunch of of times
-    free_banks(rom, banks);
+    mark_header(rom, banks);
+    // TODO: analyze(): set DT_CODE (future: make labels, slots) where appropriate
+    render_banks(&dis, banks);
+    free_banks(banks);
 
     write_line(&dis, NULL);
     return dis.lines;
