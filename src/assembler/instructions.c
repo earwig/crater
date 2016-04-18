@@ -176,7 +176,7 @@ static ASMErrorDesc parse_args(
         } else {
             if ((c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') ||
                  c == ' ' || c == '+' || c == '-' || c == '(' || c == ')' ||
-                 c == '$' || c == '_' || c == '.')
+                 c == '$' || c == '_' || c == '.' || c == '\'')
                 i++;
             else
                 return ED_PS_ARG_SYNTAX;

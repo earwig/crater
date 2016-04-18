@@ -406,7 +406,7 @@ bool argparse_indirect(ASMArgIndirect *result, ASMArgParseInfo ai)
     ASMArgRegister reg;
     ASMArgImmediate imm;
     if (argparse_register(&reg, ai)) {
-        if (reg == REG_BC || reg == REG_DE || reg == REG_HL ||
+        if (reg == REG_BC || reg == REG_DE || reg == REG_HL || reg == REG_SP ||
                              reg == REG_IX || reg == REG_IY) {
             result->type = AT_REGISTER;
             result->addr.reg = reg;
