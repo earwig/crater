@@ -226,8 +226,8 @@ static inline void trace_instruction(Z80 *z80)
         return;
     }
     if (z80->trace.fresh) {
-        TRACE("PC ADDR          RAW    INSTR\tARGS")
-        TRACE("-------          ---    -----\t----")
+        TRACE("PC ADDR  P1 P2 OP A1 A2  INSTR\tARGS")
+        TRACE("-------  --------------  -----\t----")
         z80->trace.fresh = false;
     }
 
@@ -238,7 +238,7 @@ static inline void trace_instruction(Z80 *z80)
     uint8_t bytes[4] = {quad, quad >> 8, quad >> 16, quad >> 24};
     DisasInstr *instr = disassemble_instruction(bytes);
 
-    TRACE("0x%04X:  %11s    %s", z80->regfile.pc, instr->bytestr, instr->line)
+    TRACE("0x%04X:  %-14s  %s", z80->regfile.pc, instr->bytestr, instr->line)
     disas_instr_free(instr);
 }
 

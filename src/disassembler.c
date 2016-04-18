@@ -50,18 +50,27 @@ typedef struct {
 */
 static char* format_bytestring(const uint8_t *bytes, size_t size)
 {
-    // TODO: smarter alignment; pad to full len (then remove pad from TRACE())
     if (!size)
         return NULL;
 
-    char *str = cr_malloc(sizeof(char) * (3 * size));
-    size_t i;
+    char *str = cr_malloc(sizeof(char) * 16);
+    size_t offset = 2, i;
+    uint8_t b = bytes[0];
 
-    for (i = 0; i < size; i++) {
-        snprintf(&str[3 * i], 3, "%02X", bytes[i]);
-        str[3 * i + 2] = ' ';
+    if (b == 0xCB || b == 0xDD || b == 0xED || b == 0xFD) {
+        offset--;
+        if ((b == 0xDD || b == 0xFD) && bytes[1] == 0xCB)
+            offset--;
     }
-    str[3 * size - 1] = '\0';
+
+    for (i = 0; i < offset; i++) {
+        str[3 * i] = str[3 * i + 1] = str[3 * i + 2] = ' ';
+    }
+    for (i = 0; i < size; i++) {
+        snprintf(&str[3 * (i + offset)], 3, "%02X", bytes[i]);
+        str[3 * (i + offset) + 2] = ' ';
+    }
+    str[3 * (size + offset) - 1] = '\0';
     return str;
 }
 
