@@ -139,9 +139,17 @@ static uint8_t z80_inst_ld_r_hl(Z80 *z80, uint8_t opcode)
 // static uint8_t z80_inst_ld_de_a(Z80 *z80, uint8_t opcode)
 
 /*
-    LD (nn), A
+    LD (nn), A (0x32):
+    Load a into memory address nn.
 */
-// static uint8_t z80_inst_ld_nn_a(Z80 *z80, uint8_t opcode)
+static uint8_t z80_inst_ld_nn_a(Z80 *z80, uint8_t opcode)
+{
+    (void) opcode;
+    uint16_t addr = mmu_read_double(z80->mmu, ++z80->regfile.pc);
+    mmu_write_byte(z80->mmu, addr, z80->regfile.a);
+    z80->regfile.pc += 2;
+    return 13;
+}
 
 /*
     LD A, I
@@ -283,6 +291,23 @@ static uint8_t z80_inst_exx(Z80 *z80, uint8_t opcode)
 // OR s
 
 // XOR s
+
+/*
+    XOR r (0xA8, 0xA9, 0xAA, 0xAB, 0xAC, 0xAD, 0xAF):
+    Bitwise XOR a with r (8-bit register).
+*/
+static uint8_t z80_inst_xor_r(Z80 *z80, uint8_t opcode)
+{
+    uint8_t *reg = extract_reg(z80, opcode);
+    uint8_t a = (z80->regfile.a ^= *reg);
+
+    bool parity = !(__builtin_popcount(a) % 2);
+    update_flags(z80, 0, 0, parity, !!(a & 0x08), 0, !!(a & 0x20), a == 0,
+                 !!(a & 0x80), 0xFF);
+
+    z80->regfile.pc++;
+    return 4;
+}
 
 // CP s
 
