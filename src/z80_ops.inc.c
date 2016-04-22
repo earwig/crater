@@ -312,6 +312,45 @@ static uint8_t z80_inst_xor_r(Z80 *z80, uint8_t opcode)
 // CP s
 
 /*
+    CP r (0xB8, 0xB9, 0xBA, 0xBB, 0xBC, 0xBD, 0xBF):
+    Set flags as if r (8-bit register) had been subtracted from a.
+*/
+static uint8_t z80_inst_cp_r(Z80 *z80, uint8_t opcode)
+{
+    uint8_t *reg = extract_reg(z80, opcode);
+    uint8_t d = z80->regfile.a - *reg;
+
+    bool c = (z80->regfile.a - *reg) != d;
+    bool v = (z80->regfile.a - *reg) != ((int8_t) d);
+    bool h = !!(((z80->regfile.a & 0x0F) - (*reg & 0x0F)) & 0x10);
+    update_flags(z80, c, 1, v, !!(*reg & 0x08), h, !!(*reg & 0x20), d == 0,
+                 !!(d & 0x80), 0xFF);
+
+    z80->regfile.pc++;
+    return 4;
+}
+
+/*
+    CP n (0xFE):
+    Set flags as if n (8-bit immediate) had been subtracted from a.
+*/
+static uint8_t z80_inst_cp_n(Z80 *z80, uint8_t opcode)
+{
+    (void) opcode;
+    uint8_t n = mmu_read_byte(z80->mmu, ++z80->regfile.pc);
+    uint8_t d = z80->regfile.a - n;
+
+    bool c = (z80->regfile.a - n) != d;
+    bool v = (z80->regfile.a - n) != ((int8_t) d);
+    bool h = !!(((z80->regfile.a & 0x0F) - (n & 0x0F)) & 0x10);
+    update_flags(z80, c, 1, v, !!(n & 0x08), h, !!(n & 0x20), d == 0,
+                 !!(d & 0x80), 0xFF);
+
+    z80->regfile.pc++;
+    return 7;
+}
+
+/*
     INC r (0x04, 0x0C, 0x14, 0x1C, 0x24, 0x2C, 0x3C):
     Increment r (8-bit register).
 */
@@ -516,7 +555,18 @@ static uint8_t z80_inst_jp_nn(Z80 *z80, uint8_t opcode)
     return 10;
 }
 
-// JP cc, nn
+/*
+    JP cc, nn (0xC2, 0xCA, 0xD2, 0xDA, 0xE2, 0xEA, 0xF2, 0xFA):
+    Jump to nn (16-bit immediate) if cc (condition) is true.
+*/
+static uint8_t z80_inst_jp_cc_nn(Z80 *z80, uint8_t opcode)
+{
+    if (extract_cond(z80, opcode))
+        z80->regfile.pc = mmu_read_double(z80->mmu, ++z80->regfile.pc);
+    else
+        z80->regfile.pc += 2;
+    return 10;
+}
 
 // JR e
 
@@ -550,7 +600,18 @@ static uint8_t z80_inst_jp_nn(Z80 *z80, uint8_t opcode)
 
 // RST p
 
-// IN A, (n)
+/*
+    IN A, (n): (0xDB):
+    Read a byte from port n into a.
+*/
+static uint8_t z80_inst_in_a_n(Z80 *z80, uint8_t opcode)
+{
+    (void) opcode;
+    uint8_t port = mmu_read_byte(z80->mmu, ++z80->regfile.pc);
+    z80->regfile.a = read_port(z80, port);
+    z80->regfile.pc++;
+    return 11;
+}
 
 // IN r (C)
 
@@ -562,7 +623,18 @@ static uint8_t z80_inst_jp_nn(Z80 *z80, uint8_t opcode)
 
 // INDR
 
-// OUT (n), A
+/*
+    OUT (n), A: (0xD3):
+    Write a byte from a into port n.
+*/
+static uint8_t z80_inst_out_n_a(Z80 *z80, uint8_t opcode)
+{
+    (void) opcode;
+    uint8_t port = mmu_read_byte(z80->mmu, ++z80->regfile.pc);
+    write_port(z80, port, z80->regfile.a);
+    z80->regfile.pc++;
+    return 11;
+}
 
 // OUT (C), r
 

@@ -161,6 +161,28 @@ static inline void update_flags(Z80 *z80, bool c, bool n, bool pv, bool f3,
 }
 
 /*
+    Read and return a byte from the given port.
+*/
+static uint8_t read_port(Z80 *z80, uint8_t port)
+{
+    // TODO
+    (void) z80;
+    (void) port;
+    return 0x00;
+}
+
+/*
+    Write a byte to the given port.
+*/
+static void write_port(Z80 *z80, uint8_t port, uint8_t value)
+{
+    // TODO
+    (void) z80;
+    (void) port;
+    (void) value;
+}
+
+/*
     Extract an 8-bit register from the given opcode and return a pointer to it.
 */
 static inline uint8_t* extract_reg(Z80 *z80, uint8_t opcode)
@@ -189,6 +211,24 @@ static inline uint8_t extract_pair(uint8_t opcode)
         case 0x30: return REG_SP;
     }
     FATAL("invalid call: extract_pair(0x%02X)", opcode)
+}
+
+/*
+    Extract a condition from the given opcode.
+*/
+static inline bool extract_cond(const Z80 *z80, uint8_t opcode)
+{
+    switch (opcode & 0x38) {
+        case 0x00: return !get_flag(z80, FLAG_ZERO);
+        case 0x08: return  get_flag(z80, FLAG_ZERO);
+        case 0x10: return !get_flag(z80, FLAG_CARRY);
+        case 0x18: return  get_flag(z80, FLAG_CARRY);
+        case 0x20: return !get_flag(z80, FLAG_PARITY);
+        case 0x28: return  get_flag(z80, FLAG_PARITY);
+        case 0x30: return !get_flag(z80, FLAG_SIGN);
+        case 0x38: return  get_flag(z80, FLAG_SIGN);
+    }
+    FATAL("invalid call: extract_cond(z80, 0x%02X)", opcode)
 }
 
 /*
