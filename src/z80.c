@@ -161,6 +161,15 @@ static inline void update_flags(Z80 *z80, bool c, bool n, bool pv, bool f3,
 }
 
 /*
+    Push a two-byte value onto the stack.
+*/
+static inline void stack_push(Z80 *z80, uint16_t value)
+{
+    z80->regfile.sp -= 2;
+    mmu_write_double(z80->mmu, z80->regfile.sp, value);
+}
+
+/*
     Read and return a byte from the given port.
 */
 static uint8_t read_port(Z80 *z80, uint8_t port)

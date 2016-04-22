@@ -30,3 +30,4 @@ uint8_t mmu_read_byte(const MMU*, uint16_t);
 uint16_t mmu_read_double(const MMU*, uint16_t);
 uint32_t mmu_read_quad(const MMU*, uint16_t);
 bool mmu_write_byte(MMU*, uint16_t, uint8_t);
+bool mmu_write_double(MMU*, uint16_t, uint16_t);

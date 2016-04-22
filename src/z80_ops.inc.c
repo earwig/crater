@@ -99,9 +99,18 @@ static uint8_t z80_inst_ld_r_hl(Z80 *z80, uint8_t opcode)
 // static uint8_t z80_inst_ld_iy_r(Z80 *z80, uint8_t opcode)
 
 /*
-    LD (HL), n
+    LD (HL), n (0x36):
+    Load n (8-bit immediate) into the memory address pointed to by HL.
 */
-// static uint8_t z80_inst_ld_hl_n(Z80 *z80, uint8_t opcode)
+static uint8_t z80_inst_ld_hl_n(Z80 *z80, uint8_t opcode)
+{
+    (void) opcode;
+    uint16_t addr = get_pair(z80, REG_HL);
+    uint8_t byte = mmu_read_byte(z80->mmu, ++z80->regfile.pc);
+    mmu_write_byte(z80->mmu, addr, byte);
+    z80->regfile.pc++;
+    return 10;
+}
 
 /*
     LD (IX+d), n
@@ -564,19 +573,38 @@ static uint8_t z80_inst_jp_cc_nn(Z80 *z80, uint8_t opcode)
     if (extract_cond(z80, opcode))
         z80->regfile.pc = mmu_read_double(z80->mmu, ++z80->regfile.pc);
     else
-        z80->regfile.pc += 2;
+        z80->regfile.pc += 3;
     return 10;
 }
 
-// JR e
+/*
+    JR e (0x18):
+    Relative jump e (signed 8-bit immediate) bytes.
+*/
+static uint8_t z80_inst_jr_e(Z80 *z80, uint8_t opcode)
+{
+    (void) opcode;
+    int8_t jump = mmu_read_byte(z80->mmu, ++z80->regfile.pc);
+    z80->regfile.pc += jump + 2;
+    return 12;
+}
 
-// JR C, e
 
-// JR NC, e
-
-// JR Z, e
-
-// JR NZ, e
+/*
+    JR cc, e (0x20, 0x28, 0x30, 0x38):
+    Relative jump e (signed 8-bit immediate) bytes if cc (condition) is true.
+*/
+static uint8_t z80_inst_jr_cc_e(Z80 *z80, uint8_t opcode)
+{
+    if (extract_cond(z80, opcode - 0x20)) {
+        int8_t jump = mmu_read_byte(z80->mmu, ++z80->regfile.pc);
+        z80->regfile.pc += jump + 2;
+        return 12;
+    } else {
+        z80->regfile.pc += 2;
+        return 7;
+    }
+}
 
 // JP (HL)
 
@@ -586,9 +614,33 @@ static uint8_t z80_inst_jp_cc_nn(Z80 *z80, uint8_t opcode)
 
 // DJNZ, e
 
-// CALL nn
+/*
+    CALL nn (0xCD):
+    Push PC+3 onto the stack and jump to nn (16-bit immediate).
+*/
+static uint8_t z80_inst_call_nn(Z80 *z80, uint8_t opcode)
+{
+    (void) opcode;
+    stack_push(z80, z80->regfile.pc + 3);
+    z80->regfile.pc = mmu_read_double(z80->mmu, ++z80->regfile.pc);
+    return 17;
+}
 
-// CALL cc, nn
+/*
+    CALL cc, nn (0xC4, 0xCC, 0xD4, 0xDC, 0xE4, 0xEC, 0xF4, 0xFC):
+    Push PC+3 onto the stack and jump to nn (16-bit immediate) if cc is true.
+*/
+static uint8_t z80_inst_call_cc_nn(Z80 *z80, uint8_t opcode)
+{
+    if (extract_cond(z80, opcode)) {
+        stack_push(z80, z80->regfile.pc + 3);
+        z80->regfile.pc = mmu_read_double(z80->mmu, ++z80->regfile.pc);
+        return 17;
+    } else {
+        z80->regfile.pc += 3;
+        return 10;
+    }
+}
 
 // RET
 

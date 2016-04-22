@@ -181,3 +181,13 @@ bool mmu_write_byte(MMU *mmu, uint16_t addr, uint8_t value)
         return true;
     }
 }
+
+/*
+    Write two bytes of memory to the given address.
+*/
+bool mmu_write_double(MMU *mmu, uint16_t addr, uint16_t value)
+{
+    bool b1 = mmu_write_byte(mmu, addr, value & 0xFF);
+    bool b2 = mmu_write_byte(mmu, addr + 1, value >> 8);
+    return b1 && b2;
+}
