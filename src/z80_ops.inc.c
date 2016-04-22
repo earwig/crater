@@ -218,7 +218,17 @@ static uint8_t z80_inst_ld_dd_nn(Z80 *z80, uint8_t opcode)
 
 // LD SP, IY
 
-// PUSH qq
+/*
+    PUSH qq (0xC5, 0xD5, 0xE5, 0xF5):
+    Push qq onto the stack, and decrement SP by two.
+*/
+static uint8_t z80_inst_push_qq(Z80 *z80, uint8_t opcode)
+{
+    uint8_t pair = extract_pair(opcode);
+    stack_push(z80, pair);
+    z80->regfile.pc++;
+    return 11;
+}
 
 // PUSH IX
 
