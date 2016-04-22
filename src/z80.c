@@ -257,7 +257,7 @@ bool z80_do_cycles(Z80 *z80, double cycles)
         increment_refresh_counter(z80);
         if (TRACE_LEVEL)
             trace_instruction(z80);
-        cycles -= (*instruction_lookup_table[opcode])(z80, opcode);
+        cycles -= (*instruction_table[opcode])(z80, opcode);
     }
 
     z80->pending_cycles = -cycles;
