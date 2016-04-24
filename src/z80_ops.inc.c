@@ -225,7 +225,7 @@ static uint8_t z80_inst_ld_dd_nn(Z80 *z80, uint8_t opcode)
 static uint8_t z80_inst_push_qq(Z80 *z80, uint8_t opcode)
 {
     uint8_t pair = extract_pair(opcode);
-    stack_push(z80, pair);
+    stack_push(z80, get_pair(z80, pair));
     z80->regfile.pc++;
     return 11;
 }
@@ -234,7 +234,17 @@ static uint8_t z80_inst_push_qq(Z80 *z80, uint8_t opcode)
 
 // PUSH IY
 
-// POP qq
+/*
+    POP qq (0xC1, 0xD1, 0xE1, 0xF1):
+    Pop qq from the stack, and increment SP by two.
+*/
+static uint8_t z80_inst_pop_qq(Z80 *z80, uint8_t opcode)
+{
+    uint8_t pair = extract_pair(opcode);
+    set_pair(z80, pair, stack_pop(z80));
+    z80->regfile.pc++;
+    return 10;
+}
 
 // POP IX
 
@@ -594,7 +604,7 @@ static uint8_t z80_inst_jp_cc_nn(Z80 *z80, uint8_t opcode)
 static uint8_t z80_inst_jr_e(Z80 *z80, uint8_t opcode)
 {
     (void) opcode;
-    int8_t jump = mmu_read_byte(z80->mmu, ++z80->regfile.pc);
+    int8_t jump = mmu_read_byte(z80->mmu, z80->regfile.pc + 1);
     z80->regfile.pc += jump + 2;
     return 12;
 }
@@ -607,7 +617,7 @@ static uint8_t z80_inst_jr_e(Z80 *z80, uint8_t opcode)
 static uint8_t z80_inst_jr_cc_e(Z80 *z80, uint8_t opcode)
 {
     if (extract_cond(z80, opcode - 0x20)) {
-        int8_t jump = mmu_read_byte(z80->mmu, ++z80->regfile.pc);
+        int8_t jump = mmu_read_byte(z80->mmu, z80->regfile.pc + 1);
         z80->regfile.pc += jump + 2;
         return 12;
     } else {

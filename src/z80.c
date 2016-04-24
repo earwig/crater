@@ -170,6 +170,16 @@ static inline void stack_push(Z80 *z80, uint16_t value)
 }
 
 /*
+    Pop a two-byte value from the stack.
+*/
+static inline uint16_t stack_pop(Z80 *z80)
+{
+    uint16_t value = mmu_read_double(z80->mmu, z80->regfile.sp);
+    z80->regfile.sp += 2;
+    return value;
+}
+
+/*
     Read and return a byte from the given port.
 */
 static uint8_t read_port(Z80 *z80, uint8_t port)
