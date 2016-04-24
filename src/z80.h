@@ -10,6 +10,7 @@
 
 #define Z80_EXC_NOT_POWERED          0
 #define Z80_EXC_UNIMPLEMENTED_OPCODE 1
+#define Z80_EXC_UNIMPLEMENTED_PORT   2
 
 /* Structs */
 

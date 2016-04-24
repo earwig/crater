@@ -121,6 +121,9 @@ const char* gamegear_get_exception(GameGear *gg)
                 case Z80_EXC_UNIMPLEMENTED_OPCODE:
                     SET_EXC("unimplemented opcode: 0x%02X", gg->cpu.exc_data)
                     break;
+                case Z80_EXC_UNIMPLEMENTED_PORT:
+                    SET_EXC("unimplemented port: 0x%02X", gg->cpu.exc_data)
+                    break;
                 default:
                     SET_EXC("unknown exception")
                     break;

@@ -690,9 +690,28 @@ static uint8_t z80_inst_ret_cc(Z80 *z80, uint8_t opcode)
 
 // RETI
 
-// RETN
+/*
+    RETN (0xED45, 0xED55, 0xED5D, 0xED65, 0xED6D, 0xED75, 0xED7D):
+    Pop PC from the stack, and copy to IFF2 to IFF1.
+*/
+static uint8_t z80_inst_retn(Z80 *z80, uint8_t opcode)
+{
+    (void) opcode;
+    z80->regfile.pc = stack_pop(z80);
+    z80->regfile.iff1 = z80->regfile.iff2;
+    return 14;
+}
 
-// RST p
+/*
+    RST p (0xC7, 0xCF, 0xD7, 0xDF, 0xE7, 0xEF, 0xF7, 0xFF):
+    Push PC+1 onto the stack and jump to p (opcode & 0x38).
+*/
+static uint8_t z80_inst_rst_p(Z80 *z80, uint8_t opcode)
+{
+    stack_push(z80, z80->regfile.pc + 1);
+    z80->regfile.pc = opcode & 0x38;
+    return 11;
+}
 
 /*
     IN A, (n) (0xDB):
