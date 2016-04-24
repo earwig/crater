@@ -662,9 +662,31 @@ static uint8_t z80_inst_call_cc_nn(Z80 *z80, uint8_t opcode)
     }
 }
 
-// RET
+/*
+    RET (0xC9):
+    Pop PC from the stack.
+*/
+static uint8_t z80_inst_ret(Z80 *z80, uint8_t opcode)
+{
+    (void) opcode;
+    z80->regfile.pc = stack_pop(z80);
+    return 10;
+}
 
-// RET cc
+/*
+    RET cc (0xC0, 0xC8, 0xD0, 0xD8, 0xE0, 0xE8, 0xF0, 0xF8):
+    Pop PC from the stack if cc is true.
+*/
+static uint8_t z80_inst_ret_cc(Z80 *z80, uint8_t opcode)
+{
+    if (extract_cond(z80, opcode)) {
+        z80->regfile.pc = stack_pop(z80);
+        return 11;
+    } else {
+        z80->regfile.pc++;
+        return 5;
+    }
+}
 
 // RETI
 
@@ -673,7 +695,7 @@ static uint8_t z80_inst_call_cc_nn(Z80 *z80, uint8_t opcode)
 // RST p
 
 /*
-    IN A, (n): (0xDB):
+    IN A, (n) (0xDB):
     Read a byte from port n into a.
 */
 static uint8_t z80_inst_in_a_n(Z80 *z80, uint8_t opcode)
@@ -685,18 +707,93 @@ static uint8_t z80_inst_in_a_n(Z80 *z80, uint8_t opcode)
     return 11;
 }
 
-// IN r (C)
+/*
+    IN r, (C) (0xED40, 0xED48, 0xED50, 0xED58, 0xED60, 0xED68, 0xED70, 0xED78):
+    Read a byte from port C into r, or affect flags only if 0xED70.
+*/
+static uint8_t z80_inst_in_r_c(Z80 *z80, uint8_t opcode)
+{
+    uint8_t data = read_port(z80, z80->regfile.c);
+    bool parity = !(__builtin_popcount(data) % 2);
 
-// INI
-
-// INIR
-
-// IND
-
-// INDR
+    if (opcode != 0x70)
+        *extract_reg(z80, opcode) = data;
+    update_flags(z80, 0, 0, parity, !!(data & 0x08), 0, !!(data & 0x20),
+        data == 0, !!(data & 0x80), 0xFE);
+    z80->regfile.pc++;
+    return 12;
+}
 
 /*
-    OUT (n), A: (0xD3):
+    INI (0xEDA2):
+    IN (HL), (C); INC HL; DEC B
+*/
+static uint8_t z80_inst_ini(Z80 *z80, uint8_t opcode)
+{
+    (void) opcode;
+    uint8_t data = read_port(z80, z80->regfile.c), *b = &z80->regfile.b;
+    uint16_t hl = get_pair(z80, REG_HL);
+    bool h = !!(((*b & 0x0F) - 1) & 0x10);
+
+    mmu_write_byte(z80->mmu, hl, data);
+    set_pair(z80, REG_HL, hl + 1);
+    (*b)--;
+
+    update_flags(z80, 0, 1, *b == 0x7F, !!(*b & 0x08), h, !!(*b & 0x20),
+        *b == 0, !!(*b & 0x80), 0xFE);
+    z80->regfile.pc++;
+    return 16;
+}
+
+/*
+    INIR (0xEDB2):
+    INI; JR NZ, -1
+*/
+static uint8_t z80_inst_inir(Z80 *z80, uint8_t opcode)
+{
+    z80_inst_ini(z80, opcode);
+    if (z80->regfile.b == 0)
+        return 16;
+    z80->regfile.pc -= 2;
+    return 21;
+}
+
+/*
+    IND (0xEDAA):
+    IN (HL), (C); DEC HL; DEC B
+*/
+static uint8_t z80_inst_ind(Z80 *z80, uint8_t opcode)
+{
+    (void) opcode;
+    uint8_t data = read_port(z80, z80->regfile.c), *b = &z80->regfile.b;
+    uint16_t hl = get_pair(z80, REG_HL);
+    bool h = !!(((*b & 0x0F) - 1) & 0x10);
+
+    mmu_write_byte(z80->mmu, hl, data);
+    set_pair(z80, REG_HL, hl - 1);
+    (*b)--;
+
+    update_flags(z80, 0, 1, *b == 0x7F, !!(*b & 0x08), h, !!(*b & 0x20),
+        *b == 0, !!(*b & 0x80), 0xFE);
+    z80->regfile.pc++;
+    return 16;
+}
+
+/*
+    INDR (0xEDBA):
+    IND; JR NZ, -1
+*/
+static uint8_t z80_inst_indr(Z80 *z80, uint8_t opcode)
+{
+    z80_inst_ind(z80, opcode);
+    if (z80->regfile.b == 0)
+        return 16;
+    z80->regfile.pc -= 2;
+    return 21;
+}
+
+/*
+    OUT (n), A (0xD3):
     Write a byte from a into port n.
 */
 static uint8_t z80_inst_out_n_a(Z80 *z80, uint8_t opcode)
@@ -708,15 +805,98 @@ static uint8_t z80_inst_out_n_a(Z80 *z80, uint8_t opcode)
     return 11;
 }
 
-// OUT (C), r
+/*
+    OUT (C), r (0xED41, 0xED49, 0xED51, 0xED59, 0xED61, 0xED69, 0xED71,
+        0xED79):
+    Write a byte from r (8-bit reg, or 0 if 0xED71) into port C.
+*/
+static uint8_t z80_inst_out_c_r(Z80 *z80, uint8_t opcode)
+{
+    uint8_t value = opcode != 0x71 ? *extract_reg(z80, opcode) : 0;
+    write_port(z80, z80->regfile.c, value);
+    z80->regfile.pc++;
+    return 12;
+}
 
-// OUTI
+/*
+    OUTI (0xEDA3):
+    OUT (C), (HL); INC HL; DEC B
+*/
+static uint8_t z80_inst_outi(Z80 *z80, uint8_t opcode)
+{
+    (void) opcode;
+    uint16_t hl = get_pair(z80, REG_HL);
+    uint8_t *b = &z80->regfile.b;
+    bool h = !!(((*b & 0x0F) - 1) & 0x10);
 
-// OTIR
+    write_port(z80, z80->regfile.c, mmu_read_byte(z80->mmu, hl));
+    set_pair(z80, REG_HL, hl + 1);
+    (*b)--;
 
-// OUTD
+    update_flags(z80, 0, 1, *b == 0x7F, !!(*b & 0x08), h, !!(*b & 0x20),
+        *b == 0, !!(*b & 0x80), 0xFE);
+    z80->regfile.pc++;
+    return 16;
+}
 
-// OTDR
+/*
+    OTIR (0xEDB3):
+    OUTI; JR NZ, -1
+*/
+static uint8_t z80_inst_otir(Z80 *z80, uint8_t opcode)
+{
+    z80_inst_outi(z80, opcode);
+    if (z80->regfile.b == 0)
+        return 16;
+    z80->regfile.pc -= 2;
+    return 21;
+}
+
+/*
+    OUTD (0xEDAB):
+    OUT (C), (HL); DEC HL; DEC B
+*/
+static uint8_t z80_inst_outd(Z80 *z80, uint8_t opcode)
+{
+    (void) opcode;
+    uint16_t hl = get_pair(z80, REG_HL);
+    uint8_t *b = &z80->regfile.b;
+    bool h = !!(((*b & 0x0F) - 1) & 0x10);
+
+    write_port(z80, z80->regfile.c, mmu_read_byte(z80->mmu, hl));
+    set_pair(z80, REG_HL, hl - 1);
+    (*b)--;
+
+    update_flags(z80, 0, 1, *b == 0x7F, !!(*b & 0x08), h, !!(*b & 0x20),
+        *b == 0, !!(*b & 0x80), 0xFE);
+    z80->regfile.pc++;
+    return 16;
+}
+
+/*
+    OTDR (0xEDBB):
+    OUTD; JR NZ, -1
+*/
+static uint8_t z80_inst_otdr(Z80 *z80, uint8_t opcode)
+{
+    z80_inst_outd(z80, opcode);
+    if (z80->regfile.b == 0)
+        return 16;
+    z80->regfile.pc -= 2;
+    return 21;
+}
+
+/*
+    NOP2:
+    No operation is performed twice; i.e., 2 NOPs-worth of cycles are spent.
+    Used for unimplemented extended and index instructions.
+*/
+static uint8_t z80_inst_nop2(Z80 *z80, uint8_t opcode)
+{
+    (void) opcode;
+    z80->regfile.pc++;
+    return 8;
+}
 
 /*
     0xED:
