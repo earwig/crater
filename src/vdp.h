@@ -8,12 +8,14 @@
 
 #define VDP_LINES_PER_FRAME 262
 #define VDP_VRAM_SIZE (16 * 1024)
+#define VDP_CRAM_SIZE (64)
 #define VDP_REGS 11
 
 /* Structs */
 
 typedef struct {
     uint8_t  *vram;
+    uint8_t  *cram;
     uint8_t  regs[VDP_REGS];
 
     uint8_t  h_counter;
@@ -25,6 +27,7 @@ typedef struct {
     bool     control_flag;
     bool     stat_int, stat_ovf, stat_col;
     uint8_t  read_buf;
+    uint8_t  cram_latch;
 } VDP;
 
 /* Functions */

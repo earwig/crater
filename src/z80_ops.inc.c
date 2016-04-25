@@ -74,14 +74,9 @@ static uint8_t z80_inst_ld_r_hl(Z80 *z80, uint8_t opcode)
 }
 
 /*
-    LD r, (IX+d)
+    LD r, (IXY+d)
 */
-// static uint8_t z80_inst_ld_r_ix(Z80 *z80, uint8_t opcode)
-
-/*
-    LD r, (IY+d)
-*/
-// static uint8_t z80_inst_ld_r_iy(Z80 *z80, uint8_t opcode)
+// static uint8_t z80_inst_ld_r_ixy(Z80 *z80, uint8_t opcode)
 
 /*
     LD (HL), r (0x70, 0x71, 0x72, 0x73, 0x74, 0x75, 0x77):
@@ -97,14 +92,9 @@ static uint8_t z80_inst_ld_hl_r(Z80 *z80, uint8_t opcode)
 }
 
 /*
-    LD (IX+d), r
+    LD (IXY+d), r
 */
-// static uint8_t z80_inst_ld_ix_r(Z80 *z80, uint8_t opcode)
-
-/*
-    LD (IY+d), r
-*/
-// static uint8_t z80_inst_ld_iy_r(Z80 *z80, uint8_t opcode)
+// static uint8_t z80_inst_ld_ixy_r(Z80 *z80, uint8_t opcode)
 
 /*
     LD (HL), n (0x36):
@@ -121,43 +111,43 @@ static uint8_t z80_inst_ld_hl_n(Z80 *z80, uint8_t opcode)
 }
 
 /*
-    LD (IX+d), n
+    LD (IXY+d), n
 */
-// static uint8_t z80_inst_ld_ix_n(Z80 *z80, uint8_t opcode)
+// static uint8_t z80_inst_ld_ixy_n(Z80 *z80, uint8_t opcode)
 
 /*
-    LD (IY+d), n
+    LD A, (BC/DE)
 */
-// static uint8_t z80_inst_ld_iy_n(Z80 *z80, uint8_t opcode)
+// static uint8_t z80_inst_ld_a_bcde(Z80 *z80, uint8_t opcode)
 
 /*
-    LD A, (BC)
+    LD A, (nn) (0x3A):
+    Load memory at address nn into A.
 */
-// static uint8_t z80_inst_ld_a_bc(Z80 *z80, uint8_t opcode)
+static uint8_t z80_inst_ld_a_nn(Z80 *z80, uint8_t opcode)
+{
+    (void) opcode;
+    uint16_t addr = mmu_read_double(z80->mmu, ++z80->regfile.pc);
+    z80->regfile.a = mmu_read_byte(z80->mmu, addr);
+    z80->regfile.pc += 2;
+    return 13;
+}
 
 /*
-    LD A, (DE)
+    LD (BC/DE), A (0x02, 0x12):
+    Load A into the memory address pointed to by BC or DE.
 */
-// static uint8_t z80_inst_ld_a_de(Z80 *z80, uint8_t opcode)
-
-/*
-    LD A, (nn)
-*/
-// static uint8_t z80_inst_ld_a_nn(Z80 *z80, uint8_t opcode)
-
-/*
-    LD (BC), A
-*/
-// static uint8_t z80_inst_ld_bc_a(Z80 *z80, uint8_t opcode)
-
-/*
-    LD (DE), A
-*/
-// static uint8_t z80_inst_ld_de_a(Z80 *z80, uint8_t opcode)
+static uint8_t z80_inst_ld_bcde_a(Z80 *z80, uint8_t opcode)
+{
+    uint16_t addr = get_pair(z80, extract_pair(opcode));
+    mmu_write_byte(z80->mmu, addr, z80->regfile.a);
+    z80->regfile.pc++;
+    return 7;
+}
 
 /*
     LD (nn), A (0x32):
-    Load a into memory address nn.
+    Load A into memory address nn.
 */
 static uint8_t z80_inst_ld_nn_a(Z80 *z80, uint8_t opcode)
 {
@@ -200,31 +190,34 @@ static uint8_t z80_inst_ld_dd_nn(Z80 *z80, uint8_t opcode)
     return 10;
 }
 
-// LD IX, nn
-
-// LD IY, nn
+// LD IXY, nn
 
 // LD HL, (nn)
 
 // LD dd, (nn)
 
-// LD IX, (nn)
+// LD IXY, (nn)
 
-// LD IY, (nn)
-
-// LD (nn), HL
+/*
+    LD (nn), HL: (0x22):
+    Load HL into memory address nn.
+*/
+static uint8_t z80_inst_ld_nn_hl(Z80 *z80, uint8_t opcode)
+{
+    (void) opcode;
+    uint16_t addr = mmu_read_double(z80->mmu, ++z80->regfile.pc);
+    mmu_write_double(z80->mmu, addr, get_pair(z80, REG_HL));
+    z80->regfile.pc += 2;
+    return 16;
+}
 
 // LD (nn), dd
 
-// LD (nn), IX
-
-// LD (nn), IY
+// LD (nn), IXY
 
 // LD SP, HL
 
-// LD SP, IX
-
-// LD SP, IY
+// LD SP, IXY
 
 /*
     PUSH qq (0xC5, 0xD5, 0xE5, 0xF5):
@@ -303,9 +296,7 @@ static uint8_t z80_inst_exx(Z80 *z80, uint8_t opcode)
 
 // EX (SP), HL
 
-// EX (SP), IX
-
-// EX (SP), IY
+// EX (SP), IXY
 
 /*
     LDI (0xEDA0):
@@ -391,9 +382,7 @@ static uint8_t z80_inst_lddr(Z80 *z80, uint8_t opcode)
 
 // ADD A, (HL)
 
-// ADD A, (IX + d)
-
-// ADD A, (IY + d)
+// ADD A, (IXY+d)
 
 // ADC A, s
 
@@ -405,6 +394,23 @@ static uint8_t z80_inst_lddr(Z80 *z80, uint8_t opcode)
 
 // OR s
 
+/*
+    OR r (0xB0, 0xB1, 0xB2, 0xB3, 0xB4, 0xB5, 0xB7):
+    Bitwise OR a with r (8-bit register).
+*/
+static uint8_t z80_inst_or_r(Z80 *z80, uint8_t opcode)
+{
+    uint8_t *reg = extract_reg(z80, opcode << 3);
+    uint8_t a = (z80->regfile.a ^= *reg);
+
+    bool parity = !(__builtin_popcount(a) % 2);
+    update_flags(z80, 0, 0, parity, !!(a & 0x08), 0, !!(a & 0x20), a == 0,
+                 !!(a & 0x80), 0xFF);
+
+    z80->regfile.pc++;
+    return 4;
+}
+
 // XOR s
 
 /*
@@ -413,7 +419,7 @@ static uint8_t z80_inst_lddr(Z80 *z80, uint8_t opcode)
 */
 static uint8_t z80_inst_xor_r(Z80 *z80, uint8_t opcode)
 {
-    uint8_t *reg = extract_reg(z80, opcode);
+    uint8_t *reg = extract_reg(z80, opcode << 3);
     uint8_t a = (z80->regfile.a ^= *reg);
 
     bool parity = !(__builtin_popcount(a) % 2);
@@ -432,7 +438,7 @@ static uint8_t z80_inst_xor_r(Z80 *z80, uint8_t opcode)
 */
 static uint8_t z80_inst_cp_r(Z80 *z80, uint8_t opcode)
 {
-    uint8_t *reg = extract_reg(z80, opcode);
+    uint8_t *reg = extract_reg(z80, opcode << 3);
     uint8_t d = z80->regfile.a - *reg;
 
     bool c = (z80->regfile.a - *reg) != d;
@@ -483,11 +489,27 @@ static uint8_t z80_inst_inc_r(Z80 *z80, uint8_t opcode)
 
 // INC (HL)
 
-// INC (IX+d)
+// INC (IXY+d)
 
-// INC (IY+d)
+/*
+    DEC r (0x05, 0x0D, 0x15, 0x1D, 0x25, 0x2D, 0x3D):
+    Decrement r (8-bit register).
+*/
+static uint8_t z80_inst_dec_r(Z80 *z80, uint8_t opcode)
+{
+    uint8_t *reg = extract_reg(z80, opcode);
+    bool halfcarry = !!(((*reg & 0x0F) - 1) & 0x10);
+    (*reg)--;
+    update_flags(z80, 0, 1, *reg == 0x7F, !!(*reg & 0x08), halfcarry,
+                 !!(*reg & 0x20), *reg == 0, !!(*reg & 0x80), 0xFE);
 
-// DEC m
+    z80->regfile.pc++;
+    return 4;
+}
+
+// DEC (HL)
+
+// DEC (IXY+d)
 
 // DAA
 
@@ -581,11 +603,30 @@ static uint8_t z80_inst_im(Z80 *z80, uint8_t opcode)
 
 // ADC HL, ss
 
-// SBC HL, ss
+/*
+    SBC HL, ss (0xED42, 0xED52, 0xED62, 0xED72):
+    Subtract BC with carry from HL.
+*/
+static uint8_t z80_inst_sbc_hl_ss(Z80 *z80, uint8_t opcode)
+{
+    uint8_t pair = extract_pair(opcode);
+    uint16_t minuend = get_pair(z80, REG_HL);
+    uint16_t subtrahend = get_pair(z80, pair) + get_flag(z80, FLAG_CARRY);
+    uint16_t value = minuend - subtrahend;
+    set_pair(z80, REG_HL, value);
 
-// ADD IX, pp
+    bool c  = (minuend - subtrahend) != value;
+    bool ov = (minuend - subtrahend) != ((int16_t) value);  // TODO: verify these
+    bool hc = !!(((minuend & 0x0FFF) - (subtrahend & 0x0FFF)) & 0x1000);
 
-// ADD IY, rr
+    update_flags(z80, c, 1, ov, !!(value & 0x0800), hc,
+                 !!(value & 0x2000), value == 0, !!(value & 0x8000), 0xFF);
+
+    z80->regfile.pc++;
+    return 15;
+}
+
+// ADD IXY, pp
 
 /*
     INC ss (0x03, 0x13, 0x23, 0x33):
@@ -599,15 +640,21 @@ static uint8_t z80_inst_inc_ss(Z80 *z80, uint8_t opcode)
     return 6;
 }
 
-// INC IX
+// INC IXY
 
-// INC IY
+/*
+    DEC ss (0x0B, 0x1B, 0x2B, 0x3B):
+    Decrement ss (16-bit register).
+*/
+static uint8_t z80_inst_dec_ss(Z80 *z80, uint8_t opcode)
+{
+    uint8_t pair = extract_pair(opcode);
+    set_pair(z80, pair, get_pair(z80, pair) - 1);
+    z80->regfile.pc++;
+    return 6;
+}
 
-// DEC ss
-
-// DEC IX
-
-// DEC IY
+// DEC IXY
 
 // RLCA
 
@@ -621,9 +668,7 @@ static uint8_t z80_inst_inc_ss(Z80 *z80, uint8_t opcode)
 
 // RLC (HL)
 
-// RLC (IX+d)
-
-// RLC (IY+d)
+// RLC (IXY+d)
 
 // RL m
 
@@ -645,17 +690,13 @@ static uint8_t z80_inst_inc_ss(Z80 *z80, uint8_t opcode)
 
 // BIT b, (HL)
 
-// BIT b, (IX+d)
-
-// BIT b, (IY+d)
+// BIT b, (IXY+d)
 
 // SET b, r
 
 // SET b, (HL)
 
-// SET b, (IX+d)
-
-// SET b, (IY+d)
+// SET b, (IXY+d)
 
 // RES b, m
 
@@ -714,9 +755,7 @@ static uint8_t z80_inst_jr_cc_e(Z80 *z80, uint8_t opcode)
 
 // JP (HL)
 
-// JP (IX)
-
-// JP (IY)
+// JP (IXY)
 
 /*
     DJNZ, e (0x10):

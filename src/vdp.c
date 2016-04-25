@@ -17,7 +17,9 @@
 void vdp_init(VDP *vdp)
 {
     vdp->vram = cr_malloc(sizeof(uint8_t) * VDP_VRAM_SIZE);
+    vdp->cram = cr_malloc(sizeof(uint8_t) * VDP_CRAM_SIZE);
     memset(vdp->vram, 0x00, VDP_VRAM_SIZE);
+    memset(vdp->cram, 0x00, VDP_CRAM_SIZE);
 }
 
 /*
@@ -54,6 +56,21 @@ void vdp_power(VDP *vdp)
     vdp->control_flag = false;
     vdp->stat_int = vdp->stat_ovf = vdp->stat_col = 0;
     vdp->read_buf = 0;
+    vdp->cram_latch = 0;
+}
+
+/*
+    Advance the V counter for the next scanline.
+*/
+static void advance_scanline(VDP *vdp)
+{
+    if (vdp->v_counter == 0xDA)
+        vdp->v_count_jump = !vdp->v_count_jump;
+
+    if (vdp->v_counter == 0xDA && vdp->v_count_jump)
+        vdp->v_counter = 0xD5;
+    else
+        vdp->v_counter++;
 }
 
 /*
@@ -66,14 +83,7 @@ void vdp_simulate_line(VDP *vdp)
     if (vdp->v_counter >= 0x18 && vdp->v_counter < 0xA8) {
         // TODO: draw current line
     }
-
-    if (vdp->v_counter == 0xDA)
-        vdp->v_count_jump = !vdp->v_count_jump;
-
-    if (vdp->v_counter == 0xDA && vdp->v_count_jump)
-        vdp->v_counter = 0xD5;
-    else
-        vdp->v_counter++;
+    advance_scanline(vdp);
 }
 
 /*
@@ -150,6 +160,19 @@ void vdp_write_control(VDP *vdp, uint8_t byte)
 }
 
 /*
+    Write a byte into CRAM. Handles even/odd address latching.
+*/
+static void write_cram(VDP *vdp, uint8_t byte)
+{
+    if (!(vdp->control_addr % 2)) {
+        vdp->cram_latch = byte;
+    } else {
+        vdp->cram[(vdp->control_addr - 1) % 0x3F] = vdp->cram_latch;
+        vdp->cram[ vdp->control_addr      % 0x3F] = byte % 0x0F;
+    }
+}
+
+/*
     Write a byte into the VDP's data port.
 
     Depending on the control code, this either writes into the VRAM or CRAM at
@@ -159,7 +182,7 @@ void vdp_write_control(VDP *vdp, uint8_t byte)
 void vdp_write_data(VDP *vdp, uint8_t byte)
 {
     if (vdp->control_code == CODE_CRAM_WRITE)
-        FATAL("unimplemented: VDP CRAM write @ 0x%04X", vdp->control_addr)  // TODO
+        write_cram(vdp, byte);
     else
         vdp->vram[vdp->control_addr] = byte;
 
