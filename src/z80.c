@@ -42,9 +42,10 @@
     Register values are invalid until z80_power() is called. No other Z80
     functions should be called before it.
 */
-void z80_init(Z80 *z80, MMU *mmu)
+void z80_init(Z80 *z80, MMU *mmu, IO *io)
 {
     z80->mmu = mmu;
+    z80->io = io;
     z80->except = true;
     z80->exc_code = Z80_EXC_NOT_POWERED;
     z80->exc_data = 0;
@@ -180,60 +181,34 @@ static inline uint16_t stack_pop(Z80 *z80)
 }
 
 /*
-    Read and return a byte from the given port.
+    Check for errors after an I/O operation.
 */
-static uint8_t read_port(Z80 *z80, uint8_t port)
+static void handle_io_errors(Z80 *z80)
 {
-    if (port < 0x06) {
-        // TODO: GG specific registers; initial state: C0 7F FF 00 FF 00 FF
-    } else if (port < 0x3F) {
-        return 0xFF;
-    } else if (port < 0x7F && !(port % 2)) {
-        // TODO: Return the V counter
-    } else if (port < 0x7F) {
-        // TODO: Return the H counter
-    } else if (port < 0xBF && !(port % 2)) {
-        // TODO: Return the VDP data port contents
-    } else if (port < 0xBF) {
-        // TODO: Return the VDP status flags
-    } else if (port == 0xCD || port == 0xDC) {
-        // TODO: Return the I/O port A/B register
-    } else if (port == 0xC1 || port == 0xDD) {
-        // TODO: Return the I/O port B/misc. register
-    } else {
-        return 0xFF;
+    if (z80->io->except) {
+        z80->except = true;
+        z80->exc_code = Z80_EXC_IO_ERROR;
+        z80->exc_data = z80->io->exc_port;
     }
-
-    z80->except = true;
-    z80->exc_code = Z80_EXC_UNIMPLEMENTED_PORT;
-    z80->exc_data = port;
-    return 0;
 }
 
 /*
-    Write a byte to the given port.
+    Read and return a byte from the given port, and check for errors.
+*/
+static uint8_t read_port(Z80 *z80, uint8_t port)
+{
+    uint8_t value = io_port_read(z80->io, port);
+    handle_io_errors(z80);
+    return value;
+}
+
+/*
+    Write a byte to the given port, and check for errors.
 */
 static void write_port(Z80 *z80, uint8_t port, uint8_t value)
 {
-    if (port < 0x06) {
-        // TODO: GG specific registers; initial state: C0 7F FF 00 FF 00 FF
-    } else if (port < 0x3F && !(port % 2)) {
-        // TODO: Write to memory control register
-    } else if (port < 0x3F) {
-        // TODO: Write to I/O control register
-    } else if (port < 0x7F) {
-        // TODO: Write to the SN76489 PSG
-    } else if (port < 0xBF && !(port % 2)) {
-        // TODO: Write to the VDP data port
-    } else if (port < 0xBF) {
-        // TODO: Write to the VDP control port
-    } else {
-        return;
-    }
-
-    z80->except = true;
-    z80->exc_code = Z80_EXC_UNIMPLEMENTED_PORT;
-    z80->exc_data = port;
+    io_port_write(z80->io, port, value);
+    handle_io_errors(z80);
 }
 
 /*

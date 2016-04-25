@@ -5,7 +5,7 @@
 #include <stdbool.h>
 #include <unistd.h>
 
-#include "iomanager.h"
+#include "emulator.h"
 #include "logging.h"
 
 static volatile bool caught_signal;
@@ -24,12 +24,12 @@ static void handle_sigint(int sig)
 
     Block until emulation is finished.
 */
-void iomanager_emulate(GameGear *gg)
+void emulate(GameGear *gg)
 {
     caught_signal = false;
     signal(SIGINT, handle_sigint);
 
-    DEBUG("IOManager powering GameGear")
+    DEBUG("Interface powering GameGear")
     gamegear_power(gg, true);
 
     // TODO: use SDL events
@@ -49,7 +49,7 @@ void iomanager_emulate(GameGear *gg)
             z80_dump_registers(&gg->cpu);
     }
 
-    DEBUG("IOManager unpowering GameGear")
+    DEBUG("Interface unpowering GameGear")
     gamegear_power(gg, false);
 
     signal(SIGINT, SIG_DFL);

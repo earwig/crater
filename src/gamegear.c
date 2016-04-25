@@ -17,7 +17,10 @@ GameGear* gamegear_create()
 {
     GameGear *gg = cr_malloc(sizeof(GameGear));
     mmu_init(&gg->mmu);
-    z80_init(&gg->cpu, &gg->mmu);
+    vdp_init(&gg->vdp);
+    io_init(&gg->io, &gg->vdp);
+    z80_init(&gg->cpu, &gg->mmu, &gg->io);
+
     gg->powered = false;
     gg->exc_buffer[0] = '\0';
     return gg;
@@ -31,6 +34,7 @@ GameGear* gamegear_create()
 void gamegear_destroy(GameGear *gg)
 {
     mmu_free(&gg->mmu);
+    vdp_free(&gg->vdp);
     free(gg);
 }
 
@@ -65,6 +69,8 @@ void gamegear_power(GameGear *gg, bool state)
 
     if (state) {
         mmu_power(&gg->mmu);
+        vdp_power(&gg->vdp);
+        io_power(&gg->io);
         z80_power(&gg->cpu);
         gg->last_tick = get_time_ns();
     } else {
@@ -121,8 +127,8 @@ const char* gamegear_get_exception(GameGear *gg)
                 case Z80_EXC_UNIMPLEMENTED_OPCODE:
                     SET_EXC("unimplemented opcode: 0x%02X", gg->cpu.exc_data)
                     break;
-                case Z80_EXC_UNIMPLEMENTED_PORT:
-                    SET_EXC("unimplemented port: 0x%02X", gg->cpu.exc_data)
+                case Z80_EXC_IO_ERROR:
+                    SET_EXC("I/O error on port 0x%02X", gg->cpu.exc_data)
                     break;
                 default:
                     SET_EXC("unknown exception")

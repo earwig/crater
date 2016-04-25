@@ -7,4 +7,4 @@
 
 /* Functions */
 
-void iomanager_emulate(GameGear*);
+void emulate(GameGear*);

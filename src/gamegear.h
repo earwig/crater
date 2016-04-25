@@ -6,6 +6,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#include "io.h"
 #include "mmu.h"
 #include "rom.h"
 #include "z80.h"
@@ -15,8 +16,10 @@
 /* Structs */
 
 typedef struct {
-    MMU mmu;
     Z80 cpu;
+    MMU mmu;
+    VDP vdp;
+    IO io;
     bool powered;
     uint64_t last_tick;
     char exc_buffer[GG_EXC_BUFF_SIZE];

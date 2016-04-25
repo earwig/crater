@@ -6,11 +6,12 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#include "io.h"
 #include "mmu.h"
 
 #define Z80_EXC_NOT_POWERED          0
 #define Z80_EXC_UNIMPLEMENTED_OPCODE 1
-#define Z80_EXC_UNIMPLEMENTED_PORT   2
+#define Z80_EXC_IO_ERROR             2
 
 /* Structs */
 
@@ -32,6 +33,7 @@ typedef struct {
 typedef struct {
     Z80RegFile regfile;
     MMU *mmu;
+    IO *io;
     bool except;
     uint8_t exc_code, exc_data;
     double pending_cycles;
@@ -40,7 +42,7 @@ typedef struct {
 
 /* Functions */
 
-void z80_init(Z80*, MMU*);
+void z80_init(Z80*, MMU*, IO*);
 void z80_power(Z80*);
 bool z80_do_cycles(Z80*, double);
 void z80_dump_registers(const Z80*);
