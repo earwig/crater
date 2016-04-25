@@ -307,13 +307,75 @@ static uint8_t z80_inst_exx(Z80 *z80, uint8_t opcode)
 
 // EX (SP), IY
 
-// LDI
+/*
+    LDI (0xEDA0):
+    LD (DE), (HL); INC HL; INC DE; DEC BC;
+*/
+static uint8_t z80_inst_ldi(Z80 *z80, uint8_t opcode)
+{
+    (void) opcode;
+    uint16_t hl = get_pair(z80, REG_HL),
+             de = get_pair(z80, REG_DE),
+             bc = get_pair(z80, REG_BC);
+    uint16_t value = mmu_read_double(z80->mmu, hl);
 
-// LDIR
+    mmu_write_double(z80->mmu, de, value);
+    set_pair(z80, REG_HL, ++hl);
+    set_pair(z80, REG_DE, ++de);
+    set_pair(z80, REG_BC, --bc);
 
-// LDD
+    update_flags(z80, 0, 0, bc == 0, 0, 0, 0, 0, 0, 0x16);
+    z80->regfile.pc++;
+    return 16;
+}
 
-// LDDR
+/*
+    LDIR (0xEDB0):
+    LDI; JR PV, -2
+*/
+static uint8_t z80_inst_ldir(Z80 *z80, uint8_t opcode)
+{
+    z80_inst_ldi(z80, opcode);
+    if (get_pair(z80, REG_BC) == 0)
+        return 16;
+    z80->regfile.pc -= 2;
+    return 21;
+}
+
+/*
+    LDD (0xEDA8):
+    LD (DE), (HL); DEC HL; DEC DE; DEC BC;
+*/
+static uint8_t z80_inst_ldd(Z80 *z80, uint8_t opcode)
+{
+    (void) opcode;
+    uint16_t hl = get_pair(z80, REG_HL),
+             de = get_pair(z80, REG_DE),
+             bc = get_pair(z80, REG_BC);
+    uint16_t value = mmu_read_double(z80->mmu, hl);
+
+    mmu_write_double(z80->mmu, de, value);
+    set_pair(z80, REG_HL, --hl);
+    set_pair(z80, REG_DE, --de);
+    set_pair(z80, REG_BC, --bc);
+
+    update_flags(z80, 0, 0, bc == 0, 0, 0, 0, 0, 0, 0x16);
+    z80->regfile.pc++;
+    return 16;
+}
+
+/*
+    LDDR (0xEDB8):
+    LDD; JR PV, -2
+*/
+static uint8_t z80_inst_lddr(Z80 *z80, uint8_t opcode)
+{
+    z80_inst_ldd(z80, opcode);
+    if (get_pair(z80, REG_BC) == 0)
+        return 16;
+    z80->regfile.pc -= 2;
+    return 21;
+}
 
 // CPI
 
@@ -807,7 +869,7 @@ static uint8_t z80_inst_ini(Z80 *z80, uint8_t opcode)
 
 /*
     INIR (0xEDB2):
-    INI; JR NZ, -1
+    INI; JR NZ, -2
 */
 static uint8_t z80_inst_inir(Z80 *z80, uint8_t opcode)
 {
@@ -841,7 +903,7 @@ static uint8_t z80_inst_ind(Z80 *z80, uint8_t opcode)
 
 /*
     INDR (0xEDBA):
-    IND; JR NZ, -1
+    IND; JR NZ, -2
 */
 static uint8_t z80_inst_indr(Z80 *z80, uint8_t opcode)
 {
@@ -901,7 +963,7 @@ static uint8_t z80_inst_outi(Z80 *z80, uint8_t opcode)
 
 /*
     OTIR (0xEDB3):
-    OUTI; JR NZ, -1
+    OUTI; JR NZ, -2
 */
 static uint8_t z80_inst_otir(Z80 *z80, uint8_t opcode)
 {
@@ -935,7 +997,7 @@ static uint8_t z80_inst_outd(Z80 *z80, uint8_t opcode)
 
 /*
     OTDR (0xEDBB):
-    OUTD; JR NZ, -1
+    OUTD; JR NZ, -2
 */
 static uint8_t z80_inst_otdr(Z80 *z80, uint8_t opcode)
 {
