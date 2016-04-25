@@ -267,7 +267,19 @@ static uint8_t z80_inst_pop_ixy(Z80 *z80, uint8_t opcode)
     return 14;
 }
 
-// EX DE, HL
+/*
+    EX DE, HL (0xEB):
+    Exchange DE with HL.
+*/
+static uint8_t z80_inst_ex_de_hl(Z80 *z80, uint8_t opcode)
+{
+    (void) opcode;
+    uint16_t de = get_pair(z80, REG_DE);
+    set_pair(z80, REG_DE, get_pair(z80, REG_HL));
+    set_pair(z80, REG_HL, de);
+    z80->regfile.pc++;
+    return 4;
+}
 
 // EX AF, AF′
 
@@ -388,6 +400,27 @@ static uint8_t z80_inst_lddr(Z80 *z80, uint8_t opcode)
 
 // SUB s
 
+/*
+    SUB n (0xD6):
+    Subtract n (8-bit immediate) from A.
+*/
+static uint8_t z80_inst_sub_n(Z80 *z80, uint8_t opcode)
+{
+    (void) opcode;
+    uint8_t imm = mmu_read_byte(z80->mmu, ++z80->regfile.pc);
+    uint8_t orig = z80->regfile.a;
+    uint8_t a = z80->regfile.a -= imm;
+
+    bool c = (orig - imm) != a;
+    bool v = (orig - imm) != ((int8_t) a);
+    bool h = !!(((orig & 0x0F) - (imm & 0x0F)) & 0x10);
+    update_flags(z80, c, 1, v, !!(a & 0x08), h, !!(a & 0x20), a == 0,
+        !!(a & 0x80), 0xFF);
+
+    z80->regfile.pc++;
+    return 7;
+}
+
 // SBC A, s
 
 // AND s
@@ -396,12 +429,12 @@ static uint8_t z80_inst_lddr(Z80 *z80, uint8_t opcode)
 
 /*
     OR r (0xB0, 0xB1, 0xB2, 0xB3, 0xB4, 0xB5, 0xB7):
-    Bitwise OR a with r (8-bit register).
+    Bitwise OR A with r (8-bit register).
 */
 static uint8_t z80_inst_or_r(Z80 *z80, uint8_t opcode)
 {
     uint8_t *reg = extract_reg(z80, opcode << 3);
-    uint8_t a = (z80->regfile.a ^= *reg);
+    uint8_t a = (z80->regfile.a |= *reg);
 
     bool parity = !(__builtin_popcount(a) % 2);
     update_flags(z80, 0, 0, parity, !!(a & 0x08), 0, !!(a & 0x20), a == 0,
@@ -411,11 +444,29 @@ static uint8_t z80_inst_or_r(Z80 *z80, uint8_t opcode)
     return 4;
 }
 
+/*
+    OR n (0xF6):
+    Bitwise OR A with n (8-bit immediate).
+*/
+static uint8_t z80_inst_or_n(Z80 *z80, uint8_t opcode)
+{
+    (void) opcode;
+    uint8_t imm = mmu_read_byte(z80->mmu, ++z80->regfile.pc);
+    uint8_t a = (z80->regfile.a |= imm);
+
+    bool parity = !(__builtin_popcount(a) % 2);
+    update_flags(z80, 0, 0, parity, !!(a & 0x08), 0, !!(a & 0x20), a == 0,
+                 !!(a & 0x80), 0xFF);
+
+    z80->regfile.pc++;
+    return 7;
+}
+
 // XOR s
 
 /*
     XOR r (0xA8, 0xA9, 0xAA, 0xAB, 0xAC, 0xAD, 0xAF):
-    Bitwise XOR a with r (8-bit register).
+    Bitwise XOR A with r (8-bit register).
 */
 static uint8_t z80_inst_xor_r(Z80 *z80, uint8_t opcode)
 {
@@ -434,7 +485,7 @@ static uint8_t z80_inst_xor_r(Z80 *z80, uint8_t opcode)
 
 /*
     CP r (0xB8, 0xB9, 0xBA, 0xBB, 0xBC, 0xBD, 0xBF):
-    Set flags as if r (8-bit register) had been subtracted from a.
+    Set flags as if r (8-bit register) had been subtracted from A.
 */
 static uint8_t z80_inst_cp_r(Z80 *z80, uint8_t opcode)
 {
@@ -453,7 +504,7 @@ static uint8_t z80_inst_cp_r(Z80 *z80, uint8_t opcode)
 
 /*
     CP n (0xFE):
-    Set flags as if n (8-bit immediate) had been subtracted from a.
+    Set flags as if n (8-bit immediate) had been subtracted from A.
 */
 static uint8_t z80_inst_cp_n(Z80 *z80, uint8_t opcode)
 {
@@ -599,13 +650,30 @@ static uint8_t z80_inst_im(Z80 *z80, uint8_t opcode)
     return 8;
 }
 
-// ADD HL, ss
+/*
+    ADD HL, ss (0x09, 0x19, 0x29, 0x39):
+    Add ss to HL.
+*/
+static uint8_t z80_inst_add_hl_ss(Z80 *z80, uint8_t opcode)
+{
+    uint8_t pair = extract_pair(opcode);
+    uint16_t lh = get_pair(z80, REG_HL), rh = get_pair(z80, pair);
+    uint16_t value = lh + rh;
+    set_pair(z80, REG_HL, value);
+
+    bool h = !!(((lh & 0x0FFF) + (rh & 0x0FFF)) & 0x1000);
+    update_flags(z80, (lh + rh) != value, 0, 0, !!(value & 0x0800), h,
+        !!(value & 0x2000), 0, 0, 0x3B);
+
+    z80->regfile.pc++;
+    return 11;
+}
 
 // ADC HL, ss
 
 /*
     SBC HL, ss (0xED42, 0xED52, 0xED62, 0xED72):
-    Subtract BC with carry from HL.
+    Subtract ss with carry from HL.
 */
 static uint8_t z80_inst_sbc_hl_ss(Z80 *z80, uint8_t opcode)
 {
