@@ -72,7 +72,7 @@ void z80_power(Z80 *z80)
 
     regfile->ix = 0xFFFF;
     regfile->iy = 0xFFFF;
-    regfile->sp = 0xFFFF;
+    regfile->sp = 0xFFF0;
     regfile->pc = 0x0000;
 
     regfile->i = 0xFF;
@@ -258,6 +258,17 @@ static inline bool extract_cond(const Z80 *z80, uint8_t opcode)
         case 0x38: return  get_flag(z80, FLAG_SIGN);
     }
     FATAL("invalid call: extract_cond(z80, 0x%02X)", opcode)
+}
+
+/*
+    Extract the current index register.
+*/
+static inline uint16_t* extract_index(Z80 *z80)
+{
+    uint8_t prefix = mmu_read_byte(z80->mmu, z80->regfile.pc - 1);
+    if (prefix != 0xDD && prefix != 0xFD)
+        FATAL("invalid call: extract_index(z80, 0x%02X)", prefix)
+    return prefix == 0xDD ? &z80->regfile.ix : &z80->regfile.iy;
 }
 
 /*

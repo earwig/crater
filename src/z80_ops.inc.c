@@ -63,7 +63,7 @@ static uint8_t z80_inst_ld_r_n(Z80 *z80, uint8_t opcode)
 
 /*
     LD r, (HL) (0x46, 0x4E, 0x56, 0x5E, 0x66, 0x6E, 0x7E):
-    Load the contents of HL into r (8-bit register).
+    Load the memory pointed to by HL into r (8-bit register).
 */
 static uint8_t z80_inst_ld_r_hl(Z80 *z80, uint8_t opcode)
 {
@@ -84,9 +84,17 @@ static uint8_t z80_inst_ld_r_hl(Z80 *z80, uint8_t opcode)
 // static uint8_t z80_inst_ld_r_iy(Z80 *z80, uint8_t opcode)
 
 /*
-    LD (HL), r
+    LD (HL), r (0x70, 0x71, 0x72, 0x73, 0x74, 0x75, 0x77):
+    Load r (8-bit register) into the memory pointed to by HL.
 */
-// static uint8_t z80_inst_ld_hl_r(Z80 *z80, uint8_t opcode)
+static uint8_t z80_inst_ld_hl_r(Z80 *z80, uint8_t opcode)
+{
+    uint8_t *reg = extract_reg(z80, opcode << 3);
+    uint16_t addr = get_pair(z80, REG_HL);
+    mmu_write_byte(z80->mmu, addr, *reg);
+    z80->regfile.pc++;
+    return 7;
+}
 
 /*
     LD (IX+d), r
@@ -230,9 +238,17 @@ static uint8_t z80_inst_push_qq(Z80 *z80, uint8_t opcode)
     return 11;
 }
 
-// PUSH IX
-
-// PUSH IY
+/*
+    PUSH IXY (0xDDE5, 0xFDE5):
+    Push IX or IY onto the stack, and decrement SP by two.
+*/
+static uint8_t z80_inst_push_ixy(Z80 *z80, uint8_t opcode)
+{
+    (void) opcode;
+    stack_push(z80, *extract_index(z80));
+    z80->regfile.pc++;
+    return 15;
+}
 
 /*
     POP qq (0xC1, 0xD1, 0xE1, 0xF1):
@@ -246,9 +262,17 @@ static uint8_t z80_inst_pop_qq(Z80 *z80, uint8_t opcode)
     return 10;
 }
 
-// POP IX
-
-// POP IY
+/*
+    POP IXY (0xDDE1, 0xFDE1):
+    Pop IX or IY from the stack, and increment SP by two.
+*/
+static uint8_t z80_inst_pop_ixy(Z80 *z80, uint8_t opcode)
+{
+    (void) opcode;
+    *extract_index(z80) = stack_pop(z80);
+    z80->regfile.pc++;
+    return 14;
+}
 
 // EX DE, HL
 
@@ -632,7 +656,24 @@ static uint8_t z80_inst_jr_cc_e(Z80 *z80, uint8_t opcode)
 
 // JP (IY)
 
-// DJNZ, e
+/*
+    DJNZ, e (0x10):
+    Decrement b and relative jump e (signed 8-bit immediate) if non-zero.
+*/
+static uint8_t z80_inst_djnz_e(Z80 *z80, uint8_t opcode)
+{
+    (void) opcode;
+    z80->regfile.b--;
+
+    if (z80->regfile.b != 0) {
+        int8_t jump = mmu_read_byte(z80->mmu, z80->regfile.pc + 1);
+        z80->regfile.pc += jump + 2;
+        return 13;
+    } else {
+        z80->regfile.pc += 2;
+        return 8;
+    }
+}
 
 /*
     CALL nn (0xCD):
