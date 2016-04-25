@@ -21,7 +21,6 @@ typedef struct {
     VDP vdp;
     IO io;
     bool powered;
-    uint64_t last_tick;
     char exc_buffer[GG_EXC_BUFF_SIZE];
 } GameGear;
 
@@ -31,5 +30,5 @@ GameGear* gamegear_create();
 void gamegear_destroy(GameGear*);
 void gamegear_load(GameGear*, const ROM*);
 void gamegear_power(GameGear*, bool);
-bool gamegear_simulate(GameGear*);
+bool gamegear_simulate_frame(GameGear*);
 const char* gamegear_get_exception(GameGear*);

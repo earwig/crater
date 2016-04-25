@@ -6,12 +6,25 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#define VDP_LINES_PER_FRAME 262
+#define VDP_VRAM_SIZE (16 * 1024)
+#define VDP_REGS 11
+
 /* Structs */
 
 typedef struct {
+    uint8_t  *vram;
+    uint8_t  regs[VDP_REGS];
+
+    uint8_t  h_counter;
+    uint8_t  v_counter;
+    bool     v_count_jump;
+
     uint8_t  control_code;
     uint16_t control_addr;
     bool     control_flag;
+    bool     stat_int, stat_ovf, stat_col;
+    uint8_t  read_buf;
 } VDP;
 
 /* Functions */
@@ -19,6 +32,7 @@ typedef struct {
 void vdp_init(VDP*);
 void vdp_free(VDP*);
 void vdp_power(VDP*);
+void vdp_simulate_line(VDP*);
 
 uint8_t vdp_read_control(VDP*);
 uint8_t vdp_read_data(VDP*);

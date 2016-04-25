@@ -320,7 +320,7 @@ static inline void trace_instruction(Z80 *z80)
 */
 bool z80_do_cycles(Z80 *z80, double cycles)
 {
-    cycles -= z80->pending_cycles;
+    cycles += z80->pending_cycles;
     while (cycles > 0 && !z80->except) {
         uint8_t opcode = mmu_read_byte(z80->mmu, z80->regfile.pc);
         increment_refresh_counter(z80);
@@ -329,7 +329,7 @@ bool z80_do_cycles(Z80 *z80, double cycles)
         cycles -= (*instruction_table[opcode])(z80, opcode);
     }
 
-    z80->pending_cycles = -cycles;
+    z80->pending_cycles = cycles;
     return z80->except;
 }
 

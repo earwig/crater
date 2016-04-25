@@ -8,7 +8,9 @@
 #include "util.h"
 
 /* Clock speed in Hz was taken from the official Sega GG documentation */
-#define CPU_CLOCK_SPEED 3579545
+#define CPU_CLOCK_SPEED (3579545.)
+#define CYCLES_PER_FRAME (CPU_CLOCK_SPEED / 60)
+#define CYCLES_PER_LINE (CYCLES_PER_FRAME / VDP_LINES_PER_FRAME)
 
 /*
     Create and return a pointer to a new GameGear object.
@@ -72,7 +74,6 @@ void gamegear_power(GameGear *gg, bool state)
         vdp_power(&gg->vdp);
         io_power(&gg->io);
         z80_power(&gg->cpu);
-        gg->last_tick = get_time_ns();
     } else {
         gg->exc_buffer[0] = '\0';
     }
@@ -80,12 +81,10 @@ void gamegear_power(GameGear *gg, bool state)
 }
 
 /*
-    Update the simulation of the GameGear.
+    Simulate the GameGear for one frame.
 
-    This function simulates the number of clock cycles corresponding to the
-    time since the last call to gamegear_simulate() or gamegear_power() if the
-    system was just powered on. If the system is powered off, this function
-    does nothing.
+    This function simulates the number of clock cycles corresponding to 1/60th
+    of a second. If the system is powered off, this function does nothing.
 
     The return value indicates whether an exception flag has been set
     somewhere. If true, emulation must be stopped. gamegear_get_exception() can
@@ -93,14 +92,21 @@ void gamegear_power(GameGear *gg, bool state)
     gamegear_power(gg, false) followed by gamegear_power(gg, true) will reset
     the exception flag and allow emulation to restart normally.
 */
-bool gamegear_simulate(GameGear *gg)
+bool gamegear_simulate_frame(GameGear *gg)
 {
     if (!gg->powered)
         return false;
 
-    uint64_t last = gg->last_tick, tick;
-    tick = gg->last_tick = get_time_ns();
-    return z80_do_cycles(&gg->cpu, (tick - last) * CPU_CLOCK_SPEED / 1e9);
+    size_t line;
+    bool except;
+
+    for (line = 0; line < VDP_LINES_PER_FRAME; line++) {
+        vdp_simulate_line(&gg->vdp);
+        except = z80_do_cycles(&gg->cpu, CYCLES_PER_LINE);
+        if (except)
+            return true;
+    }
+    return false;
 }
 
 /*

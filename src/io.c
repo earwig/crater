@@ -26,9 +26,9 @@ uint8_t io_port_read(IO *io, uint8_t port)
     } else if (port <= 0x3F) {
         return 0xFF;
     } else if (port <= 0x7F && !(port % 2)) {
-        // TODO: Return the V counter
+        return io->vdp->v_counter;
     } else if (port <= 0x7F) {
-        // TODO: Return the H counter
+        return io->vdp->h_counter;
     } else if (port <= 0xBF && !(port % 2)) {
         return vdp_read_data(io->vdp);
     } else if (port <= 0xBF) {

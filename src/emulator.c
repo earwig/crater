@@ -7,6 +7,9 @@
 
 #include "emulator.h"
 #include "logging.h"
+#include "util.h"
+
+#define NS_PER_FRAME (1000 * 1000 * 1000 / 60)
 
 static volatile bool caught_signal;
 
@@ -29,18 +32,21 @@ void emulate(GameGear *gg)
     caught_signal = false;
     signal(SIGINT, handle_sigint);
 
-    DEBUG("Interface powering GameGear")
+    DEBUG("Emulator powering GameGear")
     gamegear_power(gg, true);
 
-    // TODO: use SDL events
     while (!caught_signal) {
-        if (gamegear_simulate(gg)) {
+        uint64_t start = get_time_ns(), delta;
+        if (gamegear_simulate_frame(gg)) {
             ERROR("caught exception: %s", gamegear_get_exception(gg))
             if (DEBUG_LEVEL)
                 z80_dump_registers(&gg->cpu);
             break;
         }
-        usleep(1000 * 1000 / 60);
+        // TODO: SDL draw / switch buffers here
+        delta = get_time_ns() - start;
+        if (delta < NS_PER_FRAME)
+            usleep((NS_PER_FRAME - delta) / 1000);
     }
 
     if (caught_signal) {
@@ -49,7 +55,7 @@ void emulate(GameGear *gg)
             z80_dump_registers(&gg->cpu);
     }
 
-    DEBUG("Interface unpowering GameGear")
+    DEBUG("Emulator unpowering GameGear")
     gamegear_power(gg, false);
 
     signal(SIGINT, SIG_DFL);
