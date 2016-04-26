@@ -86,7 +86,7 @@ void mmu_load_rom(MMU *mmu, const uint8_t *data, size_t size)
 */
 static inline void map_slot(MMU *mmu, size_t slot, size_t bank)
 {
-    DEBUG("MMU mapping memory slot %zu to bank 0x%02zX", slot, bank)
+    TRACE("MMU mapping memory slot %zu to bank 0x%02zX", slot, bank)
     mmu->map_slots[slot] = mmu->rom_banks[bank];
 }
 

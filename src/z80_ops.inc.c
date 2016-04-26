@@ -848,7 +848,7 @@ static uint8_t z80_inst_dec_ss(Z80 *z80, uint8_t opcode)
 static uint8_t z80_inst_bit_b_r(Z80 *z80, uint8_t opcode)
 {
     uint8_t *reg = extract_reg(z80, opcode << 3);
-    uint8_t bit = opcode >> 3;
+    uint8_t bit = (opcode >> 3) & 0x07;
     bool z = (((*reg) >> bit) & 1) == 0;
     if (z)
         update_flags(z80, 0, 0, 1, 0, 1, 0, 1, 0, 0xFE);
@@ -866,7 +866,7 @@ static uint8_t z80_inst_bit_b_r(Z80 *z80, uint8_t opcode)
 static uint8_t z80_inst_bit_b_hl(Z80 *z80, uint8_t opcode)
 {
     uint8_t val = mmu_read_byte(z80->mmu, get_pair(z80, REG_HL));
-    uint8_t bit = opcode >> 3;
+    uint8_t bit = (opcode >> 3) & 0x07;
     bool z = ((val >> bit) & 1) == 0;
     if (z)
         update_flags(z80, 0, 0, 1, 0, 1, 0, 1, 0, 0xFE);

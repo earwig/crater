@@ -278,6 +278,7 @@ static inline uint8_t get_interrupt_mode(const Z80 *z80)
 */
 static inline uint8_t handle_interrupt(Z80 *z80)
 {
+    TRACE("Z80 triggering mode-%d interrupt", get_interrupt_mode(z80))
     z80->regfile.iff1 = z80->regfile.iff2 = 0;
     stack_push(z80, z80->regfile.pc);
 
