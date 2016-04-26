@@ -11,16 +11,21 @@
 #include "rom.h"
 #include "z80.h"
 
+#define GG_FPS 60
 #define GG_EXC_BUFF_SIZE 128
 
-/* Structs */
+/* Structs, etc. */
 
-typedef struct {
+struct GameGear;
+typedef void (*GGFrameCallback)(struct GameGear*);
+
+typedef struct GameGear {
     Z80 cpu;
     MMU mmu;
     VDP vdp;
     IO io;
     bool powered;
+    GGFrameCallback callback;
     char exc_buffer[GG_EXC_BUFF_SIZE];
 } GameGear;
 
@@ -29,6 +34,9 @@ typedef struct {
 GameGear* gamegear_create();
 void gamegear_destroy(GameGear*);
 void gamegear_load(GameGear*, const ROM*);
-void gamegear_power(GameGear*, bool);
-bool gamegear_simulate_frame(GameGear*);
+void gamegear_simulate(GameGear*);
+void gamegear_power_off(GameGear*);
+void gamegear_set_callback(GameGear*, GGFrameCallback);
+void gamegear_clear_callback(GameGear*);
 const char* gamegear_get_exception(GameGear*);
+void gamegear_print_state(const GameGear*);

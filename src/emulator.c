@@ -2,24 +2,29 @@
    Released under the terms of the MIT License. See LICENSE for details. */
 
 #include <signal.h>
-#include <stdbool.h>
-#include <unistd.h>
 
 #include "emulator.h"
 #include "logging.h"
-#include "util.h"
 
-#define NS_PER_FRAME (1000 * 1000 * 1000 / 60)
-
-static volatile bool caught_signal;
+static GameGear *global_gg;
 
 /*
     Signal handler for SIGINT.
 */
 static void handle_sigint(int sig)
 {
-    (void) sig;  // We don't care
-    caught_signal = true;
+    (void) sig;
+    if (global_gg)
+        gamegear_power_off(global_gg);
+}
+
+/*
+    GameGear callback: handle SDL logic at the end of a frame.
+*/
+static void draw_frame(GameGear *gg)
+{
+    (void) gg;
+    // TODO: SDL draw / switch buffers here
 }
 
 /*
@@ -29,34 +34,20 @@ static void handle_sigint(int sig)
 */
 void emulate(GameGear *gg)
 {
-    caught_signal = false;
+    global_gg = gg;
     signal(SIGINT, handle_sigint);
+    gamegear_set_callback(gg, draw_frame);
 
-    DEBUG("Emulator powering GameGear")
-    gamegear_power(gg, true);
+    gamegear_simulate(gg);
 
-    while (!caught_signal) {
-        uint64_t start = get_time_ns(), delta;
-        if (gamegear_simulate_frame(gg)) {
-            ERROR("caught exception: %s", gamegear_get_exception(gg))
-            if (DEBUG_LEVEL)
-                z80_dump_registers(&gg->cpu);
-            break;
-        }
-        // TODO: SDL draw / switch buffers here
-        delta = get_time_ns() - start;
-        if (delta < NS_PER_FRAME)
-            usleep((NS_PER_FRAME - delta) / 1000);
-    }
-
-    if (caught_signal) {
+    if (gamegear_get_exception(gg))
+        ERROR("caught exception: %s", gamegear_get_exception(gg))
+    else
         WARN("caught signal, stopping...")
-        if (DEBUG_LEVEL)
-            z80_dump_registers(&gg->cpu);
-    }
+    if (DEBUG_LEVEL)
+        gamegear_print_state(gg);
 
-    DEBUG("Emulator unpowering GameGear")
-    gamegear_power(gg, false);
-
+    gamegear_clear_callback(gg);
     signal(SIGINT, SIG_DFL);
+    global_gg = NULL;
 }

@@ -2,6 +2,7 @@
    Released under the terms of the MIT License. See LICENSE for details. */
 
 #include <stdlib.h>
+#include <unistd.h>
 
 #include "gamegear.h"
 #include "logging.h"
@@ -9,8 +10,11 @@
 
 /* Clock speed in Hz was taken from the official Sega GG documentation */
 #define CPU_CLOCK_SPEED (3579545.)
-#define CYCLES_PER_FRAME (CPU_CLOCK_SPEED / 60)
+#define CYCLES_PER_FRAME (CPU_CLOCK_SPEED / GG_FPS)
 #define CYCLES_PER_LINE (CYCLES_PER_FRAME / VDP_LINES_PER_FRAME)
+#define NS_PER_FRAME (1000 * 1000 * 1000 / GG_FPS)
+
+#define SET_EXC(...) snprintf(gg->exc_buffer, GG_EXC_BUFF_SIZE, __VA_ARGS__);
 
 /*
     Create and return a pointer to a new GameGear object.
@@ -24,6 +28,7 @@ GameGear* gamegear_create()
     z80_init(&gg->cpu, &gg->mmu, &gg->io);
 
     gg->powered = false;
+    gg->callback = NULL;
     gg->exc_buffer[0] = '\0';
     return gg;
 }
@@ -56,47 +61,59 @@ void gamegear_load(GameGear *gg, const ROM *rom)
 }
 
 /*
-    Set the GameGear object's power state (true = on; false = off).
+    Power on the GameGear.
 
-    Powering on the GameGear executes boot code (e.g. clearing memory and
-    setting initial register values) and starts the clock. Powering it off
-    stops the clock and clears any exception data.
-
-    Setting the power state to its current value has no effect.
+    This clears the exception buffer and executes boot code (e.g. clearing
+    memory and setting initial register values).
 */
-void gamegear_power(GameGear *gg, bool state)
+static void power_on(GameGear *gg)
 {
-    if (gg->powered == state)
-        return;
+    gg->exc_buffer[0] = '\0';
+    gg->powered = true;
 
-    if (state) {
-        mmu_power(&gg->mmu);
-        vdp_power(&gg->vdp);
-        io_power(&gg->io);
-        z80_power(&gg->cpu);
-    } else {
-        gg->exc_buffer[0] = '\0';
-    }
-    gg->powered = state;
+    mmu_power(&gg->mmu);
+    vdp_power(&gg->vdp);
+    io_power(&gg->io);
+    z80_power(&gg->cpu);
+}
+
+/*
+    Power off the GameGear.
+
+    This function *may* be used while the GameGear is running to trigger a safe
+    shutdown at the next opportunity. It is also reentrant. If the GameGear is
+    already off, it will do nothing.
+*/
+void gamegear_power_off(GameGear *gg)
+{
+    gg->powered = false;
+}
+
+/*
+    Set a callback to be triggered whenever the GameGear completes a frame.
+*/
+void gamegear_set_callback(GameGear *gg, GGFrameCallback callback)
+{
+    gg->callback = callback;
+}
+
+/*
+    Reset the GameGear's frame callback function.
+*/
+void gamegear_clear_callback(GameGear *gg)
+{
+    gg->callback = NULL;
 }
 
 /*
     Simulate the GameGear for one frame.
 
     This function simulates the number of clock cycles corresponding to 1/60th
-    of a second. If the system is powered off, this function does nothing.
-
-    The return value indicates whether an exception flag has been set
-    somewhere. If true, emulation must be stopped. gamegear_get_exception() can
-    be used to fetch exception information. Power-cycling the GameGear with
-    gamegear_power(gg, false) followed by gamegear_power(gg, true) will reset
-    the exception flag and allow emulation to restart normally.
+    of a second. The return value indicates whether an exception flag has been
+    set somewhere. If true, emulation must be stopped.
 */
-bool gamegear_simulate_frame(GameGear *gg)
+static bool simulate_frame(GameGear *gg)
 {
-    if (!gg->powered)
-        return false;
-
     size_t line;
     bool except;
 
@@ -110,20 +127,55 @@ bool gamegear_simulate_frame(GameGear *gg)
 }
 
 /*
+    Simulate the GameGear.
+
+    The GameGear must start out in an unpowered state; it will be powered only
+    during the simulation. This function blocks until the simulation ends,
+    either by an exception occurring or someone setting the GameGear's
+    'powered' flag to false.
+
+    If a callback has been set with gamegear_set_callback(), then we'll trigger
+    it after every frame has been simulated (sixty times per second).
+
+    Exceptions can be retrieved after this call with gamegear_get_exception().
+    If the simulation ended normally, then that function will return NULL.
+*/
+void gamegear_simulate(GameGear *gg)
+{
+    if (gg->powered)
+        return;
+
+    DEBUG("GameGear: powering on")
+    power_on(gg);
+
+    while (gg->powered) {
+        uint64_t start = get_time_ns(), delta;
+
+        if (simulate_frame(gg) || !gg->powered)
+            break;
+        if (gg->callback)
+            gg->callback(gg);
+
+        delta = get_time_ns() - start;
+        if (delta < NS_PER_FRAME)
+            usleep((NS_PER_FRAME - delta) / 1000);
+    }
+
+    DEBUG("GameGear: powering off")
+    gamegear_power_off(gg);
+}
+
+/*
     If an exception flag has been set in the GameGear, return the reason.
 
     This function returns a const pointer to a buffer holding a human-readable
     exception string (although it may be cryptic to an end-user). The buffer is
     owned by the GameGear object and should not be freed - its contents last
-    until the GameGear's power state is changed. If no exception flag is set,
-    this function returns NULL.
+    until the GameGear is powered on. If no exception flag is set, this
+    function returns NULL.
 */
 const char* gamegear_get_exception(GameGear *gg)
 {
-#define SET_EXC(...) snprintf(gg->exc_buffer, GG_EXC_BUFF_SIZE, __VA_ARGS__);
-    if (!gg->powered)
-        return NULL;
-
     if (!gg->exc_buffer[0]) {
         if (gg->cpu.except) {
             switch (gg->cpu.exc_code) {
@@ -145,5 +197,13 @@ const char* gamegear_get_exception(GameGear *gg)
         }
     }
     return gg->exc_buffer;
-#undef SET_EXC
+}
+
+/*
+    @DEBUG_LEVEL
+    Print out some state info to stdout: Z80 and VDP register values, etc.
+*/
+void gamegear_print_state(const GameGear *gg)
+{
+    z80_dump_registers(&gg->cpu);
 }
