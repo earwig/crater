@@ -4,6 +4,7 @@
 #include "z80.h"
 #include "disassembler.h"
 #include "logging.h"
+#include "util.h"
 
 #define REG_AF  0
 #define REG_BC  1
@@ -24,17 +25,6 @@
 #define FLAG_UNDOC_5   5
 #define FLAG_ZERO      6
 #define FLAG_SIGN      7
-
-#define BINARY_FMT "0b%u%u%u%u%u%u%u%u"  // Used by z80_dump_registers()
-#define BINARY_VAL(data)       \
-    (data & (1 << 7) ? 1 : 0), \
-    (data & (1 << 6) ? 1 : 0), \
-    (data & (1 << 5) ? 1 : 0), \
-    (data & (1 << 4) ? 1 : 0), \
-    (data & (1 << 3) ? 1 : 0), \
-    (data & (1 << 2) ? 1 : 0), \
-    (data & (1 << 1) ? 1 : 0), \
-    (data & (1 << 0) ? 1 : 0)
 
 /*
     Initialize a Z80 object.

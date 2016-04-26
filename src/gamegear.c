@@ -206,4 +206,5 @@ const char* gamegear_get_exception(GameGear *gg)
 void gamegear_print_state(const GameGear *gg)
 {
     z80_dump_registers(&gg->cpu);
+    vdp_dump_registers(&gg->vdp);
 }

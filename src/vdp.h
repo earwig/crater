@@ -41,3 +41,5 @@ uint8_t vdp_read_control(VDP*);
 uint8_t vdp_read_data(VDP*);
 void vdp_write_control(VDP*, uint8_t);
 void vdp_write_data(VDP*, uint8_t);
+
+void vdp_dump_registers(const VDP*);

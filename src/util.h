@@ -10,6 +10,17 @@
 
 #define INVALID_SIZE_CODE 0x8
 
+#define BINARY_FMT "0b%u%u%u%u%u%u%u%u"  // Used by register dumpers
+#define BINARY_VAL(data)       \
+    (data & (1 << 7) ? 1 : 0), \
+    (data & (1 << 6) ? 1 : 0), \
+    (data & (1 << 5) ? 1 : 0), \
+    (data & (1 << 4) ? 1 : 0), \
+    (data & (1 << 3) ? 1 : 0), \
+    (data & (1 << 2) ? 1 : 0), \
+    (data & (1 << 1) ? 1 : 0), \
+    (data & (1 << 0) ? 1 : 0)
+
 /* Functions */
 
 uint8_t bcd_encode(uint8_t);

@@ -60,6 +60,38 @@ void vdp_power(VDP *vdp)
 }
 
 /*
+    Return the base address of the pattern name table.
+*/
+static uint16_t get_pnt_base(const VDP *vdp)
+{
+    return (vdp->regs[0x02] & 0x0E) << 10;
+}
+
+/*
+    Return the base address of the sprite attribute table.
+*/
+static uint16_t get_sat_base(const VDP *vdp)
+{
+    return (vdp->regs[0x05] & 0x7E) << 7;
+}
+
+/*
+    Return the base address of the sprite generator table.
+*/
+static uint16_t get_sgt_base(const VDP *vdp)
+{
+    return (vdp->regs[0x06] & 0x04) << 11;
+}
+
+/*
+    Return the CRAM address of the backdrop color.
+*/
+static uint8_t get_backdrop_addr(const VDP *vdp)
+{
+    return ((vdp->regs[0x07] & 0x0F) << 1) + 0x20;
+}
+
+/*
     Advance the V counter for the next scanline.
 */
 static void advance_scanline(VDP *vdp)
@@ -83,6 +115,7 @@ void vdp_simulate_line(VDP *vdp)
     if (vdp->v_counter >= 0x18 && vdp->v_counter < 0xA8) {
         // TODO: draw current line
     }
+    // TODO: if (...) IRQ
     advance_scanline(vdp);
 }
 
@@ -189,4 +222,27 @@ void vdp_write_data(VDP *vdp, uint8_t byte)
     vdp->control_addr = (vdp->control_addr + 1) % 0x3FFF;
     vdp->control_flag = false;
     vdp->read_buf = byte;
+}
+
+/*
+    @DEBUG_LEVEL
+    Print out all register values to stdout.
+*/
+void vdp_dump_registers(const VDP *vdp)
+{
+    const uint8_t *regs = vdp->regs;
+    DEBUG("Dumping VDP register values:")
+
+    DEBUG("- $00:  0x%02X (" BINARY_FMT ")", regs[0x00], BINARY_VAL(regs[0]))
+    DEBUG("- $01:  0x%02X (" BINARY_FMT ")", regs[0x01], BINARY_VAL(regs[1]))
+
+    DEBUG("- $02:  0x%02X (PNT: 0x%04X)", regs[0x02], get_pnt_base(vdp))
+    DEBUG("- $03:  0x%02X (CT)", regs[0x03])
+    DEBUG("- $04:  0x%02X (BPG)", regs[0x04])
+    DEBUG("- $05:  0x%02X (SAT: 0x%04X)", regs[0x05], get_sat_base(vdp))
+    DEBUG("- $06:  0x%02X (SGT: 0x%04X)", regs[0x06], get_sgt_base(vdp))
+    DEBUG("- $07:  0x%02X (BDC: 0x%02X)", regs[0x07], get_backdrop_addr(vdp))
+    DEBUG("- $08:  0x%02X (HS)", regs[0x08])
+    DEBUG("- $09:  0x%02X (VS)", regs[0x09])
+    DEBUG("- $0A:  0x%02X (LC)", regs[0x0A])
 }
