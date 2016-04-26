@@ -20,5 +20,6 @@ typedef struct {
 
 void io_init(IO*, VDP*);
 void io_power(IO*);
+bool io_check_irq(IO*);
 uint8_t io_port_read(IO*, uint8_t);
 void io_port_write(IO*, uint8_t, uint8_t);

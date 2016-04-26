@@ -274,6 +274,24 @@ static inline uint8_t get_interrupt_mode(const Z80 *z80)
 }
 
 /*
+    Handle an active IRQ line. Return the number of cycles consumed.
+*/
+static inline uint8_t handle_interrupt(Z80 *z80)
+{
+    z80->regfile.iff1 = z80->regfile.iff2 = 0;
+    stack_push(z80, z80->regfile.pc);
+
+    if (get_interrupt_mode(z80) < 2) {
+        z80->regfile.pc = 0x0038;
+        return 13;
+    } else {
+        uint16_t addr = (z80->regfile.i << 8) + 0xFF;
+        z80->regfile.pc = mmu_read_double(z80->mmu, addr);
+        return 19;
+    }
+}
+
+/*
     Increment the refresh counter register, R.
 */
 static inline void increment_refresh_counter(Z80 *z80)
@@ -324,6 +342,10 @@ bool z80_do_cycles(Z80 *z80, double cycles)
 {
     cycles += z80->pending_cycles;
     while (cycles > 0 && !z80->except) {
+        if (io_check_irq(z80->io) && z80->regfile.iff1) {
+            cycles -= handle_interrupt(z80);
+            continue;
+        }
         uint8_t opcode = mmu_read_byte(z80->mmu, z80->regfile.pc);
         increment_refresh_counter(z80);
         if (TRACE_LEVEL)

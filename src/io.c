@@ -11,9 +11,20 @@ void io_init(IO *io, VDP *vdp)
     io->vdp = vdp;
 }
 
+/*
+    "Power on" the IO object.
+*/
 void io_power(IO *io)
 {
     io->except = false;
+}
+
+/*
+    Return whether the IRQ line is currently active.
+*/
+bool io_check_irq(IO *io)
+{
+    return vdp_assert_irq(io->vdp);
 }
 
 /*

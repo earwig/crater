@@ -60,6 +60,14 @@ void vdp_power(VDP *vdp)
 }
 
 /*
+    Return whether frame-completion interrupts are enabled.
+*/
+static bool should_frame_interrupt(const VDP *vdp)
+{
+    return vdp->regs[0x01] & 0x20;
+}
+
+/*
     Return the base address of the pattern name table.
 */
 static uint16_t get_pnt_base(const VDP *vdp)
@@ -115,7 +123,8 @@ void vdp_simulate_line(VDP *vdp)
     if (vdp->v_counter >= 0x18 && vdp->v_counter < 0xA8) {
         // TODO: draw current line
     }
-    // TODO: if (...) IRQ
+    if (vdp->v_counter == 0xC0)
+        vdp->stat_int = true;
     advance_scanline(vdp);
 }
 
@@ -222,6 +231,14 @@ void vdp_write_data(VDP *vdp, uint8_t byte)
     vdp->control_addr = (vdp->control_addr + 1) % 0x3FFF;
     vdp->control_flag = false;
     vdp->read_buf = byte;
+}
+
+/*
+    Return whether the VDP is currently asserting an interrupt.
+*/
+bool vdp_assert_irq(VDP *vdp)
+{
+    return vdp->stat_int && should_frame_interrupt(vdp);
 }
 
 /*
