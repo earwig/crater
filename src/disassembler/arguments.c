@@ -9,6 +9,8 @@
 
 #define MAX_ARG_SIZE 256
 
+/* Internal structs, enums, etc. */
+
 typedef enum {
     AT_NONE = 0,
     /* Register */
@@ -27,6 +29,15 @@ typedef enum {
     /* Port */
     AT_PORT_C,  AT_PORT_IM, AT_PORT_0
 } ArgType;
+
+typedef ArgType ArgTable[3][256];
+
+typedef struct {
+    uint8_t index, opcode, arg1, arg2;
+    ArgTable *table;
+} Instr;
+
+/* Temporary aliases to make table definitions concise */
 
 #define __ AT_NONE
 #define A_ AT_REG_A
@@ -72,7 +83,9 @@ typedef enum {
 #define PM AT_PORT_IM
 #define R0 AT_PORT_0
 
-static ArgType instr_args[3][256] = {
+/* Argument tables */
+
+static ArgTable instr_args = {
     {
         __, BC, NB, BC, B_, B_, B_, __, AF, HL, A_, BC, C_, C_, C_, __,
         ML, DE, ND, DE, D_, D_, D_, __, ML, HL, A_, DE, E_, E_, E_, __,
@@ -112,7 +125,7 @@ static ArgType instr_args[3][256] = {
     { __ }
 };
 
-static ArgType instr_args_extended[3][256] = {
+static ArgTable instr_args_extended = {
     {
         __, __, __, __, __, __, __, __, __, __, __, __, __, __, __, __,
         __, __, __, __, __, __, __, __, __, __, __, __, __, __, __, __,
@@ -152,7 +165,7 @@ static ArgType instr_args_extended[3][256] = {
     { __ }
 };
 
-static ArgType instr_args_bits[3][256] = {
+static ArgTable instr_args_bits = {
     {
         B_, C_, D_, E_, H_, L_, NH, A_, B_, C_, D_, E_, H_, L_, NH, A_,
         B_, C_, D_, E_, H_, L_, NH, A_, B_, C_, D_, E_, H_, L_, NH, A_,
@@ -192,7 +205,7 @@ static ArgType instr_args_bits[3][256] = {
     { __ }
 };
 
-static ArgType instr_args_index[3][256] = {
+static ArgTable instr_args_index = {
     {
         __, __, __, __, __, __, __, __, __, XY, __, __, __, __, __, __,
         __, __, __, __, __, __, __, __, __, XY, __, __, __, __, __, __,
@@ -232,7 +245,7 @@ static ArgType instr_args_index[3][256] = {
     { __ }
 };
 
-static ArgType instr_args_index_bits[3][256] = {
+static ArgTable instr_args_index_bits = {
     {
         II, II, II, II, II, II, II, II, II, II, II, II, II, II, II, II,
         II, II, II, II, II, II, II, II, II, II, II, II, II, II, II, II,
@@ -289,6 +302,8 @@ static ArgType instr_args_index_bits[3][256] = {
     }
 };
 
+/* Remove temporary aliases */
+
 #undef __
 #undef A_
 #undef B_
@@ -336,52 +351,50 @@ static ArgType instr_args_index_bits[3][256] = {
 /*
     Decode an immediate argument.
 */
-static void decode_immediate(
-    char *arg, ArgType type, const uint8_t *bytes, size_t shift)
+static void decode_immediate(char *arg, Instr *instr, ArgType type)
 {
-    char *format;
-    size_t take;
-    uint8_t b = bytes[shift];
+    uint8_t op = instr->opcode, take;
+    bool ix = instr->index == 0xDD;
 
     switch (type) {
         case AT_IMM_U16:  // 16-bit immediate
-            sprintf(arg, "$%04X", bytes[shift + 1] + (bytes[shift + 2] << 8));
+            sprintf(arg, "$%04X", instr->arg1 + (instr->arg2 << 8));
             break;
         case AT_IMM_U8:  // 8-bit unsigned immediate
-            if ((bytes[0] == 0xDD || bytes[0] == 0xFD) && bytes[1] == 0x36)
-                take = 2;
+            if (instr->index != 0x00 && op == 0x36)
+                take = instr->arg2;
             else
-                take = 1;
-            sprintf(arg, "$%02X", bytes[shift + take]);
+                take = instr->arg1;
+            sprintf(arg, "$%02X", take);
             break;
         case AT_IMM_REL:  // 8-bit relative offset (JP and DJNZ)
-            sprintf(arg, "%hhd", (int8_t) (bytes[shift + 1] + 2));
+            sprintf(arg, "%hhd", (int8_t) (instr->arg1 + 2));
             break;
         case AT_IMM_BIT:  // Bit position
-            sprintf(arg, "%d", (b & 0x38) >> 3);
+            sprintf(arg, "%d", (op & 0x38) >> 3);
             break;
         case AT_IMM_RST:  // Reset
-            sprintf(arg, "$%02X", b & 0x38);
+            sprintf(arg, "$%02X", op & 0x38);
             break;
         case AT_IMM_IM:  // Interrupt mode
-            sprintf(arg, "%d", !(b & (1 << 4)) ? 0 : !(b & (1 << 3)) ? 1 : 2);
+            sprintf(arg, "%d", !(op & (1 << 4)) ? 0 : !(op & (1 << 3)) ? 1 : 2);
             break;
         case AT_IDR_IMM:  // Indirect immediate
-            sprintf(arg, "($%04X)", bytes[shift + 1] + (bytes[shift + 2] << 8));
+            sprintf(arg, "($%04X)", instr->arg1 + (instr->arg2 << 8));
             break;
         case AT_IX_IY:  // Indexed offset
-            if (bytes[shift + 1]) {
-                format = bytes[0] == 0xDD ? "(ix%+hhd)" : "(iy%+hhd)";
-                sprintf(arg, format, (int8_t) bytes[shift + 1]);
+            if (instr->arg1) {
+                char *format = ix ? "(ix%+hhd)" : "(iy%+hhd)";
+                sprintf(arg, format, (int8_t) instr->arg1);
             } else {
-                sprintf(arg, bytes[0] == 0xDD ? "(ix)" : "(iy)");
+                sprintf(arg, ix ? "(ix)" : "(iy)");
             }
             break;
         case AT_PORT_IM:  // Immediate port
-            sprintf(arg, "($%02X)", bytes[shift + 1]);
+            sprintf(arg, "($%02X)", instr->arg1);
             break;
         default:
-            FATAL("invalid call: decode_immediate(arg, %d, ...)", type)
+            FATAL("invalid call: decode_immediate(arg, ..., %d)", type)
             return;
     }
 }
@@ -389,10 +402,10 @@ static void decode_immediate(
 /*
     Decode a single argument, given its type.
 */
-static void decode_argument(
-    char *arg, ArgType type, const uint8_t *bytes, size_t shift)
+static void decode_argument(char *arg, Instr *instr, ArgType type)
 {
     const char *value;
+    bool ix = instr->index == 0xDD;
 
     switch (type) {
         case AT_NONE:
@@ -427,10 +440,10 @@ static void decode_argument(
         case AT_COND_M:  value = "m";    break;
         case AT_PORT_C:  value = "(c)";  break;
         case AT_PORT_0:  value = "0";    break;
-        case AT_REG_IXY: value = (bytes[0] == 0xDD) ? "ix"   : "iy";   break;
-        case AT_REG_IH:  value = (bytes[0] == 0xDD) ? "ixh"  : "iyh";  break;
-        case AT_REG_IL:  value = (bytes[0] == 0xDD) ? "ixl"  : "iyl";  break;
-        case AT_IDR_IXY: value = (bytes[0] == 0xDD) ? "(ix)" : "(iy)";  break;
+        case AT_REG_IXY: value = ix ? "ix"   : "iy";   break;
+        case AT_REG_IH:  value = ix ? "ixh"  : "iyh";  break;
+        case AT_REG_IL:  value = ix ? "ixl"  : "iyl";  break;
+        case AT_IDR_IXY: value = ix ? "(ix)" : "(iy)"; break;
         case AT_IMM_U16:
         case AT_IMM_U8:
         case AT_IMM_REL:
@@ -440,40 +453,51 @@ static void decode_argument(
         case AT_IDR_IMM:
         case AT_IX_IY:
         case AT_PORT_IM:
-            decode_immediate(arg, type, bytes, shift);
+            decode_immediate(arg, instr, type);
             return;
         default:
-            FATAL("invalid call: decode_argument(arg, %d, ...)", type)
+            FATAL("invalid call: decode_argument(arg, ..., %d)", type)
             return;
     }
     strcpy(arg, value);
 }
 
 /*
-    Return the appropriate argument table for the given instruction.
-
-    This function also adds the number of instruction bytes to skip to its
-    shift argument (corresponding to any prefix bits), so bytes[*shift] will
-    always be the instruction opcode.
-
-    This function return type is ridiculous, but it returns a pointer to an
-    array of 3 arrays of 256 ArgTypes.
+    Fill an Instruction object with the appropriate fields.
 */
-static inline ArgType (*get_table_and_shift(
-    const uint8_t *bytes, size_t *shift))[3][256]
+static inline void load_instr(Instr *instr, const uint8_t *bytes)
 {
     uint8_t b = bytes[0];
+    bool extend   = b == 0xED;
+    bool bit      = b == 0xCB;
+    bool index    = b == 0xDD || b == 0xFD;
+    bool indexbit = index && bytes[1] == 0xCB;
 
-    if (b == 0xED)
-        return (*shift)++, &instr_args_extended;
-    if (b == 0xCB)
-        return (*shift)++, &instr_args_bits;
-    if (b == 0xDD || b == 0xFD) {
-        if (bytes[1] == 0xCB)
-            return (*shift) += 2, &instr_args_index_bits;
-        return (*shift)++, &instr_args_index;
+    instr->index = index ? b : 0x00;
+
+    if (indexbit) {
+        instr->opcode = bytes[3];
+        instr->arg1   = bytes[2];
+    } else if (extend || bit || index) {
+        instr->opcode = bytes[1];
+        instr->arg1   = bytes[2];
+        instr->arg2   = bytes[3];
+    } else {
+        instr->opcode = bytes[0];
+        instr->arg1   = bytes[1];
+        instr->arg2   = bytes[2];
     }
-    return &instr_args;
+
+    if (extend)
+        instr->table = &instr_args_extended;
+    else if (bit)
+        instr->table = &instr_args_bits;
+    else if (indexbit)
+        instr->table = &instr_args_index_bits;
+    else if (index)
+        instr->table = &instr_args_index;
+    else
+        instr->table = &instr_args;
 }
 
 /*
@@ -484,13 +508,14 @@ static inline ArgType (*get_table_and_shift(
 char* decode_arguments(const uint8_t *bytes)
 {
     char args[3][MAX_ARG_SIZE], *result;
-    ArgType (*table)[3][256], type;
-    size_t shift = 0, i, len;
+    Instr instr;
+    ArgType type;
+    size_t i, len;
 
-    table = get_table_and_shift(bytes, &shift);
+    load_instr(&instr, bytes);
     for (i = 0; i < 3; i++) {
-        type = (*table)[i][bytes[shift]];
-        decode_argument(args[i], type, bytes, shift);
+        type = (*instr.table)[i][instr.opcode];
+        decode_argument(args[i], &instr, type);
     }
 
     if (!*args[0])

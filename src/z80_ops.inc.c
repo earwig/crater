@@ -936,17 +936,41 @@ static uint8_t z80_inst_dec_ss(Z80 *z80, uint8_t opcode)
 
 // RLC (IXY+d)
 
-// RL m
+// RL r
 
-// RRC m
+// RL (HL)
 
-// RR m
+// RL (IXY+d)
 
-// SLA m
+// RRC r
 
-// SRA m
+// RRC (HL)
 
-// SRL m
+// RRC (IXY+d)
+
+// RR r
+
+// RR (HL)
+
+// RR (IXY+d)
+
+// SLA r
+
+// SLA (HL)
+
+// SLA (IXY+d)
+
+// SRA r
+
+// SRA (HL)
+
+// SRA (IXY+d)
+
+// SRL r
+
+// SRL (HL)
+
+// SRL (IXY+d)
 
 // RLD
 
@@ -1408,7 +1432,7 @@ static uint8_t z80_prefix_index(Z80 *z80, uint8_t opcode)
 */
 static uint8_t z80_prefix_index_bits(Z80 *z80, uint8_t opcode)
 {
-    opcode = mmu_read_byte(z80->mmu, ++z80->regfile.pc);
+    opcode = mmu_read_byte(z80->mmu, z80->regfile.pc += 2);
     return (*instruction_table_index_bits[opcode])(z80, opcode);
 }
 

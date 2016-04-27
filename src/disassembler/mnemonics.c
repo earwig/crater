@@ -158,7 +158,7 @@ char* decode_mnemonic(const uint8_t *bytes)
         return instr_mnemonics_bits[bytes[1]];
     if (b == 0xDD || b == 0xFD) {
         if (bytes[1] == 0xCB)
-            return instr_mnemonics_bits[bytes[2]];
+            return instr_mnemonics_bits[bytes[3]];
         return instr_mnemonics_index[bytes[1]];
     }
     return instr_mnemonics[b];
