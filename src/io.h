@@ -6,19 +6,21 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#include "psg.h"
 #include "vdp.h"
 
 /* Structs */
 
 typedef struct {
     VDP *vdp;
+    PSG *psg;
     bool except;
     uint8_t exc_port;
 } IO;
 
 /* Functions */
 
-void io_init(IO*, VDP*);
+void io_init(IO*, VDP*, PSG*);
 void io_power(IO*);
 bool io_check_irq(IO*);
 uint8_t io_port_read(IO*, uint8_t);

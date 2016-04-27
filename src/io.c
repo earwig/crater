@@ -6,9 +6,10 @@
 /*
     Initialize an IO object.
 */
-void io_init(IO *io, VDP *vdp)
+void io_init(IO *io, VDP *vdp, PSG *psg)
 {
     io->vdp = vdp;
+    io->psg = psg;
 }
 
 /*
@@ -72,8 +73,7 @@ void io_port_write(IO *io, uint8_t port, uint8_t value)
         // TODO: Write to I/O control register
         goto except;
     } else if (port <= 0x7F) {
-        // TODO: Write to the SN76489 PSG
-        goto except;
+        psg_write(io->psg, value);
     } else if (port <= 0xBF && !(port % 2)) {
         vdp_write_data(io->vdp, value);
     } else if (port <= 0xBF) {

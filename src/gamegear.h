@@ -1,4 +1,4 @@
-/* Copyright (C) 2014-2015 Ben Kurtovic <ben.kurtovic@gmail.com>
+/* Copyright (C) 2014-2016 Ben Kurtovic <ben.kurtovic@gmail.com>
    Released under the terms of the MIT License. See LICENSE for details. */
 
 #pragma once
@@ -8,6 +8,7 @@
 
 #include "io.h"
 #include "mmu.h"
+#include "psg.h"
 #include "rom.h"
 #include "z80.h"
 
@@ -23,6 +24,7 @@ typedef struct GameGear {
     Z80 cpu;
     MMU mmu;
     VDP vdp;
+    PSG psg;
     IO io;
     bool powered;
     GGFrameCallback callback;

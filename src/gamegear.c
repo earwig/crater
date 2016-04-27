@@ -1,4 +1,4 @@
-/* Copyright (C) 2014-2015 Ben Kurtovic <ben.kurtovic@gmail.com>
+/* Copyright (C) 2014-2016 Ben Kurtovic <ben.kurtovic@gmail.com>
    Released under the terms of the MIT License. See LICENSE for details. */
 
 #include <stdlib.h>
@@ -24,7 +24,8 @@ GameGear* gamegear_create()
     GameGear *gg = cr_malloc(sizeof(GameGear));
     mmu_init(&gg->mmu);
     vdp_init(&gg->vdp);
-    io_init(&gg->io, &gg->vdp);
+    psg_init(&gg->psg);
+    io_init(&gg->io, &gg->vdp, &gg->psg);
     z80_init(&gg->cpu, &gg->mmu, &gg->io);
 
     gg->powered = false;
@@ -42,6 +43,7 @@ void gamegear_destroy(GameGear *gg)
 {
     mmu_free(&gg->mmu);
     vdp_free(&gg->vdp);
+    psg_free(&gg->psg);
     free(gg);
 }
 
