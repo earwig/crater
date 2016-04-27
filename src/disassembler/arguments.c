@@ -370,8 +370,12 @@ static void decode_immediate(
             sprintf(arg, "($%04X)", bytes[shift + 1] + (bytes[shift + 2] << 8));
             break;
         case AT_IX_IY:  // Indexed offset
-            format = bytes[0] == 0xDD ? "(ix%+hhd)" : "(iy%+hhd)";
-            sprintf(arg, format, (int8_t) bytes[shift + 1]);
+            if (bytes[shift + 1]) {
+                format = bytes[0] == 0xDD ? "(ix%+hhd)" : "(iy%+hhd)";
+                sprintf(arg, format, (int8_t) bytes[shift + 1]);
+            } else {
+                sprintf(arg, bytes[0] == 0xDD ? "(ix)" : "(iy)");
+            }
             break;
         case AT_PORT_IM:  // Immediate port
             sprintf(arg, "($%02X)", bytes[shift + 1]);

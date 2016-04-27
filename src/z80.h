@@ -36,6 +36,7 @@ typedef struct {
     IO *io;
     bool except;
     uint8_t exc_code, exc_data;
+    uint16_t *last_index;
     double pending_cycles;
     Z80TraceInfo trace;
 } Z80;

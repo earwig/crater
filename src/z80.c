@@ -72,6 +72,7 @@ void z80_power(Z80 *z80)
     regfile->iff1 = regfile->iff2 = 0;
 
     z80->except = false;
+    z80->last_index = NULL;
     z80->pending_cycles = 0;
 
     z80->trace.fresh = true;
@@ -251,14 +252,11 @@ static inline bool extract_cond(const Z80 *z80, uint8_t opcode)
 }
 
 /*
-    Extract the current index register.
+    Return the address signified by a indirect index instruction.
 */
-static inline uint16_t* extract_index(Z80 *z80)
+static inline uint16_t get_index_addr(Z80 *z80, int8_t offset)
 {
-    uint8_t prefix = mmu_read_byte(z80->mmu, z80->regfile.pc - 1);
-    if (prefix != 0xDD && prefix != 0xFD)
-        FATAL("invalid call: extract_index(z80, 0x%02X)", prefix)
-    return prefix == 0xDD ? &z80->regfile.ix : &z80->regfile.iy;
+    return *z80->last_index + offset;
 }
 
 /*
