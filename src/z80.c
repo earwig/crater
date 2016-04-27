@@ -254,9 +254,9 @@ static inline bool extract_cond(const Z80 *z80, uint8_t opcode)
 /*
     Return the address signified by a indirect index instruction.
 */
-static inline uint16_t get_index_addr(Z80 *z80, int8_t offset)
+static inline uint16_t get_index_addr(Z80 *z80, uint16_t offset_addr)
 {
-    return *z80->last_index + offset;
+    return *z80->last_index + ((int8_t) mmu_read_byte(z80->mmu, offset_addr));
 }
 
 /*

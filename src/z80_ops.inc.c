@@ -273,7 +273,18 @@ static uint8_t z80_inst_ld_nn_hl(Z80 *z80, uint8_t opcode)
     return 16;
 }
 
-// LD (nn), dd
+/*
+    LD (nn), dd (0xED43, 0xED53, 0xED63, 0xED73);
+    Load dd (16-bit register) into memory address nn.
+*/
+static uint8_t z80_inst_ld_nn_dd(Z80 *z80, uint8_t opcode)
+{
+    (void) opcode;
+    uint16_t addr = mmu_read_double(z80->mmu, ++z80->regfile.pc);
+    mmu_write_double(z80->mmu, addr, extract_pair(opcode));
+    z80->regfile.pc += 2;
+    return 16;
+}
 
 // LD (nn), IXY
 
@@ -756,7 +767,22 @@ static uint8_t z80_inst_dec_r(Z80 *z80, uint8_t opcode)
     return 4;
 }
 
-// DEC (HL)
+/*
+    DEC (HL) (0x35):
+    Decrement the memory address pointed to by HL.
+*/
+static uint8_t z80_inst_dec_hl(Z80 *z80, uint8_t opcode)
+{
+    (void) opcode;
+    uint8_t byte = mmu_read_byte(z80->mmu, get_pair(z80, REG_HL));
+    bool halfcarry = !!(((byte & 0x0F) + 1) & 0x10);
+    mmu_write_byte(z80->mmu, get_pair(z80, REG_HL), --byte);
+    update_flags(z80, 0, 1, byte == 0x7F, !!(byte & 0x08), halfcarry,
+                 !!(byte & 0x20), byte == 0, !!(byte & 0x80), 0xFE);
+
+    z80->regfile.pc++;
+    return 11;
+}
 
 // DEC (IXY+d)
 
@@ -1017,7 +1043,23 @@ static uint8_t z80_inst_bit_b_hl(Z80 *z80, uint8_t opcode)
     return 8;
 }
 
-// BIT b, (IXY+d)
+/*
+    BIT b, (IXY+d) (0xDDCB40-0xDDCB7F, 0xFDCB40-0xFDCB7F):
+    Test bit b of (IX+d) or (IY+d).
+*/
+static uint8_t z80_inst_bit_b_ixy(Z80 *z80, uint8_t opcode)
+{
+    uint16_t addr = get_index_addr(z80, z80->regfile.pc - 1);
+    uint8_t val = mmu_read_byte(z80->mmu, addr);
+    uint8_t bit = (opcode >> 3) & 0x07;
+    bool z = ((val >> bit) & 1) == 0;
+    if (z)
+        update_flags(z80, 0, 0, 1, 0, 1, 0, 1, 0, 0xFE);
+    else
+        update_flags(z80, 0, 0, 0, bit == 3, 1, bit == 5, 0, bit == 7, 0xFE);
+    z80->regfile.pc++;
+    return 8;
+}
 
 // SET b, r
 
@@ -1025,7 +1067,24 @@ static uint8_t z80_inst_bit_b_hl(Z80 *z80, uint8_t opcode)
 
 // SET b, (IXY+d)
 
-// RES b, m
+// RES b, r
+
+/*
+    RES b, (HL) (0xCB86, 0xCB8E, 0xCB96, 0xCB9E, 0xCBA6, 0xCBAE, 0xCBB6,
+        0xCBBE):
+    Reset bit b of (HL).
+*/
+static uint8_t z80_inst_res_b_hl(Z80 *z80, uint8_t opcode)
+{
+    uint8_t val = mmu_read_byte(z80->mmu, get_pair(z80, REG_HL));
+    uint8_t bit = (opcode >> 3) & 0x07;
+    val &= ~(1 << bit);
+    mmu_write_byte(z80->mmu, get_pair(z80, REG_HL), val);
+    z80->regfile.pc++;
+    return 8;
+}
+
+// RES b, (IXY+d)
 
 /*
     JP nn (0xC3):
