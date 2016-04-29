@@ -10,6 +10,8 @@
 #define SIGN(x) NEG(x)
 #define SUB 1
 
+#define CARRY2(lh, op, rh) (((lh) op (rh)) & 0x10000)
+
 #define OV_ADD(lh, rh, res) \
     (POS(lh) && POS(rh) && NEG(res) || NEG(lh) && NEG(rh) && POS(res))
 #define OV_SUB(lh, rh, res) \
@@ -82,9 +84,67 @@ static inline void set_flags_dec(Z80 *z80, uint8_t val)
         F5(res), ZERO(res), SIGN(res), 0xFE);
 }
 
-// set_flags(Z80 *z80,
-//     bool c, bool n, bool pv, bool f3, bool h, bool f5, bool z, bool s,
-//     uint8_t mask)
+/*
+    Set the flags for a 16-bit ADD instruction.
+*/
+static inline void set_flags_add16(Z80 *z80, uint16_t lh, uint16_t rh)
+{
+    uint16_t res = lh + rh;
+    set_flags(z80, CARRY2(lh, +, rh), !SUB, 0, F3(res >> 8),
+        HALF(lh >> 8, +, rh >> 8), F5(res >> 8), 0, 0, 0x3B);
+}
+
+/*
+    Set the flags for a 16-bit ADC instruction.
+*/
+static inline void set_flags_adc16(Z80 *z80, uint16_t lh, uint32_t rh)
+{
+    uint16_t res = lh + rh;
+    set_flags(z80, CARRY2(lh, +, rh), !SUB, OV_ADD(lh >> 8, rh >> 8, res >> 8),
+        F3(res >> 8), HALF(lh >> 8, +, rh >> 8), F5(res >> 8), ZERO(res),
+        SIGN(res >> 8), 0xFF);
+}
+
+/*
+    Set the flags for a 16-bit SBC instruction.
+*/
+static inline void set_flags_sbc16(Z80 *z80, uint16_t lh, uint32_t rh)
+{
+    uint16_t res = lh - rh;
+    set_flags(z80, CARRY2(lh, -, rh), SUB, OV_SUB(lh >> 8, rh >> 8, res >> 8),
+        F3(res >> 8), HALF(lh >> 8, -, rh >> 8), F5(res >> 8), ZERO(res),
+        SIGN(res >> 8), 0xFF);
+}
+
+/*
+    Set the flags for a BIT instruction.
+*/
+static inline void set_flags_bit(Z80 *z80, uint8_t val, uint8_t bit)
+{
+    bool z = ZERO((val >> bit) & 1);
+    if (z)
+        set_flags(z80, 0, 0, z, 0,        1, 0,        z, 0,        0xFE);
+    else
+        set_flags(z80, 0, 0, z, bit == 3, 1, bit == 5, z, bit == 7, 0xFE);
+}
+
+/*
+    Set the flags for a RLCA/RLA/RRCA/RRA instruction.
+*/
+static inline void set_flags_bitrota(Z80 *z80, uint8_t bit)
+{
+    uint8_t a = z80->regs.a;
+    set_flags(z80, bit, 0, 0, F3(a), 0, F5(a), 0, 0, 0x3B);
+}
+
+/*
+    Set the flags for a RLC/RL/RRC/RR/SLA/SRA/SL1/SRL instruction.
+*/
+static inline void set_flags_bitshift(Z80 *z80, uint8_t res, uint8_t bit)
+{
+    set_flags(z80, bit, 0, PARITY(res), F3(res), 0, F5(res), ZERO(res),
+        SIGN(res), 0xFF);
+}
 
 #undef POS
 #undef NEG
@@ -93,6 +153,7 @@ static inline void set_flags_dec(Z80 *z80, uint8_t val)
 #undef ZERO
 #undef SIGN
 #undef SUB
+#undef CARRY2
 #undef OV_ADD
 #undef OV_SUB
 #undef PARITY
