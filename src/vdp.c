@@ -2,6 +2,7 @@
    Released under the terms of the MIT License. See LICENSE for details. */
 
 #include <string.h>
+#include <SDL.h>
 
 #include "vdp.h"
 #include "util.h"
@@ -10,6 +11,8 @@
 #define CODE_VRAM_WRITE 1
 #define CODE_REG_WRITE  2
 #define CODE_CRAM_WRITE 3
+
+extern SDL_Renderer* renderer;
 
 /*
     Initialize the Video Display Processor (VDP).
@@ -100,6 +103,89 @@ static uint8_t get_backdrop_addr(const VDP *vdp)
 }
 
 /*
+    TODO: ...
+*/
+static void draw_pixel(uint8_t y, uint8_t x, uint16_t color)
+{
+    uint8_t r = 0x11 *  (color & 0x000F);
+    uint8_t g = 0x11 * ((color & 0x00F0) >> 4);
+    uint8_t b = 0x11 * ((color & 0x0F00) >> 8);
+
+    SDL_SetRenderDrawColor(renderer, r, g, b, 0xFF);
+
+    uint8_t i, j;
+    for (i = 0; i < 3; i++) {
+        for (j = 0; j < 3; j++)
+            SDL_RenderDrawPoint(renderer, 3 * x + i, 3 * y + j);
+    }
+}
+
+/*
+    Draw the background of the current scanline.
+*/
+static void draw_background(VDP *vdp)
+{
+    uint8_t *pnt = vdp->vram + get_pnt_base(vdp);
+
+    uint8_t row = (vdp->v_counter + vdp->regs[0x09]) % (28 * 8);
+    uint8_t col;
+
+    for (col = 6; col < 32 - 6; col++) {
+        uint16_t index = (row >> 3) * 32 + col;
+        uint16_t tile = pnt[2 * index] + (pnt[2 * index + 1] << 8);
+        uint16_t pattern = tile & 0x01FF;
+        bool palette  = tile & 0x0800;
+        bool priority = tile & 0x1000;
+        bool vflip    = tile & 0x0400;
+        bool hflip    = tile & 0x0200;
+
+        uint8_t offy = vflip ? (7 - row % 8) : (row % 8);
+        uint8_t *pixels = &vdp->vram[pattern * 32 + 4 * offy];
+        uint8_t bp0 = pixels[0], bp1 = pixels[1],
+                bp2 = pixels[2], bp3 = pixels[3];
+
+        uint8_t idx, i, offx;
+        uint16_t color;
+
+        for (i = 0; i < 8; i++) {
+            idx =  ((bp0 >> i) & 1) +
+                   (((bp1 >> i) & 1) << 1) +
+                   (((bp2 >> i) & 1) << 2) +
+                   (((bp3 >> i) & 1) << 3);
+            color = vdp->cram[2 * idx] + (vdp->cram[2 * idx + 1] << 8);
+            offx = hflip ? (col * 8 + (7 - i)) : (col * 8 + i);
+            draw_pixel(vdp->v_counter, offx, color);
+        }
+    }
+}
+
+/*
+    Draw sprites in the current scanline.
+*/
+static void draw_sprites(VDP *vdp)
+{
+    uint8_t *sat = vdp->vram + get_sat_base(vdp);
+    uint8_t spritebuf[8], nsprites = 0, i;
+
+    for (i = 0; i < 64; i++) {
+        uint8_t y = sat[i] - 1;
+        if (vdp->v_counter >= y && vdp->v_counter < y + 8) {
+            DEBUG("sprite draw!!!")
+            // TODO
+        }
+    }
+}
+
+/*
+    Draw the current scanline.
+*/
+static void draw_scanline(VDP *vdp)
+{
+    draw_background(vdp);
+    draw_sprites(vdp);
+}
+
+/*
     Advance the V counter for the next scanline.
 */
 static void advance_scanline(VDP *vdp)
@@ -114,15 +200,12 @@ static void advance_scanline(VDP *vdp)
 }
 
 /*
-    Simulate one scanline within the VDP.
-
-    TODO: elaborate
+    Simulate one line within the VDP.
 */
 void vdp_simulate_line(VDP *vdp)
 {
-    if (vdp->v_counter >= 0x18 && vdp->v_counter < 0xA8) {
-        // TODO: draw current line
-    }
+    if (vdp->v_counter >= 0x18 && vdp->v_counter < 0xA8)
+        draw_scanline(vdp);
     if (vdp->v_counter == 0xC0)
         vdp->stat_int = true;
     advance_scanline(vdp);
@@ -275,6 +358,38 @@ void vdp_dump_registers(const VDP *vdp)
             w[j] = vdp->cram[i + j * 2] + (vdp->cram[i + j * 2 + 1] << 8);
 
         DEBUG("- %04X %04X %04X %04X %04X %04X %04X %04X",
+            w[0], w[1], w[2], w[3], w[4], w[5], w[6], w[7])
+    }
+
+    return;
+
+    DEBUG("Dumping PNT:")
+    for (uint16_t i = 0; i < 28 * 32; i += 32) {
+        uint16_t w[32];
+        for (uint8_t j = 0; j < 32; j++)
+            w[j] = vdp->vram[get_pnt_base(vdp) + 2 * (i + j)] +
+                  (vdp->vram[get_pnt_base(vdp) + 2 * (i + j) + 1] << 8);
+
+        DEBUG("- %03X %03X %03X %03X %03X %03X %03X %03X"
+               " %03X %03X %03X %03X %03X %03X %03X %03X"
+               " %03X %03X %03X %03X %03X %03X %03X %03X"
+               " %03X %03X %03X %03X %03X %03X %03X %03X",
+            w[0x00], w[0x01], w[0x02], w[0x03], w[0x04], w[0x05], w[0x06], w[0x07],
+            w[0x08], w[0x09], w[0x0A], w[0x0B], w[0x0C], w[0x0D], w[0x0E], w[0x0F],
+            w[0x10], w[0x11], w[0x12], w[0x13], w[0x14], w[0x15], w[0x16], w[0x17],
+            w[0x18], w[0x19], w[0x1A], w[0x1B], w[0x1C], w[0x1D], w[0x1E], w[0x1F])
+    }
+
+    DEBUG("Dumping PGT:")
+    for (uint16_t i = 0; i < /* 512 */ 16; i++) {
+        uint32_t w[8];
+        for (uint8_t j = 0; j < 8; j++)
+            w[j] = vdp->vram[32 * i + 4 * j] +
+                  (vdp->vram[32 * i + 4 * j + 1] <<  8) +
+                  (vdp->vram[32 * i + 4 * j + 2] << 16) +
+                  (vdp->vram[32 * i + 4 * j + 3] << 24);
+
+        DEBUG("- 0x%04X: %08X %08X %08X %08X %08X %08X %08X %08X", i,
             w[0], w[1], w[2], w[3], w[4], w[5], w[6], w[7])
     }
 }

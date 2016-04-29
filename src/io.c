@@ -34,6 +34,8 @@ bool io_check_irq(IO *io)
 uint8_t io_port_read(IO *io, uint8_t port)
 {
     if (port <= 0x06) {
+        if (port == 0x00)
+            return 0xC0;
         // TODO: GG specific registers; initial state: C0 7F FF 00 FF 00 FF
     } else if (port <= 0x3F) {
         return 0xFF;
@@ -47,8 +49,10 @@ uint8_t io_port_read(IO *io, uint8_t port)
         return vdp_read_control(io->vdp);
     } else if (port == 0xCD || port == 0xDC) {
         // TODO: Return the I/O port A/B register
+        return 0xFF;
     } else if (port == 0xC1 || port == 0xDD) {
         // TODO: Return the I/O port B/misc. register
+        return 0xFF;
     } else {
         return 0xFF;
     }
