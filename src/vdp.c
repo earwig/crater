@@ -184,10 +184,12 @@ void vdp_write_control(VDP *vdp, uint8_t byte)
 {
     if (!vdp->control_flag) {  // First byte
         vdp->control_addr = (vdp->control_addr & 0x3F00) + byte;
-    } else {  // Second byte
-        vdp->control_addr = ((byte & 0x3F) << 8) + (vdp->control_addr & 0xFF);
-        vdp->control_code = byte >> 6;
+        vdp->control_flag = true;
+        return;
     }
+
+    vdp->control_addr = ((byte & 0x3F) << 8) + (vdp->control_addr & 0xFF);
+    vdp->control_code = byte >> 6;
 
     if (vdp->control_code == CODE_VRAM_READ) {
         vdp->read_buf = vdp->vram[vdp->control_addr];
@@ -198,7 +200,7 @@ void vdp_write_control(VDP *vdp, uint8_t byte)
             vdp->regs[reg] = vdp->control_addr & 0xFF;
     }
 
-    vdp->control_flag = !vdp->control_flag;
+    vdp->control_flag = false;
 }
 
 /*
@@ -238,6 +240,7 @@ void vdp_write_data(VDP *vdp, uint8_t byte)
 */
 bool vdp_assert_irq(VDP *vdp)
 {
+    // TODO: line interrupts
     return vdp->stat_int && should_frame_interrupt(vdp);
 }
 
@@ -250,6 +253,7 @@ void vdp_dump_registers(const VDP *vdp)
     const uint8_t *regs = vdp->regs;
     DEBUG("Dumping VDP register values:")
 
+    // TODO: show flags
     DEBUG("- $00:  0x%02X (" BINARY_FMT ")", regs[0x00], BINARY_VAL(regs[0]))
     DEBUG("- $01:  0x%02X (" BINARY_FMT ")", regs[0x01], BINARY_VAL(regs[1]))
 

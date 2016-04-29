@@ -246,7 +246,7 @@ static uint8_t z80_inst_ld_dd_nn(Z80 *z80, uint8_t opcode)
 static uint8_t z80_inst_ld_ixy_nn(Z80 *z80, uint8_t opcode)
 {
     (void) opcode;
-    *z80->last_index = mmu_read_double(z80->mmu, ++z80->regs.pc);
+    *z80->regs.ixy = mmu_read_double(z80->mmu, ++z80->regs.pc);
     z80->regs.pc += 2;
     return 14;
 }
@@ -284,7 +284,7 @@ static uint8_t z80_inst_ld_ixy_inn(Z80 *z80, uint8_t opcode)
 {
     (void) opcode;
     uint16_t addr = mmu_read_double(z80->mmu, ++z80->regs.pc);
-    *z80->last_index = mmu_read_double(z80->mmu, addr);
+    *z80->regs.ixy = mmu_read_double(z80->mmu, addr);
     z80->regs.pc += 2;
     return 20;
 }
@@ -322,7 +322,7 @@ static uint8_t z80_inst_ld_inn_ixy(Z80 *z80, uint8_t opcode)
 {
     (void) opcode;
     uint16_t addr = mmu_read_double(z80->mmu, ++z80->regs.pc);
-    mmu_write_double(z80->mmu, addr, *z80->last_index);
+    mmu_write_double(z80->mmu, addr, *z80->regs.ixy);
     z80->regs.pc += 2;
     return 20;
 }
@@ -345,7 +345,7 @@ static uint8_t z80_inst_ld_sp_hl(Z80 *z80, uint8_t opcode)
 static uint8_t z80_inst_ld_sp_ixy(Z80 *z80, uint8_t opcode)
 {
     (void) opcode;
-    *z80->last_index = z80->regs.hl;
+    *z80->regs.ixy = z80->regs.hl;
     return 10;
 }
 
@@ -367,7 +367,7 @@ static uint8_t z80_inst_push_qq(Z80 *z80, uint8_t opcode)
 static uint8_t z80_inst_push_ixy(Z80 *z80, uint8_t opcode)
 {
     (void) opcode;
-    stack_push(z80, *z80->last_index);
+    stack_push(z80, *z80->regs.ixy);
     z80->regs.pc++;
     return 15;
 }
@@ -390,7 +390,7 @@ static uint8_t z80_inst_pop_qq(Z80 *z80, uint8_t opcode)
 static uint8_t z80_inst_pop_ixy(Z80 *z80, uint8_t opcode)
 {
     (void) opcode;
-    *z80->last_index = stack_pop(z80);
+    *z80->regs.ixy = stack_pop(z80);
     z80->regs.pc++;
     return 14;
 }
@@ -463,8 +463,8 @@ static uint8_t z80_inst_ex_sp_hl(Z80 *z80, uint8_t opcode)
 static uint8_t z80_inst_ex_sp_ixy(Z80 *z80, uint8_t opcode)
 {
     (void) opcode;
-    uint16_t ixy = *z80->last_index, sp = z80->regs.sp;
-    *z80->last_index = mmu_read_double(z80->mmu, sp);
+    uint16_t ixy = *z80->regs.ixy, sp = z80->regs.sp;
+    *z80->regs.ixy = mmu_read_double(z80->mmu, sp);
     mmu_write_double(z80->mmu, sp, ixy);
     z80->regs.pc++;
     return 23;
@@ -1210,7 +1210,7 @@ static uint8_t z80_inst_jp_hl(Z80 *z80, uint8_t opcode)
 static uint8_t z80_inst_jp_ixy(Z80 *z80, uint8_t opcode)
 {
     (void) opcode;
-    z80->regs.pc = *z80->last_index;
+    z80->regs.pc = *z80->regs.ixy;
     return 8;
 }
 
@@ -1546,7 +1546,16 @@ static uint8_t z80_prefix_bits(Z80 *z80, uint8_t opcode)
 */
 static uint8_t z80_prefix_index(Z80 *z80, uint8_t opcode)
 {
-    z80->last_index = (opcode == 0xDD) ? &z80->regs.ix : &z80->regs.iy;
+    if (opcode == 0xDD) {
+        z80->regs.ixy = &z80->regs.ix;
+        z80->regs.ih  = &z80->regs.ixh;
+        z80->regs.il  = &z80->regs.ixl;
+    } else {
+        z80->regs.ixy = &z80->regs.iy;
+        z80->regs.ih  = &z80->regs.iyh;
+        z80->regs.il  = &z80->regs.iyl;
+    }
+
     opcode = mmu_read_byte(z80->mmu, ++z80->regs.pc);
     return (*instruction_table_index[opcode])(z80, opcode);
 }

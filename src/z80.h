@@ -50,6 +50,9 @@ typedef struct {
     uint8_t  i,  r;
     bool     im_a, im_b;
     bool     iff1, iff2;
+
+    uint16_t *ixy;
+    uint8_t *ih, *il;
 } Z80RegFile;
 
 typedef struct {
@@ -64,7 +67,6 @@ typedef struct {
     IO *io;
     bool except;
     uint8_t exc_code, exc_data;
-    uint16_t *last_index;
     double pending_cycles;
     Z80TraceInfo trace;
 } Z80;

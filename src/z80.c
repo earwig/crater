@@ -60,8 +60,10 @@ void z80_power(Z80 *z80)
     z80->regs.im_a = z80->regs.im_b = 0;
     z80->regs.iff1 = z80->regs.iff2 = 0;
 
+    z80->regs.ixy = NULL;
+    z80->regs.ih = z80->regs.il = NULL;
+
     z80->except = false;
-    z80->last_index = NULL;
     z80->pending_cycles = 0;
 
     z80->trace.fresh = true;
@@ -206,7 +208,7 @@ static inline bool extract_cond(const Z80 *z80, uint8_t opcode)
 */
 static inline uint16_t get_index_addr(Z80 *z80, uint16_t offset_addr)
 {
-    return *z80->last_index + ((int8_t) mmu_read_byte(z80->mmu, offset_addr));
+    return *z80->regs.ixy + ((int8_t) mmu_read_byte(z80->mmu, offset_addr));
 }
 
 /*
