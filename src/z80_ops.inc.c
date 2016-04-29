@@ -484,7 +484,7 @@ static uint8_t z80_inst_ldi(Z80 *z80, uint8_t opcode)
     z80->regs.de++;
     z80->regs.bc--;
 
-    update_flags(z80, 0, 0, z80->regs.bc == 0, 0, 0, 0, 0, 0, 0x16);
+    set_flags(z80, 0, 0, z80->regs.bc == 0, 0, 0, 0, 0, 0, 0x16);
     z80->regs.pc++;
     return 16;
 }
@@ -516,7 +516,7 @@ static uint8_t z80_inst_ldd(Z80 *z80, uint8_t opcode)
     z80->regs.de--;
     z80->regs.bc--;
 
-    update_flags(z80, 0, 0, z80->regs.bc == 0, 0, 0, 0, 0, 0, 0x16);
+    set_flags(z80, 0, 0, z80->regs.bc == 0, 0, 0, 0, 0, 0, 0x16);
     z80->regs.pc++;
     return 16;
 }
@@ -534,31 +534,151 @@ static uint8_t z80_inst_lddr(Z80 *z80, uint8_t opcode)
     return 21;
 }
 
-// CPI
+// TODO; CPI
 
-// CPIR
+// TODO: CPIR
 
-// CPD
+// TODO: CPD
 
-// CPDR
+// TODO: CPDR
 
-// ADD A, r
+/*
+    ADD A, r (0x80, 0x81, 0x82, 0x83, 0x84, 0x85, 0x87):
+    TODO
+*/
+static uint8_t z80_inst_add_a_r(Z80 *z80, uint8_t opcode)
+{
+    uint8_t value = *extract_reg(z80, opcode << 3);
 
-// ADD A, n
+    set_flags_add8(z80, value);
+    z80->regs.a += value;
+    z80->regs.pc++;
+    return 4;
+}
 
-// ADD A, (HL)
+/*
+    ADD A, n (0xC6):
+    TODO
+*/
+static uint8_t z80_inst_add_a_n(Z80 *z80, uint8_t opcode)
+{
+    (void) opcode;
+    uint8_t value = mmu_read_byte(z80->mmu, ++z80->regs.pc);
 
-// ADD A, (IXY+d)
+    set_flags_add8(z80, value);
+    z80->regs.a += value;
+    z80->regs.pc++;
+    return 7;
+}
 
-// ADC A, r
+/*
+    ADD A, (HL) (0x86):
+    TODO
+*/
+static uint8_t z80_inst_add_a_hl(Z80 *z80, uint8_t opcode)
+{
+    (void) opcode;
+    uint8_t value = mmu_read_byte(z80->mmu, z80->regs.hl);
 
-// ADC A, n
+    set_flags_add8(z80, value);
+    z80->regs.a += value;
+    z80->regs.pc++;
+    return 7;
+}
 
-// ADC A, (HL)
+/*
+    ADD A, (IXY+d) (0xDD86, 0xFD86):
+    TODO
+*/
+static uint8_t z80_inst_add_a_ixy(Z80 *z80, uint8_t opcode)
+{
+    (void) opcode;
+    uint16_t addr = get_index_addr(z80, ++z80->regs.pc);
+    uint8_t value = mmu_read_byte(z80->mmu, addr);
 
-// ADC A, (IXY+d)
+    set_flags_add8(z80, value);
+    z80->regs.a += value;
+    z80->regs.pc++;
+    return 19;
+}
 
-// SUB r
+/*
+    ADC A, r (0x88, 0x89, 0x8A, 0x8B, 0x8C, 0x8D, 0x8F):
+    TODO
+*/
+static uint8_t z80_inst_adc_a_r(Z80 *z80, uint8_t opcode)
+{
+    uint16_t value = *extract_reg(z80, opcode << 3);
+    value += get_flag(z80, FLAG_CARRY);
+
+    set_flags_add8(z80, value);
+    z80->regs.a += value;
+    z80->regs.pc++;
+    return 4;
+}
+
+/*
+    ADC A, n (0xCE):
+    TODO
+*/
+static uint8_t z80_inst_adc_a_n(Z80 *z80, uint8_t opcode)
+{
+    (void) opcode;
+    uint16_t value = mmu_read_byte(z80->mmu, ++z80->regs.pc);
+    value += get_flag(z80, FLAG_CARRY);
+
+    set_flags_add8(z80, value);
+    z80->regs.a += value;
+    z80->regs.pc++;
+    return 7;
+}
+
+/*
+    ADC A, (HL) (0x8E):
+    TODO
+*/
+static uint8_t z80_inst_adc_a_hl(Z80 *z80, uint8_t opcode)
+{
+    (void) opcode;
+    uint16_t value = mmu_read_byte(z80->mmu, z80->regs.hl);
+    value += get_flag(z80, FLAG_CARRY);
+
+    set_flags_add8(z80, value);
+    z80->regs.a += value;
+    z80->regs.pc++;
+    return 7;
+}
+
+/*
+    ADC A, (IXY+d) (0xDD8E, 0xFD8E):
+    TODO
+*/
+static uint8_t z80_inst_adc_a_ixy(Z80 *z80, uint8_t opcode)
+{
+    (void) opcode;
+    uint16_t addr = get_index_addr(z80, ++z80->regs.pc);
+    uint16_t value = mmu_read_byte(z80->mmu, addr);
+    value += get_flag(z80, FLAG_CARRY);
+
+    set_flags_add8(z80, value);
+    z80->regs.a += value;
+    z80->regs.pc++;
+    return 19;
+}
+
+/*
+    SUB, r (0x90, 0x91, 0x92, 0x93, 0x94, 0x95, 0x97):
+    TODO
+*/
+static uint8_t z80_inst_sub_r(Z80 *z80, uint8_t opcode)
+{
+    uint8_t value = *extract_reg(z80, opcode << 3);
+
+    set_flags_sub8(z80, value);
+    z80->regs.a -= value;
+    z80->regs.pc++;
+    return 4;
+}
 
 /*
     SUB n (0xD6):
@@ -567,33 +687,122 @@ static uint8_t z80_inst_lddr(Z80 *z80, uint8_t opcode)
 static uint8_t z80_inst_sub_n(Z80 *z80, uint8_t opcode)
 {
     (void) opcode;
-    uint8_t imm = mmu_read_byte(z80->mmu, ++z80->regs.pc);
-    uint8_t orig = z80->regs.a;
-    uint8_t a = z80->regs.a -= imm;
+    uint8_t value = mmu_read_byte(z80->mmu, ++z80->regs.pc);
 
-    bool c = (orig - imm) != a;
-    bool v = (orig - imm) != ((int8_t) a);
-    bool h = !!(((orig & 0x0F) - (imm & 0x0F)) & 0x10);
-    update_flags(z80, c, 1, v, !!(a & 0x08), h, !!(a & 0x20), a == 0,
-        !!(a & 0x80), 0xFF);
-
+    set_flags_sub8(z80, value);
+    z80->regs.a -= value;
     z80->regs.pc++;
     return 7;
 }
 
-// SUB (HL)
+/*
+    SUB (HL)
+    TODO
+*/
+static uint8_t z80_inst_sub_hl(Z80 *z80, uint8_t opcode)
+{
+    (void) opcode;
+    uint8_t value = mmu_read_byte(z80->mmu, z80->regs.hl);
 
-// SUB (IXY+d)
+    set_flags_sub8(z80, value);
+    z80->regs.a -= value;
+    z80->regs.pc++;
+    return 7;
+}
 
-// SBC A, r
+/*
+    SUB (IXY+d)
+    TODO
+*/
+static uint8_t z80_inst_sub_ixy(Z80 *z80, uint8_t opcode)
+{
+    (void) opcode;
+    uint16_t addr = get_index_addr(z80, ++z80->regs.pc);
+    uint8_t value = mmu_read_byte(z80->mmu, addr);
 
-// SBC A, n
+    set_flags_sub8(z80, value);
+    z80->regs.a -= value;
+    z80->regs.pc++;
+    return 19;
+}
 
-// SBC A, (HL)
+/*
+    SBC A, r (...):
+    TODO
+*/
+static uint8_t z80_inst_sbc_a_r(Z80 *z80, uint8_t opcode)
+{
+    uint8_t value = *extract_reg(z80, opcode << 3);
+    value += get_flag(z80, FLAG_CARRY);
 
-// SBC A, (IXY+d)
+    set_flags_sub8(z80, value);
+    z80->regs.a -= value;
+    z80->regs.pc++;
+    return 4;
+}
 
-// AND r
+/*
+    SBC A, n (...):
+    TODO
+*/
+static uint8_t z80_inst_sbc_a_n(Z80 *z80, uint8_t opcode)
+{
+    (void) opcode;
+    uint8_t value = mmu_read_byte(z80->mmu, ++z80->regs.pc);
+    value += get_flag(z80, FLAG_CARRY);
+
+    set_flags_sub8(z80, value);
+    z80->regs.a -= value;
+    z80->regs.pc++;
+    return 7;
+}
+
+/*
+    SBC A, (HL)
+    TODO
+*/
+static uint8_t z80_inst_sbc_a_hl(Z80 *z80, uint8_t opcode)
+{
+    (void) opcode;
+    uint8_t value = mmu_read_byte(z80->mmu, z80->regs.hl);
+    value += get_flag(z80, FLAG_CARRY);
+
+    set_flags_sub8(z80, value);
+    z80->regs.a -= value;
+    z80->regs.pc++;
+    return 7;
+}
+
+/*
+    SBC A, (IXY+d)
+    TODO
+*/
+static uint8_t z80_inst_sbc_a_ixy(Z80 *z80, uint8_t opcode)
+{
+    (void) opcode;
+    uint16_t addr = get_index_addr(z80, ++z80->regs.pc);
+    uint8_t value = mmu_read_byte(z80->mmu, addr);
+    value += get_flag(z80, FLAG_CARRY);
+
+    set_flags_sub8(z80, value);
+    z80->regs.a -= value;
+    z80->regs.pc++;
+    return 19;
+}
+
+/*
+    AND r
+    TODO
+*/
+static uint8_t z80_inst_and_r(Z80 *z80, uint8_t opcode)
+{
+    uint8_t value = *extract_reg(z80, opcode << 3);
+    uint8_t res = z80->regs.a &= value;
+
+    set_flags_bitwise(z80, res, true);
+    z80->regs.pc++;
+    return 4;
+}
 
 /*
     AND n (0xE6):
@@ -602,20 +811,44 @@ static uint8_t z80_inst_sub_n(Z80 *z80, uint8_t opcode)
 static uint8_t z80_inst_and_n(Z80 *z80, uint8_t opcode)
 {
     (void) opcode;
-    uint8_t imm = mmu_read_byte(z80->mmu, ++z80->regs.pc);
-    uint8_t a = (z80->regs.a &= imm);
+    uint8_t value = mmu_read_byte(z80->mmu, ++z80->regs.pc);
+    uint8_t res = z80->regs.a &= value;
 
-    bool parity = !(__builtin_popcount(a) % 2);
-    update_flags(z80, 0, 0, parity, !!(a & 0x08), 1, !!(a & 0x20), a == 0,
-        !!(a & 0x80), 0xFF);
-
+    set_flags_bitwise(z80, res, true);
     z80->regs.pc++;
     return 7;
 }
 
-// AND (HL)
+/*
+    AND (HL)
+    TODO
+*/
+static uint8_t z80_inst_and_hl(Z80 *z80, uint8_t opcode)
+{
+    (void) opcode;
+    uint8_t value = mmu_read_byte(z80->mmu, z80->regs.hl);
+    uint8_t res = z80->regs.a &= value;
 
-// AND (IXY+d)
+    set_flags_bitwise(z80, res, true);
+    z80->regs.pc++;
+    return 7;
+}
+
+/*
+    AND (IXY+d)
+    TODO
+*/
+static uint8_t z80_inst_and_ixy(Z80 *z80, uint8_t opcode)
+{
+    (void) opcode;
+    uint16_t addr = get_index_addr(z80, ++z80->regs.pc);
+    uint8_t value = mmu_read_byte(z80->mmu, addr);
+    uint8_t res = z80->regs.a &= value;
+
+    set_flags_bitwise(z80, res, true);
+    z80->regs.pc++;
+    return 19;
+}
 
 /*
     OR r (0xB0, 0xB1, 0xB2, 0xB3, 0xB4, 0xB5, 0xB7):
@@ -623,13 +856,10 @@ static uint8_t z80_inst_and_n(Z80 *z80, uint8_t opcode)
 */
 static uint8_t z80_inst_or_r(Z80 *z80, uint8_t opcode)
 {
-    uint8_t *reg = extract_reg(z80, opcode << 3);
-    uint8_t a = (z80->regs.a |= *reg);
+    uint8_t value = *extract_reg(z80, opcode << 3);
+    uint8_t res = z80->regs.a |= value;
 
-    bool parity = !(__builtin_popcount(a) % 2);
-    update_flags(z80, 0, 0, parity, !!(a & 0x08), 0, !!(a & 0x20), a == 0,
-        !!(a & 0x80), 0xFF);
-
+    set_flags_bitwise(z80, res, false);
     z80->regs.pc++;
     return 4;
 }
@@ -641,18 +871,28 @@ static uint8_t z80_inst_or_r(Z80 *z80, uint8_t opcode)
 static uint8_t z80_inst_or_n(Z80 *z80, uint8_t opcode)
 {
     (void) opcode;
-    uint8_t imm = mmu_read_byte(z80->mmu, ++z80->regs.pc);
-    uint8_t a = (z80->regs.a |= imm);
+    uint8_t value = mmu_read_byte(z80->mmu, ++z80->regs.pc);
+    uint8_t res = z80->regs.a |= value;
 
-    bool parity = !(__builtin_popcount(a) % 2);
-    update_flags(z80, 0, 0, parity, !!(a & 0x08), 0, !!(a & 0x20), a == 0,
-        !!(a & 0x80), 0xFF);
-
+    set_flags_bitwise(z80, res, false);
     z80->regs.pc++;
     return 7;
 }
 
-// OR (HL)
+/*
+    OR (HL)
+    TODO
+*/
+static uint8_t z80_inst_or_hl(Z80 *z80, uint8_t opcode)
+{
+    (void) opcode;
+    uint8_t value = mmu_read_byte(z80->mmu, z80->regs.hl);
+    uint8_t res = z80->regs.a |= value;
+
+    set_flags_bitwise(z80, res, false);
+    z80->regs.pc++;
+    return 7;
+}
 
 /*
     OR (IXY+d) (0xDDB6, 0xFDB6):
@@ -661,16 +901,13 @@ static uint8_t z80_inst_or_n(Z80 *z80, uint8_t opcode)
 static uint8_t z80_inst_or_ixy(Z80 *z80, uint8_t opcode)
 {
     (void) opcode;
-    uint8_t addr = get_index_addr(z80, ++z80->regs.pc);
-    uint8_t val = mmu_read_byte(z80->mmu, addr);
-    uint8_t a = (z80->regs.a |= val);
+    uint16_t addr = get_index_addr(z80, ++z80->regs.pc);
+    uint8_t value = mmu_read_byte(z80->mmu, addr);
+    uint8_t res = z80->regs.a |= value;
 
-    bool parity = !(__builtin_popcount(a) % 2);
-    update_flags(z80, 0, 0, parity, !!(a & 0x08), 0, !!(a & 0x20), a == 0,
-        !!(a & 0x80), 0xFF);
-
+    set_flags_bitwise(z80, res, false);
     z80->regs.pc++;
-    return 7;
+    return 19;
 }
 
 /*
@@ -679,13 +916,10 @@ static uint8_t z80_inst_or_ixy(Z80 *z80, uint8_t opcode)
 */
 static uint8_t z80_inst_xor_r(Z80 *z80, uint8_t opcode)
 {
-    uint8_t *reg = extract_reg(z80, opcode << 3);
-    uint8_t a = (z80->regs.a ^= *reg);
+    uint8_t value = *extract_reg(z80, opcode << 3);
+    uint8_t res = z80->regs.a ^= value;
 
-    bool parity = !(__builtin_popcount(a) % 2);
-    update_flags(z80, 0, 0, parity, !!(a & 0x08), 0, !!(a & 0x20), a == 0,
-        !!(a & 0x80), 0xFF);
-
+    set_flags_bitwise(z80, res, false);
     z80->regs.pc++;
     return 4;
 }
@@ -697,20 +931,43 @@ static uint8_t z80_inst_xor_r(Z80 *z80, uint8_t opcode)
 static uint8_t z80_inst_xor_n(Z80 *z80, uint8_t opcode)
 {
     (void) opcode;
-    uint8_t imm = mmu_read_byte(z80->mmu, ++z80->regs.pc);
-    uint8_t a = (z80->regs.a ^= imm);
+    uint8_t value = mmu_read_byte(z80->mmu, ++z80->regs.pc);
+    uint8_t res = z80->regs.a ^= value;
 
-    bool parity = !(__builtin_popcount(a) % 2);
-    update_flags(z80, 0, 0, parity, !!(a & 0x08), 0, !!(a & 0x20), a == 0,
-        !!(a & 0x80), 0xFF);
-
+    set_flags_bitwise(z80, res, false);
     z80->regs.pc++;
     return 7;
 }
 
-// XOR (HL)
+/*
+    XOR (HL)
+    TODO
+*/
+static uint8_t z80_inst_xor_hl(Z80 *z80, uint8_t opcode)
+{
+    (void) opcode;
+    uint8_t value = mmu_read_byte(z80->mmu, z80->regs.hl);
+    uint8_t res = z80->regs.a ^= value;
 
-// XOR (IXY+d)
+    set_flags_bitwise(z80, res, false);
+    z80->regs.pc++;
+    return 7;
+}
+/*
+    XOR (IXY+d)
+    TODO
+*/
+static uint8_t z80_inst_xor_ixy(Z80 *z80, uint8_t opcode)
+{
+    (void) opcode;
+    uint16_t addr = get_index_addr(z80, ++z80->regs.pc);
+    uint8_t value = mmu_read_byte(z80->mmu, addr);
+    uint8_t res = z80->regs.a ^= value;
+
+    set_flags_bitwise(z80, res, false);
+    z80->regs.pc++;
+    return 19;
+}
 
 /*
     CP r (0xB8, 0xB9, 0xBA, 0xBB, 0xBC, 0xBD, 0xBF):
@@ -718,15 +975,9 @@ static uint8_t z80_inst_xor_n(Z80 *z80, uint8_t opcode)
 */
 static uint8_t z80_inst_cp_r(Z80 *z80, uint8_t opcode)
 {
-    uint8_t *reg = extract_reg(z80, opcode << 3);
-    uint8_t d = z80->regs.a - *reg;
+    uint8_t value = *extract_reg(z80, opcode << 3);
 
-    bool c = (z80->regs.a - *reg) != d;
-    bool v = (z80->regs.a - *reg) != ((int8_t) d);
-    bool h = !!(((z80->regs.a & 0x0F) - (*reg & 0x0F)) & 0x10);
-    update_flags(z80, c, 1, v, !!(*reg & 0x08), h, !!(*reg & 0x20), d == 0,
-        !!(d & 0x80), 0xFF);
-
+    set_flags_cp(z80, value);
     z80->regs.pc++;
     return 4;
 }
@@ -738,15 +989,9 @@ static uint8_t z80_inst_cp_r(Z80 *z80, uint8_t opcode)
 static uint8_t z80_inst_cp_n(Z80 *z80, uint8_t opcode)
 {
     (void) opcode;
-    uint8_t n = mmu_read_byte(z80->mmu, ++z80->regs.pc);
-    uint8_t d = z80->regs.a - n;
+    uint8_t value = mmu_read_byte(z80->mmu, ++z80->regs.pc);
 
-    bool c = (z80->regs.a - n) != d;
-    bool v = (z80->regs.a - n) != ((int8_t) d);
-    bool h = !!(((z80->regs.a & 0x0F) - (n & 0x0F)) & 0x10);
-    update_flags(z80, c, 1, v, !!(n & 0x08), h, !!(n & 0x20), d == 0,
-        !!(d & 0x80), 0xFF);
-
+    set_flags_cp(z80, value);
     z80->regs.pc++;
     return 7;
 }
@@ -758,20 +1003,27 @@ static uint8_t z80_inst_cp_n(Z80 *z80, uint8_t opcode)
 static uint8_t z80_inst_cp_hl(Z80 *z80, uint8_t opcode)
 {
     (void) opcode;
-    uint8_t n = mmu_read_byte(z80->mmu, z80->regs.hl);
-    uint8_t d = z80->regs.a - n;
+    uint8_t value = mmu_read_byte(z80->mmu, z80->regs.hl);
 
-    bool c = (z80->regs.a - n) != d;
-    bool v = (z80->regs.a - n) != ((int8_t) d);
-    bool h = !!(((z80->regs.a & 0x0F) - (n & 0x0F)) & 0x10);
-    update_flags(z80, c, 1, v, !!(n & 0x08), h, !!(n & 0x20), d == 0,
-        !!(d & 0x80), 0xFF);
-
+    set_flags_cp(z80, value);
     z80->regs.pc++;
     return 7;
 }
 
-// CP (IXY+d)
+/*
+    CP (IXY+d)
+    TODO
+*/
+static uint8_t z80_inst_cp_ixy(Z80 *z80, uint8_t opcode)
+{
+    (void) opcode;
+    uint16_t addr = get_index_addr(z80, ++z80->regs.pc);
+    uint8_t value = mmu_read_byte(z80->mmu, addr);
+
+    set_flags_cp(z80, value);
+    z80->regs.pc++;
+    return 19;
+}
 
 /*
     INC r (0x04, 0x0C, 0x14, 0x1C, 0x24, 0x2C, 0x3C):
@@ -780,11 +1032,9 @@ static uint8_t z80_inst_cp_hl(Z80 *z80, uint8_t opcode)
 static uint8_t z80_inst_inc_r(Z80 *z80, uint8_t opcode)
 {
     uint8_t *reg = extract_reg(z80, opcode);
-    bool halfcarry = !!(((*reg & 0x0F) + 1) & 0x10);
-    (*reg)++;
-    update_flags(z80, 0, 0, *reg == 0x80, !!(*reg & 0x08), halfcarry,
-        !!(*reg & 0x20), *reg == 0, !!(*reg & 0x80), 0xFE);
 
+    set_flags_inc(z80, *reg);
+    (*reg)++;
     z80->regs.pc++;
     return 4;
 }
@@ -797,16 +1047,28 @@ static uint8_t z80_inst_inc_hl(Z80 *z80, uint8_t opcode)
 {
     (void) opcode;
     uint8_t byte = mmu_read_byte(z80->mmu, z80->regs.hl);
-    bool halfcarry = !!(((byte & 0x0F) + 1) & 0x10);
-    mmu_write_byte(z80->mmu, z80->regs.hl, ++byte);
-    update_flags(z80, 0, 0, byte == 0x80, !!(byte & 0x08), halfcarry,
-        !!(byte & 0x20), byte == 0, !!(byte & 0x80), 0xFE);
 
+    set_flags_inc(z80, byte);
+    mmu_write_byte(z80->mmu, z80->regs.hl, ++byte);
     z80->regs.pc++;
     return 11;
 }
 
-// INC (IXY+d)
+/*
+    INC (IXY+d)
+    TODO
+*/
+static uint8_t z80_inst_inc_ixy(Z80 *z80, uint8_t opcode)
+{
+    (void) opcode;
+    uint16_t addr = get_index_addr(z80, ++z80->regs.pc);
+    uint8_t byte = mmu_read_byte(z80->mmu, addr);
+
+    set_flags_inc(z80, byte);
+    mmu_write_byte(z80->mmu, addr, ++byte);
+    z80->regs.pc++;
+    return 23;
+}
 
 /*
     DEC r (0x05, 0x0D, 0x15, 0x1D, 0x25, 0x2D, 0x3D):
@@ -815,11 +1077,9 @@ static uint8_t z80_inst_inc_hl(Z80 *z80, uint8_t opcode)
 static uint8_t z80_inst_dec_r(Z80 *z80, uint8_t opcode)
 {
     uint8_t *reg = extract_reg(z80, opcode);
-    bool halfcarry = !!(((*reg & 0x0F) - 1) & 0x10);
-    (*reg)--;
-    update_flags(z80, 0, 1, *reg == 0x7F, !!(*reg & 0x08), halfcarry,
-        !!(*reg & 0x20), *reg == 0, !!(*reg & 0x80), 0xFE);
 
+    set_flags_dec(z80, *reg);
+    (*reg)--;
     z80->regs.pc++;
     return 4;
 }
@@ -832,26 +1092,40 @@ static uint8_t z80_inst_dec_hl(Z80 *z80, uint8_t opcode)
 {
     (void) opcode;
     uint8_t byte = mmu_read_byte(z80->mmu, z80->regs.hl);
-    bool halfcarry = !!(((byte & 0x0F) + 1) & 0x10);
-    mmu_write_byte(z80->mmu, z80->regs.hl, --byte);
-    update_flags(z80, 0, 1, byte == 0x7F, !!(byte & 0x08), halfcarry,
-        !!(byte & 0x20), byte == 0, !!(byte & 0x80), 0xFE);
 
+    set_flags_dec(z80, byte);
+    mmu_write_byte(z80->mmu, z80->regs.hl, --byte);
     z80->regs.pc++;
     return 11;
 }
 
-// DEC (IXY+d)
+/*
+    DEC (IXY+d)
+    TODO
+*/
+static uint8_t z80_inst_dec_ixy(Z80 *z80, uint8_t opcode)
+{
+    (void) opcode;
+    uint16_t addr = get_index_addr(z80, ++z80->regs.pc);
+    uint8_t byte = mmu_read_byte(z80->mmu, addr);
 
-// DAA
+    set_flags_dec(z80, byte);
+    mmu_write_byte(z80->mmu, addr, --byte);
+    z80->regs.pc++;
+    return 23;
+}
 
-// CPL
+// ----------------------------------------------------------------------------
 
-// NEG
+// TODO: DAA
 
-// CCF
+// TODO: CPL
 
-// SCF
+// TODO: NEG
+
+// TODO: CCF
+
+// TODO: SCF
 
 /*
     NOP (0x00):
@@ -942,14 +1216,14 @@ static uint8_t z80_inst_add_hl_ss(Z80 *z80, uint8_t opcode)
     z80->regs.hl = value;
 
     bool h = !!(((lh & 0x0FFF) + (rh & 0x0FFF)) & 0x1000);
-    update_flags(z80, (lh + rh) != value, 0, 0, !!(value & 0x0800), h,
+    set_flags(z80, (lh + rh) != value, 0, 0, !!(value & 0x0800), h,
         !!(value & 0x2000), 0, 0, 0x3B);
 
     z80->regs.pc++;
     return 11;
 }
 
-// ADC HL, ss
+// TODO: ADC HL, ss
 
 /*
     SBC HL, ss (0xED42, 0xED52, 0xED62, 0xED72):
@@ -966,14 +1240,14 @@ static uint8_t z80_inst_sbc_hl_ss(Z80 *z80, uint8_t opcode)
     bool ov = (minu - subtra) != ((int16_t) value);
     bool hc = !!(((minu & 0x0FFF) - (subtra & 0x0FFF)) & 0x1000);
 
-    update_flags(z80, c, 1, ov, !!(value & 0x0800), hc,
+    set_flags(z80, c, 1, ov, !!(value & 0x0800), hc,
         !!(value & 0x2000), value == 0, !!(value & 0x8000), 0xFF);
 
     z80->regs.pc++;
     return 15;
 }
 
-// ADD IXY, pp
+// TODO: ADD IXY, pp
 
 /*
     INC ss (0x03, 0x13, 0x23, 0x33):
@@ -986,7 +1260,7 @@ static uint8_t z80_inst_inc_ss(Z80 *z80, uint8_t opcode)
     return 6;
 }
 
-// INC IXY
+// TODO: INC IXY
 
 /*
     DEC ss (0x0B, 0x1B, 0x2B, 0x3B):
@@ -999,61 +1273,61 @@ static uint8_t z80_inst_dec_ss(Z80 *z80, uint8_t opcode)
     return 6;
 }
 
-// DEC IXY
+// TODO: DEC IXY
 
-// RLCA
+// TODO: RLCA
 
-// RLA
+// TODO: RLA
 
-// RRCA
+// TODO: RRCA
 
-// RRA
+// TODO: RRA
 
-// RLC r
+// TODO: RLC r
 
-// RLC (HL)
+// TODO: RLC (HL)
 
-// RLC (IXY+d)
+// TODO: RLC (IXY+d)
 
-// RL r
+// TODO: RL r
 
-// RL (HL)
+// TODO: RL (HL)
 
-// RL (IXY+d)
+// TODO: RL (IXY+d)
 
-// RRC r
+// TODO: RRC r
 
-// RRC (HL)
+// TODO: RRC (HL)
 
-// RRC (IXY+d)
+// TODO: RRC (IXY+d)
 
-// RR r
+// TODO: RR r
 
-// RR (HL)
+// TODO: RR (HL)
 
-// RR (IXY+d)
+// TODO: RR (IXY+d)
 
-// SLA r
+// TODO: SLA r
 
-// SLA (HL)
+// TODO: SLA (HL)
 
-// SLA (IXY+d)
+// TODO: SLA (IXY+d)
 
-// SRA r
+// TODO: SRA r
 
-// SRA (HL)
+// TODO: SRA (HL)
 
-// SRA (IXY+d)
+// TODO: SRA (IXY+d)
 
-// SRL r
+// TODO: SRL r
 
-// SRL (HL)
+// TODO: SRL (HL)
 
-// SRL (IXY+d)
+// TODO: SRL (IXY+d)
 
-// RLD
+// TODO: RLD
 
-// RRD
+// TODO: RRD
 
 /*
     BIT b, r   (0xCB40, 0xCB41, 0xCB42, 0xCB43, 0xCB44, 0xCB45, 0xCB47, 0xCB48,
@@ -1071,9 +1345,9 @@ static uint8_t z80_inst_bit_b_r(Z80 *z80, uint8_t opcode)
     uint8_t bit = (opcode >> 3) & 0x07;
     bool z = (((*reg) >> bit) & 1) == 0;
     if (z)
-        update_flags(z80, 0, 0, 1, 0, 1, 0, 1, 0, 0xFE);
+        set_flags(z80, 0, 0, 1, 0, 1, 0, 1, 0, 0xFE);
     else
-        update_flags(z80, 0, 0, 0, bit == 3, 1, bit == 5, 0, bit == 7, 0xFE);
+        set_flags(z80, 0, 0, 0, bit == 3, 1, bit == 5, 0, bit == 7, 0xFE);
     z80->regs.pc++;
     return 8;
 }
@@ -1089,9 +1363,9 @@ static uint8_t z80_inst_bit_b_hl(Z80 *z80, uint8_t opcode)
     uint8_t bit = (opcode >> 3) & 0x07;
     bool z = ((val >> bit) & 1) == 0;
     if (z)
-        update_flags(z80, 0, 0, 1, 0, 1, 0, 1, 0, 0xFE);
+        set_flags(z80, 0, 0, 1, 0, 1, 0, 1, 0, 0xFE);
     else
-        update_flags(z80, 0, 0, 0, bit == 3, 1, bit == 5, 0, bit == 7, 0xFE);
+        set_flags(z80, 0, 0, 0, bit == 3, 1, bit == 5, 0, bit == 7, 0xFE);
     z80->regs.pc++;
     return 8;
 }
@@ -1107,20 +1381,20 @@ static uint8_t z80_inst_bit_b_ixy(Z80 *z80, uint8_t opcode)
     uint8_t bit = (opcode >> 3) & 0x07;
     bool z = ((val >> bit) & 1) == 0;
     if (z)
-        update_flags(z80, 0, 0, 1, 0, 1, 0, 1, 0, 0xFE);
+        set_flags(z80, 0, 0, 1, 0, 1, 0, 1, 0, 0xFE);
     else
-        update_flags(z80, 0, 0, 0, bit == 3, 1, bit == 5, 0, bit == 7, 0xFE);
+        set_flags(z80, 0, 0, 0, bit == 3, 1, bit == 5, 0, bit == 7, 0xFE);
     z80->regs.pc++;
     return 8;
 }
 
-// SET b, r
+// TODO: SET b, r
 
-// SET b, (HL)
+// TODO: SET b, (HL)
 
-// SET b, (IXY+d)
+// TODO: SET b, (IXY+d)
 
-// RES b, r
+// TODO: RES b, r
 
 /*
     RES b, (HL) (0xCB86, 0xCB8E, 0xCB96, 0xCB9E, 0xCBA6, 0xCBAE, 0xCBB6,
@@ -1137,7 +1411,7 @@ static uint8_t z80_inst_res_b_hl(Z80 *z80, uint8_t opcode)
     return 8;
 }
 
-// RES b, (IXY+d)
+// TODO: RES b, (IXY+d)
 
 /*
     JP nn (0xC3):
@@ -1344,7 +1618,7 @@ static uint8_t z80_inst_in_r_c(Z80 *z80, uint8_t opcode)
 
     if (opcode != 0x70)
         *extract_reg(z80, opcode) = data;
-    update_flags(z80, 0, 0, parity, !!(data & 0x08), 0, !!(data & 0x20),
+    set_flags(z80, 0, 0, parity, !!(data & 0x08), 0, !!(data & 0x20),
         data == 0, !!(data & 0x80), 0xFE);
     z80->regs.pc++;
     return 12;
@@ -1364,7 +1638,7 @@ static uint8_t z80_inst_ini(Z80 *z80, uint8_t opcode)
     z80->regs.hl++;
     (*b)--;
 
-    update_flags(z80, 0, 1, *b == 0x7F, !!(*b & 0x08), h, !!(*b & 0x20),
+    set_flags(z80, 0, 1, *b == 0x7F, !!(*b & 0x08), h, !!(*b & 0x20),
         *b == 0, !!(*b & 0x80), 0xFE);
     z80->regs.pc++;
     return 16;
@@ -1397,7 +1671,7 @@ static uint8_t z80_inst_ind(Z80 *z80, uint8_t opcode)
     z80->regs.hl--;
     (*b)--;
 
-    update_flags(z80, 0, 1, *b == 0x7F, !!(*b & 0x08), h, !!(*b & 0x20),
+    set_flags(z80, 0, 1, *b == 0x7F, !!(*b & 0x08), h, !!(*b & 0x20),
         *b == 0, !!(*b & 0x80), 0xFE);
     z80->regs.pc++;
     return 16;
@@ -1456,7 +1730,7 @@ static uint8_t z80_inst_outi(Z80 *z80, uint8_t opcode)
     z80->regs.hl++;
     (*b)--;
 
-    update_flags(z80, 0, 1, *b == 0x7F, !!(*b & 0x08), h, !!(*b & 0x20),
+    set_flags(z80, 0, 1, *b == 0x7F, !!(*b & 0x08), h, !!(*b & 0x20),
         *b == 0, !!(*b & 0x80), 0xFE);
     z80->regs.pc++;
     return 16;
@@ -1489,7 +1763,7 @@ static uint8_t z80_inst_outd(Z80 *z80, uint8_t opcode)
     z80->regs.hl--;
     (*b)--;
 
-    update_flags(z80, 0, 1, *b == 0x7F, !!(*b & 0x08), h, !!(*b & 0x20),
+    set_flags(z80, 0, 1, *b == 0x7F, !!(*b & 0x08), h, !!(*b & 0x20),
         *b == 0, !!(*b & 0x80), 0xFE);
     z80->regs.pc++;
     return 16;

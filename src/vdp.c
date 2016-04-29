@@ -266,4 +266,15 @@ void vdp_dump_registers(const VDP *vdp)
     DEBUG("- $08:  0x%02X (HS)", regs[0x08])
     DEBUG("- $09:  0x%02X (VS)", regs[0x09])
     DEBUG("- $0A:  0x%02X (LC)", regs[0x0A])
+
+    // TODO: remove me!
+    DEBUG("Dumping CRAM:")
+    for (uint8_t i = 0x00; i < 0x40; i += 0x10) {
+        uint16_t w[8];
+        for (uint8_t j = 0; j < 8; j++)
+            w[j] = vdp->cram[i + j * 2] + (vdp->cram[i + j * 2 + 1] << 8);
+
+        DEBUG("- %04X %04X %04X %04X %04X %04X %04X %04X",
+            w[0], w[1], w[2], w[3], w[4], w[5], w[6], w[7])
+    }
 }

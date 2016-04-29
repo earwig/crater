@@ -90,10 +90,11 @@ static inline bool get_shadow_flag(const Z80 *z80, uint8_t flag)
 /*
     Update the F register flags according to the set bits in the mask.
 */
-static inline void update_flags(Z80 *z80, bool c, bool n, bool pv, bool f3,
-                                bool h, bool f5, bool z, bool s, uint8_t mask)
+static inline void set_flags(Z80 *z80,
+    bool c, bool n, bool pv, bool f3, bool h, bool f5, bool z, bool s,
+    uint8_t mask)
 {
-    z80->regs.f = (~mask & z80->regs.f) | (mask & (
+    uint8_t new = (
         c  << FLAG_CARRY     |
         n  << FLAG_SUBTRACT  |
         pv << FLAG_PARITY    |
@@ -101,8 +102,12 @@ static inline void update_flags(Z80 *z80, bool c, bool n, bool pv, bool f3,
         h  << FLAG_HALFCARRY |
         f5 << FLAG_UNDOC_5   |
         z  << FLAG_ZERO      |
-        s  << FLAG_SIGN));
+        s  << FLAG_SIGN
+    );
+    z80->regs.f = (~mask & z80->regs.f) | (mask & new);
 }
+
+#include "z80_flags.inc.c"
 
 /*
     Push a two-byte value onto the stack.
@@ -138,7 +143,7 @@ static void handle_io_errors(Z80 *z80)
 /*
     Read and return a byte from the given port, and check for errors.
 */
-static uint8_t read_port(Z80 *z80, uint8_t port)
+static inline uint8_t read_port(Z80 *z80, uint8_t port)
 {
     uint8_t value = io_port_read(z80->io, port);
     handle_io_errors(z80);
@@ -148,7 +153,7 @@ static uint8_t read_port(Z80 *z80, uint8_t port)
 /*
     Write a byte to the given port, and check for errors.
 */
-static void write_port(Z80 *z80, uint8_t port, uint8_t value)
+static inline void write_port(Z80 *z80, uint8_t port, uint8_t value)
 {
     io_port_write(z80->io, port, value);
     handle_io_errors(z80);
