@@ -6,16 +6,6 @@
 #include "logging.h"
 #include "util.h"
 
-#define REG_AF  0
-#define REG_BC  1
-#define REG_DE  2
-#define REG_HL  3
-#define REG_SP  4
-#define REG_AF_ 5
-#define REG_BC_ 6
-#define REG_DE_ 7
-#define REG_HL_ 8
-
 #define FLAG_CARRY     0
 #define FLAG_SUBTRACT  1
 #define FLAG_PARITY    2
@@ -49,27 +39,26 @@ void z80_init(Z80 *z80, MMU *mmu, IO *io)
 */
 void z80_power(Z80 *z80)
 {
-    Z80RegFile *regfile = &z80->regfile;
+    z80->regs.af = 0xFFFF;
+    z80->regs.bc = 0xFFFF;
+    z80->regs.de = 0xFFFF;
+    z80->regs.hl = 0xFFFF;
 
-    regfile->a  = regfile->f  = 0xFF;
-    regfile->b  = regfile->c  = 0xFF;
-    regfile->d  = regfile->e  = 0xFF;
-    regfile->h  = regfile->l  = 0xFF;
-    regfile->a_ = regfile->f_ = 0xFF;
-    regfile->b_ = regfile->c_ = 0xFF;
-    regfile->d_ = regfile->e_ = 0xFF;
-    regfile->h_ = regfile->l_ = 0xFF;
+    z80->regs.af_ = 0xFFFF;
+    z80->regs.bc_ = 0xFFFF;
+    z80->regs.de_ = 0xFFFF;
+    z80->regs.hl_ = 0xFFFF;
 
-    regfile->ix = 0xFFFF;
-    regfile->iy = 0xFFFF;
-    regfile->sp = 0xFFF0;
-    regfile->pc = 0x0000;
+    z80->regs.ix = 0xFFFF;
+    z80->regs.iy = 0xFFFF;
+    z80->regs.sp = 0xFFF0;
+    z80->regs.pc = 0x0000;
 
-    regfile->i = 0xFF;
-    regfile->r = 0xFF;
+    z80->regs.i = 0xFF;
+    z80->regs.r = 0xFF;
 
-    regfile->im_a = regfile->im_b = 0;
-    regfile->iff1 = regfile->iff2 = 0;
+    z80->regs.im_a = z80->regs.im_b = 0;
+    z80->regs.iff1 = z80->regs.iff2 = 0;
 
     z80->except = false;
     z80->last_index = NULL;
@@ -81,50 +70,11 @@ void z80_power(Z80 *z80)
 }
 
 /*
-    Get the value of a register pair.
-*/
-static inline uint16_t get_pair(Z80 *z80, uint8_t pair)
-{
-    switch (pair) {
-        case REG_AF:  return (z80->regfile.a  << 8) + z80->regfile.f;
-        case REG_BC:  return (z80->regfile.b  << 8) + z80->regfile.c;
-        case REG_DE:  return (z80->regfile.d  << 8) + z80->regfile.e;
-        case REG_HL:  return (z80->regfile.h  << 8) + z80->regfile.l;
-        case REG_AF_: return (z80->regfile.a_ << 8) + z80->regfile.f_;
-        case REG_BC_: return (z80->regfile.b_ << 8) + z80->regfile.c_;
-        case REG_DE_: return (z80->regfile.d_ << 8) + z80->regfile.e_;
-        case REG_HL_: return (z80->regfile.h_ << 8) + z80->regfile.l_;
-        case REG_SP:  return z80->regfile.sp;
-    }
-    FATAL("invalid call: get_pair(z80, %u)", pair)
-}
-
-/*
-    Set the value of a register pair.
-*/
-static inline void set_pair(Z80 *z80, uint8_t pair, uint16_t value)
-{
-    switch (pair) {
-        case REG_AF:  z80->regfile.a  = value >> 8; z80->regfile.f  = value; break;
-        case REG_BC:  z80->regfile.b  = value >> 8; z80->regfile.c  = value; break;
-        case REG_DE:  z80->regfile.d  = value >> 8; z80->regfile.e  = value; break;
-        case REG_HL:  z80->regfile.h  = value >> 8; z80->regfile.l  = value; break;
-        case REG_AF_: z80->regfile.a_ = value >> 8; z80->regfile.f_ = value; break;
-        case REG_BC_: z80->regfile.b_ = value >> 8; z80->regfile.c_ = value; break;
-        case REG_DE_: z80->regfile.d_ = value >> 8; z80->regfile.e_ = value; break;
-        case REG_HL_: z80->regfile.h_ = value >> 8; z80->regfile.l_ = value; break;
-        case REG_SP:  z80->regfile.sp = value; break;
-        default:
-            FATAL("invalid call: set_pair(z80, %u, 0x%04X)", pair, value)
-    }
-}
-
-/*
     Return whether a particular flag is set in the F register.
 */
 static inline bool get_flag(const Z80 *z80, uint8_t flag)
 {
-    return z80->regfile.f & (1 << flag);
+    return z80->regs.f & (1 << flag);
 }
 
 /*
@@ -132,7 +82,7 @@ static inline bool get_flag(const Z80 *z80, uint8_t flag)
 */
 static inline bool get_shadow_flag(const Z80 *z80, uint8_t flag)
 {
-    return z80->regfile.f_ & (1 << flag);
+    return z80->regs.f_ & (1 << flag);
 }
 
 /*
@@ -141,7 +91,7 @@ static inline bool get_shadow_flag(const Z80 *z80, uint8_t flag)
 static inline void update_flags(Z80 *z80, bool c, bool n, bool pv, bool f3,
                                 bool h, bool f5, bool z, bool s, uint8_t mask)
 {
-    z80->regfile.f = (~mask & z80->regfile.f) | (mask & (
+    z80->regs.f = (~mask & z80->regs.f) | (mask & (
         c  << FLAG_CARRY     |
         n  << FLAG_SUBTRACT  |
         pv << FLAG_PARITY    |
@@ -157,8 +107,8 @@ static inline void update_flags(Z80 *z80, bool c, bool n, bool pv, bool f3,
 */
 static inline void stack_push(Z80 *z80, uint16_t value)
 {
-    z80->regfile.sp -= 2;
-    mmu_write_double(z80->mmu, z80->regfile.sp, value);
+    z80->regs.sp -= 2;
+    mmu_write_double(z80->mmu, z80->regs.sp, value);
 }
 
 /*
@@ -166,8 +116,8 @@ static inline void stack_push(Z80 *z80, uint16_t value)
 */
 static inline uint16_t stack_pop(Z80 *z80)
 {
-    uint16_t value = mmu_read_double(z80->mmu, z80->regfile.sp);
-    z80->regfile.sp += 2;
+    uint16_t value = mmu_read_double(z80->mmu, z80->regs.sp);
+    z80->regs.sp += 2;
     return value;
 }
 
@@ -208,29 +158,29 @@ static void write_port(Z80 *z80, uint8_t port, uint8_t value)
 static inline uint8_t* extract_reg(Z80 *z80, uint8_t opcode)
 {
     switch (opcode & 0x38) {
-        case 0x00: return &z80->regfile.b;
-        case 0x08: return &z80->regfile.c;
-        case 0x10: return &z80->regfile.d;
-        case 0x18: return &z80->regfile.e;
-        case 0x20: return &z80->regfile.h;
-        case 0x28: return &z80->regfile.l;
-        case 0x38: return &z80->regfile.a;
+        case 0x00: return &z80->regs.b;
+        case 0x08: return &z80->regs.c;
+        case 0x10: return &z80->regs.d;
+        case 0x18: return &z80->regs.e;
+        case 0x20: return &z80->regs.h;
+        case 0x28: return &z80->regs.l;
+        case 0x38: return &z80->regs.a;
     }
     FATAL("invalid call: extract_reg(z80, 0x%02X)", opcode)
 }
 
 /*
-    Extract a register pair from the given opcode and return its identifer.
+    Extract a register pair from the given opcode and return a pointer to it.
 */
-static inline uint8_t extract_pair(uint8_t opcode)
+static inline uint16_t* extract_pair(Z80 *z80, uint8_t opcode)
 {
     switch (opcode & 0x30) {
-        case 0x00: return REG_BC;
-        case 0x10: return REG_DE;
-        case 0x20: return REG_HL;
-        case 0x30: return REG_SP;
+        case 0x00: return &z80->regs.bc;
+        case 0x10: return &z80->regs.de;
+        case 0x20: return &z80->regs.hl;
+        case 0x30: return &z80->regs.sp;
     }
-    FATAL("invalid call: extract_pair(0x%02X)", opcode)
+    FATAL("invalid call: extract_pair(z80, 0x%02X)", opcode)
 }
 
 /*
@@ -264,9 +214,9 @@ static inline uint16_t get_index_addr(Z80 *z80, uint16_t offset_addr)
 */
 static inline uint8_t get_interrupt_mode(const Z80 *z80)
 {
-    if (!z80->regfile.im_a)
+    if (!z80->regs.im_a)
         return 0;
-    if (!z80->regfile.im_b)
+    if (!z80->regs.im_b)
         return 1;
     return 2;
 }
@@ -277,15 +227,15 @@ static inline uint8_t get_interrupt_mode(const Z80 *z80)
 static inline uint8_t handle_interrupt(Z80 *z80)
 {
     TRACE("Z80 triggering mode-%d interrupt", get_interrupt_mode(z80))
-    z80->regfile.iff1 = z80->regfile.iff2 = 0;
-    stack_push(z80, z80->regfile.pc);
+    z80->regs.iff1 = z80->regs.iff2 = 0;
+    stack_push(z80, z80->regs.pc);
 
     if (get_interrupt_mode(z80) < 2) {
-        z80->regfile.pc = 0x0038;
+        z80->regs.pc = 0x0038;
         return 13;
     } else {
-        uint16_t addr = (z80->regfile.i << 8) + 0xFF;
-        z80->regfile.pc = mmu_read_double(z80->mmu, addr);
+        uint16_t addr = (z80->regs.i << 8) + 0xFF;
+        z80->regs.pc = mmu_read_double(z80->mmu, addr);
         return 19;
     }
 }
@@ -295,7 +245,7 @@ static inline uint8_t handle_interrupt(Z80 *z80)
 */
 static inline void increment_refresh_counter(Z80 *z80)
 {
-    z80->regfile.r = (z80->regfile.r & 0x80) | ((z80->regfile.r + 1) & 0x7F);
+    z80->regs.r = (z80->regs.r & 0x80) | ((z80->regs.r + 1) & 0x7F);
 }
 
 #include "z80_ops.inc.c"
@@ -306,7 +256,7 @@ static inline void increment_refresh_counter(Z80 *z80)
 */
 static inline void trace_instruction(Z80 *z80)
 {
-    if (z80->regfile.pc == z80->trace.last_addr && !z80->trace.fresh) {
+    if (z80->regs.pc == z80->trace.last_addr && !z80->trace.fresh) {
         z80->trace.counter++;
         if (!(z80->trace.counter % (1 << 14)))
             TRACE_NOEOL("repeat last: %llu times\r", z80->trace.counter);
@@ -318,15 +268,15 @@ static inline void trace_instruction(Z80 *z80)
         z80->trace.fresh = false;
     }
 
-    z80->trace.last_addr = z80->regfile.pc;
+    z80->trace.last_addr = z80->regs.pc;
     z80->trace.counter = 0;
 
-    uint32_t quad = mmu_read_quad(z80->mmu, z80->regfile.pc);
+    uint32_t quad = mmu_read_quad(z80->mmu, z80->regs.pc);
     uint8_t bytes[4] = {quad, quad >> 8, quad >> 16, quad >> 24};
     DisasInstr *instr = disassemble_instruction(bytes);
 
     TRACE("0x%04X:  %-14s        %s",
-        z80->regfile.pc, instr->bytestr, instr->line)
+        z80->regs.pc, instr->bytestr, instr->line)
     disas_instr_free(instr);
 }
 
@@ -341,11 +291,11 @@ bool z80_do_cycles(Z80 *z80, double cycles)
 {
     cycles += z80->pending_cycles;
     while (cycles > 0 && !z80->except) {
-        if (io_check_irq(z80->io) && z80->regfile.iff1) {
+        if (io_check_irq(z80->io) && z80->regs.iff1) {
             cycles -= handle_interrupt(z80);
             continue;
         }
-        uint8_t opcode = mmu_read_byte(z80->mmu, z80->regfile.pc);
+        uint8_t opcode = mmu_read_byte(z80->mmu, z80->regs.pc);
         increment_refresh_counter(z80);
         if (TRACE_LEVEL)
             trace_instruction(z80);
@@ -362,18 +312,18 @@ bool z80_do_cycles(Z80 *z80, double cycles)
 */
 void z80_dump_registers(const Z80 *z80)
 {
-    const Z80RegFile *rf = &z80->regfile;
+    const Z80RegFile *rf = &z80->regs;
     DEBUG("Dumping Z80 register values:")
 
-    DEBUG("- AF:   0x%02X%02X (%03d, %03d)", rf->a, rf->f, rf->a, rf->f)
-    DEBUG("- BC:   0x%02X%02X (%03d, %03d)", rf->b, rf->c, rf->b, rf->c)
-    DEBUG("- DE:   0x%02X%02X (%03d, %03d)", rf->d, rf->e, rf->d, rf->e)
-    DEBUG("- HL:   0x%02X%02X (%03d, %03d)", rf->h, rf->l, rf->h, rf->l)
+    DEBUG("- AF:   0x%04X (%03d, %03d)", rf->af, rf->a, rf->f)
+    DEBUG("- BC:   0x%04X (%03d, %03d)", rf->bc, rf->b, rf->c)
+    DEBUG("- DE:   0x%04X (%03d, %03d)", rf->de, rf->d, rf->e)
+    DEBUG("- HL:   0x%04X (%03d, %03d)", rf->hl, rf->h, rf->l)
 
-    DEBUG("- AF':  0x%02X%02X (%03d, %03d)", rf->a_, rf->f_, rf->a_, rf->f_)
-    DEBUG("- BC':  0x%02X%02X (%03d, %03d)", rf->b_, rf->c_, rf->b_, rf->c_)
-    DEBUG("- DE':  0x%02X%02X (%03d, %03d)", rf->d_, rf->e_, rf->d_, rf->e_)
-    DEBUG("- HL':  0x%02X%02X (%03d, %03d)", rf->h_, rf->l_, rf->h_, rf->l_)
+    DEBUG("- AF':  0x%04X (%03d, %03d)", rf->af_, rf->a_, rf->f_)
+    DEBUG("- BC':  0x%04X (%03d, %03d)", rf->bc_, rf->b_, rf->c_)
+    DEBUG("- DE':  0x%04X (%03d, %03d)", rf->de_, rf->d_, rf->e_)
+    DEBUG("- HL':  0x%04X (%03d, %03d)", rf->hl_, rf->h_, rf->l_)
 
     DEBUG("- IX:   0x%04X (%05d)", rf->ix, rf->ix)
     DEBUG("- IY:   0x%04X (%05d)", rf->iy, rf->iy)

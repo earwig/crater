@@ -15,10 +15,38 @@
 
 /* Structs */
 
+#ifdef __BIG_ENDIAN__
+#define REG1(hi, lo) hi
+#define REG2(hi, lo) lo
+#else
+#define REG1(hi, lo) lo
+#define REG2(hi, lo) hi
+#endif
+
+#define REG_PAIR(hi, lo, pair)    \
+    union {                       \
+        struct {                  \
+            uint8_t REG1(hi, lo); \
+            uint8_t REG2(hi, lo); \
+        };                        \
+        uint16_t pair;            \
+    };
+
 typedef struct {
-    uint8_t  a,  f,  b,  c,  d,  e,  h,  l;
-    uint8_t  a_, f_, b_, c_, d_, e_, h_, l_;
-    uint16_t ix, iy, sp, pc;
+    REG_PAIR(a, f, af)
+    REG_PAIR(b, c, bc)
+    REG_PAIR(d, e, de)
+    REG_PAIR(h, l, hl)
+
+    REG_PAIR(a_, f_, af_)
+    REG_PAIR(b_, c_, bc_)
+    REG_PAIR(d_, e_, de_)
+    REG_PAIR(h_, l_, hl_)
+
+    REG_PAIR(ixh, ixl, ix)
+    REG_PAIR(iyh, iyl, iy)
+
+    uint16_t sp, pc;
     uint8_t  i,  r;
     bool     im_a, im_b;
     bool     iff1, iff2;
@@ -31,7 +59,7 @@ typedef struct {
 } Z80TraceInfo;
 
 typedef struct {
-    Z80RegFile regfile;
+    Z80RegFile regs;
     MMU *mmu;
     IO *io;
     bool except;
@@ -40,6 +68,10 @@ typedef struct {
     double pending_cycles;
     Z80TraceInfo trace;
 } Z80;
+
+#undef REG_PAIR
+#undef REG1
+#undef REG2
 
 /* Functions */
 
