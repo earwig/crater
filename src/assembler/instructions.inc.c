@@ -7,7 +7,7 @@
     `make` should trigger a rebuild when it is modified; if not, use:
     `python scripts/update_asm_instructions.py`.
 
-    @AUTOGEN_DATE Fri May 22 01:01:58 2015 UTC
+    @AUTOGEN_DATE Fri Apr 29 03:32:10 2016 UTC
 */
 
 /* @AUTOGEN_INST_BLOCK_START */
@@ -607,7 +607,7 @@ INST_FUNC(inir)
 INST_FUNC(jp)
 {
     INST_TAKES_ARGS(
-        AT_CONDITION|AT_IMMEDIATE|AT_INDEXED|AT_INDIRECT,
+        AT_CONDITION|AT_IMMEDIATE|AT_INDIRECT,
         AT_IMMEDIATE|AT_OPTIONAL,
         AT_NONE
     )
@@ -635,12 +635,14 @@ INST_FUNC(jp)
             INST_RETURN(3, 0xFA, INST_IMM_U16_B1(INST_IMM(1)), INST_IMM_U16_B2(INST_IMM(1)))
         INST_ERROR(ARG_VALUE)
     }
-    if (INST_NARGS == 1 && INST_TYPE(0) == AT_INDIRECT &&
-            (INST_INDIRECT(0).type == AT_REGISTER && INST_INDIRECT(0).addr.reg == REG_HL)) {
-        INST_RETURN(1, 0xE9)
-    }
-    if (INST_NARGS == 1 && INST_TYPE(0) == AT_INDEXED) {
-        INST_RETURN(3, INST_INDEX_PREFIX(0), 0xE9, INST_INDEX(0).offset)
+    if (INST_NARGS == 1 && INST_TYPE(0) == AT_INDIRECT) {
+        if ((INST_INDIRECT(0).type == AT_REGISTER && INST_INDIRECT(0).addr.reg == REG_HL))
+            INST_RETURN(1, 0xE9)
+        if ((INST_INDIRECT(0).type == AT_REGISTER && INST_INDIRECT(0).addr.reg == REG_IX))
+            INST_RETURN(2, INST_IX_PREFIX, 0xE9)
+        if ((INST_INDIRECT(0).type == AT_REGISTER && INST_INDIRECT(0).addr.reg == REG_IY))
+            INST_RETURN(2, INST_IY_PREFIX, 0xE9)
+        INST_ERROR(ARG_VALUE)
     }
     INST_ERROR(ARG_TYPE)
 }
@@ -873,14 +875,10 @@ INST_FUNC(ld)
             INST_RETURN(2, INST_IX_PREFIX, 0x6D)
         if (INST_REG(0) == REG_IYL && INST_REG(1) == REG_IYL)
             INST_RETURN(2, INST_IY_PREFIX, 0x6D)
-        if (INST_REG(0) == REG_A && INST_REG(1) == REG_IX)
-            INST_RETURN(3, INST_IX_PREFIX, 0xED, 0x57)
-        if (INST_REG(0) == REG_A && INST_REG(1) == REG_IY)
-            INST_RETURN(3, INST_IY_PREFIX, 0xED, 0x57)
-        if (INST_REG(0) == REG_IX && INST_REG(1) == REG_A)
-            INST_RETURN(3, INST_IX_PREFIX, 0xED, 0x47)
-        if (INST_REG(0) == REG_IY && INST_REG(1) == REG_A)
-            INST_RETURN(3, INST_IY_PREFIX, 0xED, 0x47)
+        if (INST_REG(0) == REG_A && INST_REG(1) == REG_I)
+            INST_RETURN(2, 0xED, 0x57)
+        if (INST_REG(0) == REG_I && INST_REG(1) == REG_A)
+            INST_RETURN(2, 0xED, 0x47)
         if (INST_REG(0) == REG_A && INST_REG(1) == REG_R)
             INST_RETURN(2, 0xED, 0x5F)
         if (INST_REG(0) == REG_R && INST_REG(1) == REG_A)

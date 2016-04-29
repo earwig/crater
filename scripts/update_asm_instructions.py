@@ -201,7 +201,7 @@ class Instruction(object):
             return "INST_INDIRECT({0}).type == AT_IMMEDIATE".format(num)
 
         err = "Unknown condition for indirect argument: {0}"
-        return ASMInstError(err.format(cond))
+        raise ASMInstError(err.format(cond))
 
     def _build_indexed_check(self, num, cond):
         """
@@ -225,7 +225,7 @@ class Instruction(object):
             return "INST_PORT({0}).type == AT_IMMEDIATE".format(num)
 
         err = "Unknown condition for port argument: {0}"
-        return ASMInstError(err.format(cond))
+        raise ASMInstError(err.format(cond))
 
     _SUBCASE_LOOKUP_TABLE = {
         "register": _build_register_check,
@@ -257,12 +257,14 @@ class Instruction(object):
                     raise ASMInstError(msg.format(typ, cond))
                 return merged
             if typ == "register":
-                if cond == "i":
+                if cond == "ixy":
                     return ["ix", "iy"]
                 if cond == "ih":
                     return ["ixh", "iyh"]
                 if cond == "il":
                     return ["ixl", "iyl"]
+            if typ == "indirect" and cond == "reg.ixy":
+                return ["reg.ix", "reg.iy"]
             return [cond]
 
         splits = [split(typ, cond) for typ, cond in zip(types, conds)]
@@ -283,6 +285,11 @@ class Instruction(object):
             base, stride = _parse_step_args(call)
             index = _rindex(types, "register")
             return base + self.REGISTER_OFFSETS[conds[index]] * stride
+
+        def handle_index(which):
+            prefix = "INST_I{0}_PREFIX".format(which.upper())
+            if ret[0] != prefix:
+                ret.insert(0, prefix)
 
         ret = ret[:]
         for i, byte in enumerate(ret):
@@ -344,10 +351,10 @@ class Instruction(object):
                     raise ASMInstError(msg.format(byte))
 
         for i, cond in enumerate(conds):
-            if types[i] == "register" and cond[0] == "i":
-                prefix = "INST_I{0}_PREFIX".format(cond[1].upper())
-                if ret[0] != prefix:
-                    ret.insert(0, prefix)
+            if types[i] == "register" and cond.startswith(("ix", "iy")):
+                handle_index(cond[1])
+            elif types[i] == "indirect" and cond in ("reg.ix", "reg.iy"):
+                handle_index(cond[5])
             elif types[i] == "indexed":
                 ret.insert(0, "INST_INDEX_PREFIX({0})".format(i))
                 ret.insert(2, "INST_INDEX({0}).offset".format(i))

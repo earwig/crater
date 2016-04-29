@@ -35,13 +35,13 @@ add:
           cases:
             - if:     [a, a|b|c|d|e|h|ih|l|il]
               return: [reg(0x80)]
-            - if:     [hl|i, bc]
+            - if:     [hl|ixy, bc]
               return: [0x09]
-            - if:     [hl|i, de]
+            - if:     [hl|ixy, de]
               return: [0x19]
-            - if:     [hl|i, hl|i]
+            - if:     [hl|ixy, hl|ixy]
               return: [0x29]
-            - if:     [hl|i, sp]
+            - if:     [hl|ixy, sp]
               return: [0x39]
         - type: [register, immediate]
           cases:
@@ -143,7 +143,7 @@ dec:
           cases:
             - if:     [a|b|c|d|e|h|ih|l|il]
               return: [reg(0x05 0x08)]
-            - if:     [bc|de|hl|i|sp]
+            - if:     [bc|de|hl|ixy|sp]
               return: [reg(0x0B 0x10)]
         - type: [indirect_hl_or_indexed]
           cases:
@@ -177,7 +177,7 @@ ex:
               return: [0xEB]
         - type: [indirect, register]
           cases:
-            - if:     [reg.sp, hl|i]
+            - if:     [reg.sp, hl|ixy]
               return: [0xE3]
 
 exx:
@@ -221,7 +221,7 @@ inc:
           cases:
             - if:     [a|b|c|d|e|h|ih|l|il]
               return: [reg(0x04 0x08)]
-            - if:     [bc|de|hl|i|sp]
+            - if:     [bc|de|hl|ixy|sp]
               return: [reg(0x03 0x10)]
         - type: [indirect_hl_or_indexed]
           cases:
@@ -255,9 +255,9 @@ jp:
           cases:
             - if:     [nz|z|nc|c|po|pe|p|m, u16]
               return: [cond(0xC2 0x08), u16]
-        - type: [indirect_hl_or_indexed]
+        - type: [indirect]
           cases:
-            - if:     [_]
+            - if:     [reg.hl|reg.ixy]
               return: [0xE9]
 
 jr:
@@ -323,13 +323,13 @@ ld:
               return: [0xED, 0x5F]
             - if:     [r, a]
               return: [0xED, 0x4F]
-            - if:     [sp, hl|i]
+            - if:     [sp, hl|ixy]
               return: [0xF9]
         - type: [register, immediate]
           cases:
             - if:     [a|b|c|d|e|h|ih|l|il, u8]
               return: [reg(0x06 0x08), u8]
-            - if:     [bc|de|hl|i|sp, u16]
+            - if:     [bc|de|hl|ixy|sp, u16]
               return: [reg(0x01 0x10), u16]
         - type: [register, indirect_hl_or_indexed]
           cases:
@@ -341,7 +341,7 @@ ld:
               return: [0x0A]
             - if:     [a, reg.de]
               return: [0x1A]
-            - if:     [hl|i, imm]
+            - if:     [hl|ixy, imm]
               return: [0x2A, u16]
             - if:     [a, imm]
               return: [0x3A, u16]
@@ -361,7 +361,7 @@ ld:
               return: [0x02]
             - if:     [reg.de, a]
               return: [0x12]
-            - if:     [imm, hl|i]
+            - if:     [imm, hl|ixy]
               return: [0x22, u16]
             - if:     [imm, a]
               return: [0x32, u16]
@@ -443,7 +443,7 @@ pop:
     cases:
         - type: [register]
           cases:
-            - if:     [bc|de|hl|i|af]
+            - if:     [bc|de|hl|ixy|af]
               return: [reg(0xC1 0x10)]
 
 push:
@@ -451,7 +451,7 @@ push:
     cases:
         - type: [register]
           cases:
-            - if:     [bc|de|hl|i|af]
+            - if:     [bc|de|hl|ixy|af]
               return: [reg(0xC5 0x10)]
 
 res:
