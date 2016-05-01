@@ -98,15 +98,67 @@ static uint16_t get_sgt_base(const VDP *vdp)
 }
 
 /*
-    Return the CRAM address of the backdrop color.
+    Return the backdrop color as a CRAM index.
 */
-static uint8_t get_backdrop_addr(const VDP *vdp)
+static uint8_t get_backdrop_color(const VDP *vdp)
 {
     return ((vdp->regs[0x07] & 0x0F) << 1) + 0x20;
 }
 
 /*
-    TODO: ...
+    Return the horizontal background scroll value.
+*/
+static uint8_t get_bg_hscroll(const VDP *vdp)
+{
+    return vdp->regs[0x08];
+}
+
+/*
+    Return the vertical background scroll value.
+*/
+static uint8_t get_bg_vscroll(const VDP *vdp)
+{
+    return vdp->regs[0x09];
+}
+
+/*
+    Return the packed background tile at the given row and column.
+*/
+static uint16_t get_background_tile(const VDP *vdp, uint8_t row, uint8_t col)
+{
+    uint8_t *pnt = vdp->vram + get_pnt_base(vdp);
+    uint16_t index = row * 32 + col;
+    return pnt[2 * index] + (pnt[2 * index + 1] << 8);
+}
+
+/*
+    Get the CRAM color index of the given (row, col) in the given pattern.
+*/
+static uint8_t read_pattern(const VDP *vdp, uint16_t pattern,
+    uint8_t row, uint8_t col)
+{
+    uint8_t *planes = &vdp->vram[32 * pattern + 4 * row];
+    return ((planes[0] >> (7 - col)) & 1) +
+          (((planes[1] >> (7 - col)) & 1) << 1) +
+          (((planes[2] >> (7 - col)) & 1) << 2) +
+          (((planes[3] >> (7 - col)) & 1) << 3);
+}
+
+/*
+    Return the BGR444 color at the given CRAM index.
+
+    The index should be between 0 and 15, as there are 16 colors per palette.
+*/
+static uint16_t get_color(const VDP *vdp, uint8_t index, bool palette)
+{
+    uint8_t offset = 2 * (index + 16 * palette);
+    return vdp->cram[offset] + (vdp->cram[offset + 1] << 8);
+}
+
+/*
+    Draw a pixel onto our pixel array at the given coordinates.
+
+    The color should be in BGR444 format, as returned by get_color().
 */
 static void draw_pixel(VDP *vdp, uint8_t y, uint8_t x, uint16_t color)
 {
@@ -115,9 +167,7 @@ static void draw_pixel(VDP *vdp, uint8_t y, uint8_t x, uint16_t color)
     uint8_t b = 0x11 * ((color & 0x0F00) >> 8);
 
     uint32_t argb = (0xFF << 24) + (r << 16) + (g << 8) + b;
-
-    // TODO
-    vdp->pixels[y * (160 + 96) + x] = argb;
+    vdp->pixels[y * 160 + x] = argb;
 }
 
 /*
@@ -125,36 +175,34 @@ static void draw_pixel(VDP *vdp, uint8_t y, uint8_t x, uint16_t color)
 */
 static void draw_background(VDP *vdp)
 {
-    uint8_t *pnt = vdp->vram + get_pnt_base(vdp);
+    uint8_t src_row = (vdp->v_counter + get_bg_vscroll(vdp)) % (28 << 3);
+    uint8_t dst_row = vdp->v_counter - 0x18;
+    uint8_t vcell = src_row >> 3;
+    uint8_t hcell, col;
 
-    uint8_t row = (vdp->v_counter + vdp->regs[0x09]) % (28 * 8);
-    uint8_t col;
+    uint8_t start_col   = get_bg_hscroll(vdp) >> 3;
+    uint8_t fine_scroll = get_bg_hscroll(vdp) % 8;
 
-    for (col = 6; col < 32 - 6; col++) {
-        uint16_t index = (row >> 3) * 32 + col;
-        uint16_t tile = pnt[2 * index] + (pnt[2 * index + 1] << 8);
-        uint16_t pattern = tile & 0x01FF;
-        bool palette  = tile & 0x0800;
-        bool priority = tile & 0x1000;
-        bool vflip    = tile & 0x0400;
-        bool hflip    = tile & 0x0200;
+    for (col = 6; col < 20 + 6; col++) {
+        hcell = (32 - start_col + col) % 32;
+        uint16_t tile = get_background_tile(vdp, vcell, hcell);
+        uint16_t pattern  = tile & 0x01FF;
+        bool     palette  = tile & 0x0800;
+        bool     priority = tile & 0x1000;
+        bool     vflip    = tile & 0x0400;
+        bool     hflip    = tile & 0x0200;
 
-        uint8_t offy = vflip ? (7 - row % 8) : (row % 8);
-        uint8_t *pixels = &vdp->vram[pattern * 32 + 4 * offy];
-        uint8_t bp0 = pixels[0], bp1 = pixels[1],
-                bp2 = pixels[2], bp3 = pixels[3];
-
-        uint8_t idx, i, offx;
+        uint8_t vshift = vflip ? (7 - src_row % 8) : (src_row % 8), hshift;
+        uint8_t pixel, dst_col, index;
         uint16_t color;
 
-        for (i = 0; i < 8; i++) {
-            idx =  ((bp0 >> i) & 1) +
-                   (((bp1 >> i) & 1) << 1) +
-                   (((bp2 >> i) & 1) << 2) +
-                   (((bp3 >> i) & 1) << 3);
-            color = vdp->cram[2 * idx] + (vdp->cram[2 * idx + 1] << 8);
-            offx = hflip ? (col * 8 + (7 - i)) : (col * 8 + i);
-            draw_pixel(vdp, vdp->v_counter, offx, color);
+        for (pixel = 0; pixel < 8; pixel++) {
+            dst_col = ((col - 6) << 3) + pixel + fine_scroll;
+            hshift = hflip ? (7 - pixel) : pixel;
+
+            index = read_pattern(vdp, pattern, vshift, hshift);
+            color = get_color(vdp, index, palette);
+            draw_pixel(vdp, dst_row, dst_col, color);
         }
     }
 }
@@ -348,17 +396,17 @@ void vdp_dump_registers(const VDP *vdp)
     DEBUG("- $04:  0x%02X (BPG)", regs[0x04])
     DEBUG("- $05:  0x%02X (SAT: 0x%04X)", regs[0x05], get_sat_base(vdp))
     DEBUG("- $06:  0x%02X (SGT: 0x%04X)", regs[0x06], get_sgt_base(vdp))
-    DEBUG("- $07:  0x%02X (BDC: 0x%02X)", regs[0x07], get_backdrop_addr(vdp))
+    DEBUG("- $07:  0x%02X (BDC: 0x%02X)", regs[0x07], get_backdrop_color(vdp))
     DEBUG("- $08:  0x%02X (HS)", regs[0x08])
     DEBUG("- $09:  0x%02X (VS)", regs[0x09])
     DEBUG("- $0A:  0x%02X (LC)", regs[0x0A])
 
     // TODO: remove me!
     DEBUG("Dumping CRAM:")
-    for (uint8_t i = 0x00; i < 0x40; i += 0x10) {
+    for (uint8_t i = 0; i < 32; i += 8) {
         uint16_t w[8];
         for (uint8_t j = 0; j < 8; j++)
-            w[j] = vdp->cram[i + j * 2] + (vdp->cram[i + j * 2 + 1] << 8);
+            w[j] = get_color(vdp, (i + j) % 16, i & 16);
 
         DEBUG("- %04X %04X %04X %04X %04X %04X %04X %04X",
             w[0], w[1], w[2], w[3], w[4], w[5], w[6], w[7])

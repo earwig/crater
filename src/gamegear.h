@@ -12,8 +12,8 @@
 #include "rom.h"
 #include "z80.h"
 
-#define GG_SCREEN_WIDTH  (160 + 96)
-#define GG_SCREEN_HEIGHT (144 + 48)
+#define GG_SCREEN_WIDTH  160
+#define GG_SCREEN_HEIGHT 144
 
 #define GG_FPS 60
 #define GG_EXC_BUFF_SIZE 128

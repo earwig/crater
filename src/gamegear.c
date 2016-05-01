@@ -154,8 +154,7 @@ static bool simulate_frame(GameGear *gg)
 
     The GameGear must start out in an unpowered state; it will be powered only
     during the simulation. This function blocks until the simulation ends,
-    either by an exception occurring or someone setting the GameGear's
-    'powered' flag to false.
+    either by an exception occurring or someone calling gamegear_power_off().
 
     If a callback has been set with gamegear_set_callback(), then we'll trigger
     it after every frame has been simulated (sixty times per second).
