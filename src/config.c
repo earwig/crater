@@ -38,7 +38,7 @@ static void print_help(const char *arg1)
 "    -g, --debug       show logging information while running; add twice (-gg)\n"
 "                      to show more detailed logs, including an emulator trace\n"
 "    -s, --scale <n>   scale the game screen by an integer factor\n"
-"                      (applies to windowed mode only)\n"
+"                      (applies to windowed mode only; defaults to 4)\n"
 "    -a, --assemble <in> [<out>]     convert z80 assembly source code into a\n"
 "                                    binary file that can be run by crater\n"
 "    -d, --disassemble <in> [<out>]  convert a binary file into z80 assembly\n"
@@ -307,7 +307,7 @@ static int parse_args(Config *config, int argc, char *argv[])
     filename based on the input file, replacing its extension with ".gg" or
     ".asm" (or adding it, if none is present).
 */
-static void guess_assembler_output_file(Config* config)
+static void guess_assembler_output_file(Config *config)
 {
     char *src = config->src_path, *ptr = src + strlen(src) - 1,
          *ext = config->assemble ? ".gg" : ".asm";
@@ -326,28 +326,39 @@ static void guess_assembler_output_file(Config* config)
 
 /*
     Ensure that the combination of arguments in a config object are valid.
-
-    Some modifications are made in the case of missing arguments, like guessing
-    the filenames for assembler output files.
 */
-static bool sanity_check(Config* config)
+static bool sanity_check(Config *config)
 {
     bool assembler = config->assemble || config->disassemble;
 
-    if (config->fullscreen && config->scale > 1) {
+    if (config->fullscreen && config->scale) {
         ERROR("cannot specify a scale in fullscreen mode")
         return false;
     } else if (config->assemble && config->disassemble) {
         ERROR("cannot assemble and disassemble at the same time")
         return false;
-    } else if (assembler && (config->fullscreen || config->scale > 1)) {
+    } else if (assembler && (config->fullscreen || config->scale)) {
         ERROR("cannot specify emulator options in assembler mode")
         return false;
     } else if (assembler && !config->src_path) {
         ERROR("assembler mode requires an input file")
         return false;
     }
+    return true;
+}
 
+/*
+    Set some default values for missing arguments.
+
+    Some additional sanity checking is done.
+*/
+static bool set_defaults(Config *config)
+{
+    bool assembler = config->assemble || config->disassemble;
+
+    if (!config->scale) {
+        config->scale = 4;
+    }
     if (assembler && !config->dst_path) {
         guess_assembler_output_file(config);
     }
@@ -355,7 +366,6 @@ static bool sanity_check(Config* config)
         ERROR("refusing to overwrite the assembler input file; pass -r to override")
         return false;
     }
-
     return true;
 }
 
@@ -376,14 +386,14 @@ int config_create(Config** config_ptr, int argc, char* argv[])
     config->assemble = false;
     config->disassemble = false;
     config->fullscreen = false;
-    config->scale = 1;
+    config->scale = 0;
     config->rom_path = NULL;
     config->src_path = NULL;
     config->dst_path = NULL;
     config->overwrite = false;
 
     retval = parse_args(config, argc, argv);
-    if (retval == CONFIG_OK && !sanity_check(config))
+    if (retval == CONFIG_OK && !(sanity_check(config) && set_defaults(config)))
         retval = CONFIG_EXIT_FAILURE;
     if (retval != CONFIG_OK) {
         config_destroy(config);

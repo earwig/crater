@@ -3,8 +3,10 @@
 
 #pragma once
 
-#include "gamegear.h"
+#include <stdbool.h>
+
+#include "rom.h"
 
 /* Functions */
 
-void emulate(GameGear*);
+void emulate(ROM*, bool, unsigned);

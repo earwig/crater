@@ -406,7 +406,7 @@ static bool write_disassembly(const char *path, char **lines)
 */
 bool disassemble_file(const char *src_path, const char *dst_path)
 {
-    ROM *rom;
+    ROM rom;
     const char *errmsg;
     char **lines;
 
@@ -416,8 +416,8 @@ bool disassemble_file(const char *src_path, const char *dst_path)
         return false;
     }
 
-    lines = disassemble(rom);
-    rom_close(rom);
+    lines = disassemble(&rom);
+    rom_close(&rom);
 
     DEBUG("Writing output file")
     return write_disassembly(dst_path, lines);

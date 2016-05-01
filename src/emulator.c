@@ -2,105 +2,155 @@
    Released under the terms of the MIT License. See LICENSE for details. */
 
 #include <signal.h>
+#include <stdint.h>
 #include <SDL.h>
 
 #include "emulator.h"
+#include "gamegear.h"
 #include "logging.h"
+#include "util.h"
 
-#define SCREEN_WIDTH  3 * (160 + 96)  // TODO: define elsewhere; use scale
-#define SCREEN_HEIGHT 3 * (144 + 48)
+typedef struct {
+    GameGear *gg;
+    SDL_Window *window;
+    SDL_Renderer *renderer;
+    SDL_Texture *texture;
+    uint32_t *pixels;
+} Emulator;
 
-static GameGear *global_gg;
-
-static SDL_Window *window;
-SDL_Renderer* renderer;
+static Emulator emu;
 
 /*
-    Signal handler for SIGINT.
+    Signal handler for SIGINT. Tells the GameGear to power off, if it exists.
 */
 static void handle_sigint(int sig)
 {
     (void) sig;
-    if (global_gg)
-        gamegear_power_off(global_gg);
+    if (emu.gg)
+        gamegear_power_off(emu.gg);  // Safe!
 }
 
 /*
-    TODO: ...
+    Set up SDL for drawing the game.
 */
-static void setup_graphics()
+static void setup_graphics(bool fullscreen, unsigned scale)
 {
     if (SDL_Init(SDL_INIT_VIDEO) < 0)
         FATAL("SDL failed to initialize: %s", SDL_GetError());
 
-    SDL_CreateWindowAndRenderer(SCREEN_WIDTH, SCREEN_HEIGHT,
-        SDL_WINDOW_BORDERLESS/* |SDL_WINDOW_OPENGL|SDL_WINDOW_RESIZABLE ? */,
-        &window, &renderer);
+    uint32_t flags;
+    if (fullscreen)
+        flags = SDL_WINDOW_FULLSCREEN_DESKTOP;
+    else
+        flags = SDL_WINDOW_BORDERLESS|SDL_WINDOW_RESIZABLE;
 
-    if (!window)
+    SDL_CreateWindowAndRenderer(
+        scale * GG_SCREEN_WIDTH, scale * GG_SCREEN_HEIGHT,
+        flags, &emu.window, &emu.renderer);
+
+    if (!emu.window)
         FATAL("SDL failed to create a window: %s", SDL_GetError());
-    if (!renderer)
+    if (!emu.renderer)
         FATAL("SDL failed to create a renderer: %s", SDL_GetError());
 
-    SDL_SetRenderDrawColor(renderer, 0x33, 0x33, 0x33, 0xFF);
-    SDL_RenderClear(renderer);
-    SDL_RenderPresent(renderer);
+    emu.texture = SDL_CreateTexture(emu.renderer, SDL_PIXELFORMAT_ARGB8888,
+        SDL_TEXTUREACCESS_STREAMING, GG_SCREEN_WIDTH, GG_SCREEN_HEIGHT);
+
+    if (!emu.texture)
+        FATAL("SDL failed to create a texture: %s", SDL_GetError());
+
+    emu.pixels = cr_malloc(
+        sizeof(uint32_t) * GG_SCREEN_WIDTH * GG_SCREEN_HEIGHT);
+
+    SDL_RenderSetLogicalSize(emu.renderer, GG_SCREEN_WIDTH, GG_SCREEN_HEIGHT);
+    SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "nearest");
+    SDL_SetWindowTitle(emu.window, "crater");
+    SDL_ShowCursor(SDL_DISABLE);
+
+    SDL_SetRenderDrawColor(emu.renderer, 0x00, 0x00, 0x00, 0xFF);
+    SDL_RenderClear(emu.renderer);
+    SDL_RenderPresent(emu.renderer);
 }
 
 /*
-    GameGear callback: handle SDL logic at the end of a frame.
+    Actually send the pixel data to the screen.
 */
-static void draw_frame(GameGear *gg)
+static void draw_frame()
 {
-    SDL_RenderPresent(renderer);
+    SDL_UpdateTexture(emu.texture, NULL, emu.pixels,
+        GG_SCREEN_WIDTH * sizeof(uint32_t));
+    SDL_SetRenderDrawColor(emu.renderer, 0x00, 0x00, 0x00, 0xFF);
+    SDL_RenderClear(emu.renderer);
+    SDL_RenderCopy(emu.renderer, emu.texture, NULL, NULL);
+    SDL_RenderPresent(emu.renderer);
+}
 
+/*
+    Handle SDL events, mainly quit events and button presses.
+*/
+static void handle_events(GameGear *gg)
+{
     SDL_Event e;
     while (SDL_PollEvent(&e)) {
         if (e.type == SDL_QUIT) {
             gamegear_power_off(gg);
             return;
         }
+        // TODO: buttons
     }
-
-    SDL_SetRenderDrawColor(renderer, 0x33, 0x33, 0x33, 0xFF);
-    SDL_RenderClear(renderer);
 }
 
 /*
-    TODO: ...
+    GameGear callback: Draw the current frame and handle SDL event logic.
+*/
+static void frame_callback(GameGear *gg)
+{
+    draw_frame();
+    handle_events(gg);
+}
+
+/*
+    Clean up SDL stuff allocated in setup_graphics().
 */
 static void cleanup_graphics()
 {
-    SDL_DestroyRenderer(renderer);
-    SDL_DestroyWindow(window);
-    window = NULL;
-    renderer = NULL;
+    free(emu.pixels);
+    SDL_DestroyTexture(emu.texture);
+    SDL_DestroyRenderer(emu.renderer);
+    SDL_DestroyWindow(emu.window);
     SDL_Quit();
+
+    emu.window = NULL;
+    emu.renderer = NULL;
+    emu.texture = NULL;
 }
 
 /*
-    Emulate a Game Gear. Handle I/O with the host computer.
+    Emulate a ROM in a Game Gear while handling I/O with the host computer.
 
     Block until emulation is finished.
 */
-void emulate(GameGear *gg)
+void emulate(ROM *rom, bool fullscreen, unsigned scale)
 {
-    global_gg = gg;
+    emu.gg = gamegear_create();
     signal(SIGINT, handle_sigint);
-    gamegear_set_callback(gg, draw_frame);
-    setup_graphics();
+    setup_graphics(fullscreen, scale);
 
-    gamegear_simulate(gg);
+    gamegear_attach_callback(emu.gg, frame_callback);
+    gamegear_attach_display(emu.gg, emu.pixels);
+    gamegear_load(emu.gg, rom);
 
-    if (gamegear_get_exception(gg))
-        ERROR("caught exception: %s", gamegear_get_exception(gg))
+    gamegear_simulate(emu.gg);
+
+    if (gamegear_get_exception(emu.gg))
+        ERROR("caught exception: %s", gamegear_get_exception(emu.gg))
     else
         WARN("caught signal, stopping...")
     if (DEBUG_LEVEL)
-        gamegear_print_state(gg);
+        gamegear_print_state(emu.gg);
 
     cleanup_graphics();
-    gamegear_clear_callback(gg);
     signal(SIGINT, SIG_DFL);
-    global_gg = NULL;
+    gamegear_destroy(emu.gg);
+    emu.gg = NULL;
 }

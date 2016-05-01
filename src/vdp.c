@@ -12,13 +12,16 @@
 #define CODE_REG_WRITE  2
 #define CODE_CRAM_WRITE 3
 
-extern SDL_Renderer* renderer;
-
 /*
     Initialize the Video Display Processor (VDP).
+
+    The VDP will write to its pixels array whenever it draws a scanline. It
+    defaults to NULL, but you should set it to something if you want to see its
+    output.
 */
 void vdp_init(VDP *vdp)
 {
+    vdp->pixels = NULL;
     vdp->vram = cr_malloc(sizeof(uint8_t) * VDP_VRAM_SIZE);
     vdp->cram = cr_malloc(sizeof(uint8_t) * VDP_CRAM_SIZE);
     memset(vdp->vram, 0x00, VDP_VRAM_SIZE);
@@ -105,19 +108,16 @@ static uint8_t get_backdrop_addr(const VDP *vdp)
 /*
     TODO: ...
 */
-static void draw_pixel(uint8_t y, uint8_t x, uint16_t color)
+static void draw_pixel(VDP *vdp, uint8_t y, uint8_t x, uint16_t color)
 {
     uint8_t r = 0x11 *  (color & 0x000F);
     uint8_t g = 0x11 * ((color & 0x00F0) >> 4);
     uint8_t b = 0x11 * ((color & 0x0F00) >> 8);
 
-    SDL_SetRenderDrawColor(renderer, r, g, b, 0xFF);
+    uint32_t argb = (0xFF << 24) + (r << 16) + (g << 8) + b;
 
-    uint8_t i, j;
-    for (i = 0; i < 3; i++) {
-        for (j = 0; j < 3; j++)
-            SDL_RenderDrawPoint(renderer, 3 * x + i, 3 * y + j);
-    }
+    // TODO
+    vdp->pixels[y * (160 + 96) + x] = argb;
 }
 
 /*
@@ -154,7 +154,7 @@ static void draw_background(VDP *vdp)
                    (((bp3 >> i) & 1) << 3);
             color = vdp->cram[2 * idx] + (vdp->cram[2 * idx + 1] << 8);
             offx = hflip ? (col * 8 + (7 - i)) : (col * 8 + i);
-            draw_pixel(vdp->v_counter, offx, color);
+            draw_pixel(vdp, vdp->v_counter, offx, color);
         }
     }
 }
@@ -181,6 +181,9 @@ static void draw_sprites(VDP *vdp)
 */
 static void draw_scanline(VDP *vdp)
 {
+    if (!vdp->pixels)
+        return;
+
     draw_background(vdp);
     draw_sprites(vdp);
 }

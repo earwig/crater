@@ -18,6 +18,11 @@
 
 /*
     Create and return a pointer to a new GameGear object.
+
+    The GameGear operates in headless mode by default (i.e., without any
+    noticeable output). You'll probably want to attach a frame-completion
+    callback with gamegear_attach_callback() and a display with
+    gamegear_attach_display().
 */
 GameGear* gamegear_create()
 {
@@ -93,18 +98,34 @@ void gamegear_power_off(GameGear *gg)
 
 /*
     Set a callback to be triggered whenever the GameGear completes a frame.
+
+    The callback is passed a reference to the GameGear object.
 */
-void gamegear_set_callback(GameGear *gg, GGFrameCallback callback)
+void gamegear_attach_callback(GameGear *gg, GGFrameCallback callback)
 {
     gg->callback = callback;
 }
 
 /*
-    Reset the GameGear's frame callback function.
+    Set a display to written to whenever the GameGear draws a pixel.
+
+    The array must be (GG_SCREEN_WIDTH * GG_SCREEN_HEIGHT) pixels large, where
+    each pixel is a 32-bit integer in ARGB order (i.e., A is the top 8 bits).
 */
-void gamegear_clear_callback(GameGear *gg)
+void gamegear_attach_display(GameGear *gg, uint32_t *pixels)
+{
+    gg->vdp.pixels = pixels;
+}
+
+/*
+    Reset any callbacks or displays attached to the GameGear.
+
+    This returns the GameGear to headless mode.
+*/
+void gamegear_detach(GameGear *gg)
 {
     gg->callback = NULL;
+    gg->vdp.pixels = NULL;
 }
 
 /*

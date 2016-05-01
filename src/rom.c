@@ -154,15 +154,13 @@ static bool find_and_read_header(ROM *rom)
 }
 
 /*
-    Create and load a ROM image located at the given path.
+    Load a ROM image located at the given path.
 
-    rom_ptr will point to the new object if created successfully, and NULL will
-    be returned. Otherwise, rom_ptr will not be modified and an error string
-    will be returned. The error string should not be freed.
+    NULL will be returned if the ROM is opened successfully. Otherwise, and an
+    error string will be returned. The error string should not be freed.
 */
-const char* rom_open(ROM **rom_ptr, const char *path)
+const char* rom_open(ROM *rom, const char *path)
 {
-    ROM *rom;
     FILE *fp;
     struct stat st;
 
@@ -177,8 +175,6 @@ const char* rom_open(ROM **rom_ptr, const char *path)
         fclose(fp);
         return (st.st_mode & S_IFDIR) ? rom_err_isdir : rom_err_notfile;
     }
-
-    rom = cr_malloc(sizeof(ROM));
 
     // Set defaults:
     rom->name = NULL;
@@ -227,18 +223,16 @@ const char* rom_open(ROM **rom_ptr, const char *path)
         return rom_err_sms;
     }
 
-    *rom_ptr = rom;
     return NULL;
 }
 
 /*
-    Free a ROM object previously created with rom_open().
+    Free memory previously allocated by the ROM during rom_open().
 */
 void rom_close(ROM *rom)
 {
     free(rom->name);
     free(rom->data);
-    free(rom);
 }
 
 /*

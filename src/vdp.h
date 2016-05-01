@@ -14,6 +14,8 @@
 /* Structs */
 
 typedef struct {
+    uint32_t *pixels;
+
     uint8_t  *vram;
     uint8_t  *cram;
     uint8_t  regs[VDP_REGS];

@@ -8,7 +8,6 @@
 #include "src/config.h"
 #include "src/disassembler.h"
 #include "src/emulator.h"
-#include "src/gamegear.h"
 #include "src/logging.h"
 #include "src/rom.h"
 
@@ -35,21 +34,16 @@ int main(int argc, char *argv[])
         retval = disassemble_file(config->src_path, config->dst_path);
         retval = retval ? EXIT_SUCCESS : EXIT_FAILURE;
     } else {
-        ROM *rom;
+        ROM rom;
         const char* errmsg;
 
         if ((errmsg = rom_open(&rom, config->rom_path))) {
             ERROR("couldn't load ROM image '%s': %s", config->rom_path, errmsg)
             retval = EXIT_FAILURE;
         } else {
-            GameGear *gg = gamegear_create();
-
-            printf("crater: emulating: %s\n", rom->name);
-            gamegear_load(gg, rom);
-            emulate(gg);
-
-            gamegear_destroy(gg);
-            rom_close(rom);
+            printf("crater: emulating: %s\n", rom.name);
+            emulate(&rom, config->fullscreen, config->scale);
+            rom_close(&rom);
         }
     }
 

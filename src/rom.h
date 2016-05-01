@@ -42,7 +42,7 @@ typedef struct {
 
 /* Functions */
 
-const char* rom_open(ROM**, const char*);
+const char* rom_open(ROM*, const char*);
 void rom_close(ROM*);
 const char* rom_product(const ROM*);
 const char* rom_region(const ROM*);
