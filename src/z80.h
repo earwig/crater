@@ -68,6 +68,7 @@ typedef struct {
     bool except;
     uint8_t exc_code, exc_data;
     double pending_cycles;
+    bool irq_wait;
     Z80TraceInfo trace;
 } Z80;
 

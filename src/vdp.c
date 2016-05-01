@@ -415,24 +415,20 @@ void vdp_dump_registers(const VDP *vdp)
     return;
 
     DEBUG("Dumping PNT:")
-    for (uint16_t i = 0; i < 28 * 32; i += 32) {
-        uint16_t w[32];
-        for (uint8_t j = 0; j < 32; j++)
-            w[j] = vdp->vram[get_pnt_base(vdp) + 2 * (i + j)] +
-                  (vdp->vram[get_pnt_base(vdp) + 2 * (i + j) + 1] << 8);
+    for (uint16_t i = 0; i < 18; i++) {
+        uint16_t w[20];
+        for (uint8_t j = 0; j < 20; j++)
+            w[j] = get_background_tile(vdp, i + 3, j + 6);
 
-        DEBUG("- %03X %03X %03X %03X %03X %03X %03X %03X"
-               " %03X %03X %03X %03X %03X %03X %03X %03X"
-               " %03X %03X %03X %03X %03X %03X %03X %03X"
-               " %03X %03X %03X %03X %03X %03X %03X %03X",
-            w[0x00], w[0x01], w[0x02], w[0x03], w[0x04], w[0x05], w[0x06], w[0x07],
-            w[0x08], w[0x09], w[0x0A], w[0x0B], w[0x0C], w[0x0D], w[0x0E], w[0x0F],
-            w[0x10], w[0x11], w[0x12], w[0x13], w[0x14], w[0x15], w[0x16], w[0x17],
-            w[0x18], w[0x19], w[0x1A], w[0x1B], w[0x1C], w[0x1D], w[0x1E], w[0x1F])
+        DEBUG("- %03X %03X %03X %03X %03X %03X %03X %03X %03X %03X"
+               " %03X %03X %03X %03X %03X %03X %03X %03X %03X %03X",
+            w[0x00], w[0x01], w[0x02], w[0x03], w[0x04], w[0x05], w[0x06],
+            w[0x07], w[0x08], w[0x09], w[0x0A], w[0x0B], w[0x0C], w[0x0D],
+            w[0x0E], w[0x0F], w[0x10], w[0x11], w[0x12], w[0x13])
     }
 
     DEBUG("Dumping PGT:")
-    for (uint16_t i = 0; i < /* 512 */ 16; i++) {
+    for (uint16_t i = 0; i < /* 512 */ 32; i++) {
         uint32_t w[8];
         for (uint8_t j = 0; j < 8; j++)
             w[j] = vdp->vram[32 * i + 4 * j] +

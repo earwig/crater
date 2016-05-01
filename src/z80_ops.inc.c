@@ -1182,6 +1182,7 @@ static uint8_t z80_inst_ei(Z80 *z80, uint8_t opcode)
     (void) opcode;
     z80->regs.iff1 = true;
     z80->regs.iff2 = true;
+    z80->irq_wait = true;
     z80->regs.pc++;
     return 4;
 }

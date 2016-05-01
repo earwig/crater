@@ -65,6 +65,7 @@ void z80_power(Z80 *z80)
 
     z80->except = false;
     z80->pending_cycles = 0;
+    z80->irq_wait = false;
 
     z80->trace.fresh = true;
     z80->trace.last_addr = 0;
@@ -231,7 +232,7 @@ static inline uint8_t get_interrupt_mode(const Z80 *z80)
 /*
     Handle an active IRQ line. Return the number of cycles consumed.
 */
-static inline uint8_t handle_interrupt(Z80 *z80)
+static inline uint8_t accept_interrupt(Z80 *z80)
 {
     TRACE("Z80 triggering mode-%d interrupt", get_interrupt_mode(z80))
     z80->regs.iff1 = z80->regs.iff2 = 0;
@@ -298,10 +299,13 @@ bool z80_do_cycles(Z80 *z80, double cycles)
 {
     cycles += z80->pending_cycles;
     while (cycles > 0 && !z80->except) {
-        if (io_check_irq(z80->io) && z80->regs.iff1) {
-            cycles -= handle_interrupt(z80);
+        if (io_check_irq(z80->io) && z80->regs.iff1 && !z80->irq_wait) {
+            cycles -= accept_interrupt(z80);
             continue;
         }
+        if (z80->irq_wait)
+            z80->irq_wait = false;
+
         uint8_t opcode = mmu_read_byte(z80->mmu, z80->regs.pc);
         increment_refresh_counter(z80);
         if (TRACE_LEVEL)
