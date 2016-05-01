@@ -146,6 +146,17 @@ static inline void set_flags_bitshift(Z80 *z80, uint8_t res, uint8_t bit)
         SIGN(res), 0xFF);
 }
 
+/*
+    Set the flags for a NEG instruction.
+*/
+static inline void set_flags_neg(Z80 *z80)
+{
+    uint8_t val = z80->regs.a;
+    uint8_t res = -val;
+    set_flags(z80, CARRY(0, -, val), SUB, OV_SUB(0, val, res), F3(res),
+        HALF(0, -, val), F5(res), ZERO(res), SIGN(res), 0xFF);
+}
+
 #undef POS
 #undef NEG
 #undef CARRY

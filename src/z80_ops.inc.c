@@ -335,6 +335,7 @@ static uint8_t z80_inst_ld_sp_hl(Z80 *z80, uint8_t opcode)
 {
     (void) opcode;
     z80->regs.sp = z80->regs.hl;
+    z80->regs.pc++;
     return 6;
 }
 
@@ -346,6 +347,7 @@ static uint8_t z80_inst_ld_sp_ixy(Z80 *z80, uint8_t opcode)
 {
     (void) opcode;
     *z80->regs.ixy = z80->regs.hl;
+    z80->regs.pc++;
     return 10;
 }
 
@@ -1119,7 +1121,18 @@ static uint8_t z80_inst_dec_ixy(Z80 *z80, uint8_t opcode)
 
 // TODO: CPL
 
-// TODO: NEG
+/*
+    NEG (0xED44, 0xED4C, 0xED54, 0xED5C, 0xED64, 0xED6C, 0xED74, 0xED7C):
+    Negate A.
+*/
+static uint8_t z80_inst_neg(Z80 *z80, uint8_t opcode)
+{
+    (void) opcode;
+    set_flags_neg(z80);
+    z80->regs.a = -z80->regs.a;
+    z80->regs.pc++;
+    return 8;
+}
 
 // TODO: CCF
 
