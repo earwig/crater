@@ -42,7 +42,7 @@ int main(int argc, char *argv[])
             retval = EXIT_FAILURE;
         } else {
             printf("crater: emulating: %s\n", rom.name);
-            emulate(&rom, config->fullscreen, config->scale);
+            emulate(&rom, config);
             rom_close(&rom);
         }
     }

@@ -130,11 +130,11 @@ static void cleanup_graphics()
 
     Block until emulation is finished.
 */
-void emulate(ROM *rom, bool fullscreen, unsigned scale)
+void emulate(ROM *rom, Config *config)
 {
     emu.gg = gamegear_create();
     signal(SIGINT, handle_sigint);
-    setup_graphics(fullscreen, scale);
+    setup_graphics(config->fullscreen, config->scale);
 
     gamegear_attach_callback(emu.gg, frame_callback);
     gamegear_attach_display(emu.gg, emu.pixels);

@@ -5,8 +5,9 @@
 
 #include <stdbool.h>
 
+#include "config.h"
 #include "rom.h"
 
 /* Functions */
 
-void emulate(ROM*, bool, unsigned);
+void emulate(ROM*, Config*);
