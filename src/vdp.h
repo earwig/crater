@@ -24,10 +24,10 @@ typedef struct {
     uint8_t  v_counter;
     bool     v_count_jump;
 
+    uint8_t  flags;
     uint8_t  control_code;
     uint16_t control_addr;
-    bool     control_flag;
-    bool     stat_int, stat_ovf, stat_col;
+    uint8_t  line_count;
     uint8_t  read_buf;
     uint8_t  cram_latch;
 } VDP;

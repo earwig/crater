@@ -7,6 +7,12 @@
 #include "vdp.h"
 #include "util.h"
 
+#define FLAG_CONTROL   0x01
+#define FLAG_FRAME_INT 0x02
+#define FLAG_LINE_INT  0x04
+#define FLAG_SPR_OVF   0x08
+#define FLAG_SPR_COL   0x10
+
 #define CODE_VRAM_READ  0
 #define CODE_VRAM_WRITE 1
 #define CODE_REG_WRITE  2
@@ -24,8 +30,6 @@ void vdp_init(VDP *vdp)
     vdp->pixels = NULL;
     vdp->vram = cr_malloc(sizeof(uint8_t) * VDP_VRAM_SIZE);
     vdp->cram = cr_malloc(sizeof(uint8_t) * VDP_CRAM_SIZE);
-    memset(vdp->vram, 0x00, VDP_VRAM_SIZE);
-    memset(vdp->cram, 0x00, VDP_CRAM_SIZE);
 }
 
 /*
@@ -34,6 +38,7 @@ void vdp_init(VDP *vdp)
 void vdp_free(VDP *vdp)
 {
     free(vdp->vram);
+    free(vdp->cram);
 }
 
 /*
@@ -41,6 +46,9 @@ void vdp_free(VDP *vdp)
 */
 void vdp_power(VDP *vdp)
 {
+    memset(vdp->vram, 0x00, VDP_VRAM_SIZE);
+    memset(vdp->cram, 0x00, VDP_CRAM_SIZE);
+
     vdp->regs[0x00] = 0x00;
     vdp->regs[0x01] = 0x00;
     vdp->regs[0x02] = 0xFF;
@@ -57,12 +65,20 @@ void vdp_power(VDP *vdp)
     vdp->v_counter = 0;
     vdp->v_count_jump = false;
 
+    vdp->flags = 0;
     vdp->control_code = 0;
     vdp->control_addr = 0;
-    vdp->control_flag = false;
-    vdp->stat_int = vdp->stat_ovf = vdp->stat_col = 0;
+    vdp->line_count = 0x01;
     vdp->read_buf = 0;
     vdp->cram_latch = 0;
+}
+
+/*
+    Return whether line-completion interrupts are enabled.
+*/
+static bool should_line_interrupt(const VDP *vdp)
+{
+    return vdp->regs[0x00] & 0x10;
 }
 
 /*
@@ -237,6 +253,23 @@ static void draw_scanline(VDP *vdp)
 }
 
 /*
+    Update the line counter, which triggers line interrupts.
+*/
+static void update_line_counter(VDP *vdp)
+{
+    if (vdp->v_counter < 0xC0) {
+        if (vdp->line_count == 0x00) {
+            vdp->flags |= FLAG_LINE_INT;
+            vdp->line_count = vdp->regs[0x0A];
+        } else {
+            vdp->line_count--;
+        }
+    } else {
+        vdp->line_count = vdp->regs[0x0A];
+    }
+}
+
+/*
     Advance the V counter for the next scanline.
 */
 static void advance_scanline(VDP *vdp)
@@ -258,7 +291,8 @@ void vdp_simulate_line(VDP *vdp)
     if (vdp->v_counter >= 0x18 && vdp->v_counter < 0xA8)
         draw_scanline(vdp);
     if (vdp->v_counter == 0xC0)
-        vdp->stat_int = true;
+        vdp->flags |= FLAG_FRAME_INT;
+    update_line_counter(vdp);
     advance_scanline(vdp);
 }
 
@@ -269,19 +303,20 @@ void vdp_simulate_line(VDP *vdp)
     7  6  5  4  3  2  1  0
     F  9S C  *  *  *  *  *
 
-    - F: Interrupt flag: set when the effective display area is completed
+    - F: Frame interrupt: set when the effective display area is completed
     - 9S: 9th sprite / Sprite overflow: more than eight sprites on a scanline
-    - C: Collision flag: two sprites have an overlapping pixel
+    - C: Sprite collision: two sprites have an overlapping pixel
     - *: Unused
 
-    The control flag is also reset.
+    The control and line interrupt flags are also reset.
 */
 uint8_t vdp_read_control(VDP *vdp)
 {
     uint8_t status =
-        (vdp->stat_int << 8) + (vdp->stat_ovf << 7) + (vdp->stat_col << 6);
-    vdp->stat_int = vdp->stat_ovf = vdp->stat_col = 0;
-    vdp->control_flag = false;
+        (!!(vdp->flags & FLAG_FRAME_INT) << 7) +
+        (!!(vdp->flags & FLAG_SPR_OVF)   << 6) +
+        (!!(vdp->flags & FLAG_SPR_COL)   << 5);
+    vdp->flags = 0;
     return status;
 }
 
@@ -296,8 +331,8 @@ uint8_t vdp_read_data(VDP *vdp)
 {
     uint8_t buffer = vdp->read_buf;
     vdp->read_buf = vdp->vram[vdp->control_addr];
-    vdp->control_addr = (vdp->control_addr + 1) % 0x3FFF;
-    vdp->control_flag = false;
+    vdp->control_addr = (vdp->control_addr + 1) & 0x3FFF;
+    vdp->flags &= ~FLAG_CONTROL;
     return buffer;
 }
 
@@ -316,9 +351,9 @@ uint8_t vdp_read_data(VDP *vdp)
 */
 void vdp_write_control(VDP *vdp, uint8_t byte)
 {
-    if (!vdp->control_flag) {  // First byte
+    vdp->flags ^= FLAG_CONTROL;
+    if (vdp->flags & FLAG_CONTROL) {  // First byte
         vdp->control_addr = (vdp->control_addr & 0x3F00) + byte;
-        vdp->control_flag = true;
         return;
     }
 
@@ -327,14 +362,12 @@ void vdp_write_control(VDP *vdp, uint8_t byte)
 
     if (vdp->control_code == CODE_VRAM_READ) {
         vdp->read_buf = vdp->vram[vdp->control_addr];
-        vdp->control_addr = (vdp->control_addr + 1) % 0x3FFF;
+        vdp->control_addr = (vdp->control_addr + 1) & 0x3FFF;
     } else if (vdp->control_code == CODE_REG_WRITE) {
         uint8_t reg = byte & 0x0F;
         if (reg <= VDP_REGS)
             vdp->regs[reg] = vdp->control_addr & 0xFF;
     }
-
-    vdp->control_flag = false;
 }
 
 /*
@@ -345,8 +378,8 @@ static void write_cram(VDP *vdp, uint8_t byte)
     if (!(vdp->control_addr % 2)) {
         vdp->cram_latch = byte;
     } else {
-        vdp->cram[(vdp->control_addr - 1) % 0x3F] = vdp->cram_latch;
-        vdp->cram[ vdp->control_addr      % 0x3F] = byte % 0x0F;
+        vdp->cram[(vdp->control_addr - 1) & 0x3F] = vdp->cram_latch;
+        vdp->cram[ vdp->control_addr      & 0x3F] = byte & 0x0F;
     }
 }
 
@@ -364,8 +397,8 @@ void vdp_write_data(VDP *vdp, uint8_t byte)
     else
         vdp->vram[vdp->control_addr] = byte;
 
-    vdp->control_addr = (vdp->control_addr + 1) % 0x3FFF;
-    vdp->control_flag = false;
+    vdp->control_addr = (vdp->control_addr + 1) & 0x3FFF;
+    vdp->flags &= ~FLAG_CONTROL;
     vdp->read_buf = byte;
 }
 
@@ -374,8 +407,8 @@ void vdp_write_data(VDP *vdp, uint8_t byte)
 */
 bool vdp_assert_irq(VDP *vdp)
 {
-    // TODO: line interrupts
-    return vdp->stat_int && should_frame_interrupt(vdp);
+    return (vdp->flags & FLAG_FRAME_INT && should_frame_interrupt(vdp)) ||
+           (vdp->flags & FLAG_LINE_INT  && should_line_interrupt(vdp));
 }
 
 /*
