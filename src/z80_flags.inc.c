@@ -147,12 +147,21 @@ static inline void set_flags_bitshift(Z80 *z80, uint8_t res, uint8_t bit)
 }
 
 /*
+    Set the flags for a CPL instruction.
+*/
+static inline void set_flags_cpl(Z80 *z80)
+{
+    uint8_t res = z80->regs.a;
+    set_flags(z80, 0, 1, 0, F3(res), 1, F5(res), 0, 0, 0x3A);
+}
+
+/*
     Set the flags for a NEG instruction.
 */
 static inline void set_flags_neg(Z80 *z80)
 {
-    uint8_t val = z80->regs.a;
-    uint8_t res = -val;
+    uint8_t res = z80->regs.a;
+    uint8_t val = -res;
     set_flags(z80, CARRY(0, -, val), SUB, OV_SUB(0, val, res), F3(res),
         HALF(0, -, val), F5(res), ZERO(res), SIGN(res), 0xFF);
 }

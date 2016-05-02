@@ -546,7 +546,7 @@ static uint8_t z80_inst_lddr(Z80 *z80, uint8_t opcode)
 
 /*
     ADD A, r (0x80, 0x81, 0x82, 0x83, 0x84, 0x85, 0x87):
-    TODO
+    Add r (8-bit register) to A.
 */
 static uint8_t z80_inst_add_a_r(Z80 *z80, uint8_t opcode)
 {
@@ -560,7 +560,7 @@ static uint8_t z80_inst_add_a_r(Z80 *z80, uint8_t opcode)
 
 /*
     ADD A, n (0xC6):
-    TODO
+    Add n (8-bit immediate) to A.
 */
 static uint8_t z80_inst_add_a_n(Z80 *z80, uint8_t opcode)
 {
@@ -575,7 +575,7 @@ static uint8_t z80_inst_add_a_n(Z80 *z80, uint8_t opcode)
 
 /*
     ADD A, (HL) (0x86):
-    TODO
+    Add (HL) to A.
 */
 static uint8_t z80_inst_add_a_hl(Z80 *z80, uint8_t opcode)
 {
@@ -590,7 +590,7 @@ static uint8_t z80_inst_add_a_hl(Z80 *z80, uint8_t opcode)
 
 /*
     ADD A, (IXY+d) (0xDD86, 0xFD86):
-    TODO
+    Add (IX+d) or (IY+d) to A.
 */
 static uint8_t z80_inst_add_a_ixy(Z80 *z80, uint8_t opcode)
 {
@@ -606,7 +606,7 @@ static uint8_t z80_inst_add_a_ixy(Z80 *z80, uint8_t opcode)
 
 /*
     ADC A, r (0x88, 0x89, 0x8A, 0x8B, 0x8C, 0x8D, 0x8F):
-    TODO
+    Add r (8-bit register) plus the carry flag to A.
 */
 static uint8_t z80_inst_adc_a_r(Z80 *z80, uint8_t opcode)
 {
@@ -621,7 +621,7 @@ static uint8_t z80_inst_adc_a_r(Z80 *z80, uint8_t opcode)
 
 /*
     ADC A, n (0xCE):
-    TODO
+    Add n (8-bit immediate) plus the carry flag to A.
 */
 static uint8_t z80_inst_adc_a_n(Z80 *z80, uint8_t opcode)
 {
@@ -637,7 +637,7 @@ static uint8_t z80_inst_adc_a_n(Z80 *z80, uint8_t opcode)
 
 /*
     ADC A, (HL) (0x8E):
-    TODO
+    Add (HL) plus the carry flag to A.
 */
 static uint8_t z80_inst_adc_a_hl(Z80 *z80, uint8_t opcode)
 {
@@ -653,7 +653,7 @@ static uint8_t z80_inst_adc_a_hl(Z80 *z80, uint8_t opcode)
 
 /*
     ADC A, (IXY+d) (0xDD8E, 0xFD8E):
-    TODO
+    Add (IX+d) or (IY+d) plus the carry flag to A.
 */
 static uint8_t z80_inst_adc_a_ixy(Z80 *z80, uint8_t opcode)
 {
@@ -669,8 +669,8 @@ static uint8_t z80_inst_adc_a_ixy(Z80 *z80, uint8_t opcode)
 }
 
 /*
-    SUB, r (0x90, 0x91, 0x92, 0x93, 0x94, 0x95, 0x97):
-    TODO
+    SUB r (0x90, 0x91, 0x92, 0x93, 0x94, 0x95, 0x97):
+    Subtract r (8-bit register) from A.
 */
 static uint8_t z80_inst_sub_r(Z80 *z80, uint8_t opcode)
 {
@@ -699,7 +699,7 @@ static uint8_t z80_inst_sub_n(Z80 *z80, uint8_t opcode)
 
 /*
     SUB (HL)
-    TODO
+    Subtract (HL) from A.
 */
 static uint8_t z80_inst_sub_hl(Z80 *z80, uint8_t opcode)
 {
@@ -714,7 +714,7 @@ static uint8_t z80_inst_sub_hl(Z80 *z80, uint8_t opcode)
 
 /*
     SUB (IXY+d)
-    TODO
+    Subtract (IX+d) or (IY+d) from A.
 */
 static uint8_t z80_inst_sub_ixy(Z80 *z80, uint8_t opcode)
 {
@@ -729,8 +729,8 @@ static uint8_t z80_inst_sub_ixy(Z80 *z80, uint8_t opcode)
 }
 
 /*
-    SBC A, r (...):
-    TODO
+    SBC A, r (0x98, 0x99, 0x9A, 0x9B, 0x9C, 0x9D, 0x9F):
+    Subtract r (8-bit register) plus the carry flag from A.
 */
 static uint8_t z80_inst_sbc_a_r(Z80 *z80, uint8_t opcode)
 {
@@ -744,8 +744,8 @@ static uint8_t z80_inst_sbc_a_r(Z80 *z80, uint8_t opcode)
 }
 
 /*
-    SBC A, n (...):
-    TODO
+    SBC A, n (0xDE):
+    Subtract n (8-bit immediate) plus the carry flag from A.
 */
 static uint8_t z80_inst_sbc_a_n(Z80 *z80, uint8_t opcode)
 {
@@ -760,8 +760,8 @@ static uint8_t z80_inst_sbc_a_n(Z80 *z80, uint8_t opcode)
 }
 
 /*
-    SBC A, (HL)
-    TODO
+    SBC A, (HL) (0x9E):
+    Subtract (HL) plus the carry flag from A.
 */
 static uint8_t z80_inst_sbc_a_hl(Z80 *z80, uint8_t opcode)
 {
@@ -776,8 +776,8 @@ static uint8_t z80_inst_sbc_a_hl(Z80 *z80, uint8_t opcode)
 }
 
 /*
-    SBC A, (IXY+d)
-    TODO
+    SBC A, (IXY+d) (0xDD9E, 0xFD9E):
+    Subtract (IX+d) or (IY+d) plus the carry flag from A.
 */
 static uint8_t z80_inst_sbc_a_ixy(Z80 *z80, uint8_t opcode)
 {
@@ -793,8 +793,8 @@ static uint8_t z80_inst_sbc_a_ixy(Z80 *z80, uint8_t opcode)
 }
 
 /*
-    AND r
-    TODO
+    AND r (0xA0, 0xA1, 0xA2, 0xA3, 0xA4, 0xA5, 0xA7):
+    Bitwise AND A with r (8-bit register).
 */
 static uint8_t z80_inst_and_r(Z80 *z80, uint8_t opcode)
 {
@@ -822,8 +822,8 @@ static uint8_t z80_inst_and_n(Z80 *z80, uint8_t opcode)
 }
 
 /*
-    AND (HL)
-    TODO
+    AND (HL) (0xA6):
+    Bitwise AND A with (HL).
 */
 static uint8_t z80_inst_and_hl(Z80 *z80, uint8_t opcode)
 {
@@ -837,8 +837,8 @@ static uint8_t z80_inst_and_hl(Z80 *z80, uint8_t opcode)
 }
 
 /*
-    AND (IXY+d)
-    TODO
+    AND (IXY+d) (0xDDA6, 0xFDA6):
+    Bitwise AND A with (IX+d) or (IY+d).
 */
 static uint8_t z80_inst_and_ixy(Z80 *z80, uint8_t opcode)
 {
@@ -882,8 +882,8 @@ static uint8_t z80_inst_or_n(Z80 *z80, uint8_t opcode)
 }
 
 /*
-    OR (HL)
-    TODO
+    OR (HL) (0xB6):
+    Bitwise OR A with (HL).
 */
 static uint8_t z80_inst_or_hl(Z80 *z80, uint8_t opcode)
 {
@@ -942,8 +942,8 @@ static uint8_t z80_inst_xor_n(Z80 *z80, uint8_t opcode)
 }
 
 /*
-    XOR (HL)
-    TODO
+    XOR (HL) (0xAE):
+    Bitwise XOR A with (HL).
 */
 static uint8_t z80_inst_xor_hl(Z80 *z80, uint8_t opcode)
 {
@@ -955,9 +955,10 @@ static uint8_t z80_inst_xor_hl(Z80 *z80, uint8_t opcode)
     z80->regs.pc++;
     return 7;
 }
+
 /*
-    XOR (IXY+d)
-    TODO
+    XOR (IXY+d) (0xDDAE, 0xFDAE):
+    Bitwise XOR A with (IX+d) or (IY+d).
 */
 static uint8_t z80_inst_xor_ixy(Z80 *z80, uint8_t opcode)
 {
@@ -1000,7 +1001,7 @@ static uint8_t z80_inst_cp_n(Z80 *z80, uint8_t opcode)
 
 /*
     CP (HL) (0xBE):
-    Set flags as if the memory pointed to by HL had been subtracted from A.
+    Set flags as if (HL) had been subtracted from A.
 */
 static uint8_t z80_inst_cp_hl(Z80 *z80, uint8_t opcode)
 {
@@ -1013,8 +1014,8 @@ static uint8_t z80_inst_cp_hl(Z80 *z80, uint8_t opcode)
 }
 
 /*
-    CP (IXY+d)
-    TODO
+    CP (IXY+d) (0xDDBE, 0xFDBE):
+    Set flags as if (IX+d) or (IY+d) had been subtracted from A.
 */
 static uint8_t z80_inst_cp_ixy(Z80 *z80, uint8_t opcode)
 {
@@ -1057,8 +1058,8 @@ static uint8_t z80_inst_inc_hl(Z80 *z80, uint8_t opcode)
 }
 
 /*
-    INC (IXY+d)
-    TODO
+    INC (IXY+d) (0xDD34, 0xFD34):
+    Increment (IX+d) or (IY+d).
 */
 static uint8_t z80_inst_inc_ixy(Z80 *z80, uint8_t opcode)
 {
@@ -1102,8 +1103,8 @@ static uint8_t z80_inst_dec_hl(Z80 *z80, uint8_t opcode)
 }
 
 /*
-    DEC (IXY+d)
-    TODO
+    DEC (IXY+d) (0xDD35, 0xFD35):
+    Decrement (IX+d) or (IY+d).
 */
 static uint8_t z80_inst_dec_ixy(Z80 *z80, uint8_t opcode)
 {
@@ -1119,7 +1120,18 @@ static uint8_t z80_inst_dec_ixy(Z80 *z80, uint8_t opcode)
 
 // TODO: DAA
 
-// TODO: CPL
+/*
+    CPL (0x2F):
+    Invert A.
+*/
+static uint8_t z80_inst_cpl(Z80 *z80, uint8_t opcode)
+{
+    (void) opcode;
+    z80->regs.a = ~z80->regs.a;
+    set_flags_cpl(z80);
+    z80->regs.pc++;
+    return 8;
+}
 
 /*
     NEG (0xED44, 0xED4C, 0xED54, 0xED5C, 0xED64, 0xED6C, 0xED74, 0xED7C):
@@ -1128,8 +1140,8 @@ static uint8_t z80_inst_dec_ixy(Z80 *z80, uint8_t opcode)
 static uint8_t z80_inst_neg(Z80 *z80, uint8_t opcode)
 {
     (void) opcode;
-    set_flags_neg(z80);
     z80->regs.a = -z80->regs.a;
+    set_flags_neg(z80);
     z80->regs.pc++;
     return 8;
 }
@@ -1232,8 +1244,8 @@ static uint8_t z80_inst_add_hl_ss(Z80 *z80, uint8_t opcode)
 }
 
 /*
-    ADC HL, ss
-    TODO
+    ADC HL, ss (0xED4A, 0xED5A, 0xED6A, 0xED7A):
+    Add ss plus the carry flag to HL.
 */
 static uint8_t z80_inst_adc_hl_ss(Z80 *z80, uint8_t opcode)
 {
@@ -1262,8 +1274,9 @@ static uint8_t z80_inst_sbc_hl_ss(Z80 *z80, uint8_t opcode)
 }
 
 /*
-    ADD IXY, pp
-    TODO
+    ADD IXY, pp (0xDD09, 0xDD19, 0xDD29, 0xDD39, 0xFD09, 0xFD19, 0xFD29,
+        0xFD39):
+    Add pp to IX or IY.
 */
 static uint8_t z80_inst_add_ixy_ss(Z80 *z80, uint8_t opcode)
 {
@@ -1287,8 +1300,8 @@ static uint8_t z80_inst_inc_ss(Z80 *z80, uint8_t opcode)
 }
 
 /*
-    INC IXY
-    TODO
+    INC IXY (0xDD23, 0xFD23):
+    Increment IX or IY.
 */
 static uint8_t z80_inst_inc_xy(Z80 *z80, uint8_t opcode)
 {
@@ -1310,8 +1323,8 @@ static uint8_t z80_inst_dec_ss(Z80 *z80, uint8_t opcode)
 }
 
 /*
-    DEC IXY
-    TODO
+    DEC IXY (0xDD2B, 0xFD2B):
+    Decrement IX or IY.
 */
 static uint8_t z80_inst_dec_xy(Z80 *z80, uint8_t opcode)
 {
@@ -1390,8 +1403,8 @@ static uint8_t z80_inst_rra(Z80 *z80, uint8_t opcode)
 }
 
 /*
-    RLC r
-    TODO
+    RLC r (0xCB00, 0xCB01, 0xCB02, 0xCB03, 0xCB04, 0xCB05, 0xCB07):
+    Rotate r left one bit. Bit 7 is copied to bit 0 and the carry flag.
 */
 static uint8_t z80_inst_rlc_r(Z80 *z80, uint8_t opcode)
 {
@@ -1406,8 +1419,8 @@ static uint8_t z80_inst_rlc_r(Z80 *z80, uint8_t opcode)
 }
 
 /*
-    RLC (HL)
-    TODO
+    RLC (HL) (0xCB06):
+    Rotate (HL) left one bit. Bit 7 is copied to bit 0 and the carry flag.
 */
 static uint8_t z80_inst_rlc_hl(Z80 *z80, uint8_t opcode)
 {
@@ -1429,8 +1442,9 @@ static uint8_t z80_inst_rlc_hl(Z80 *z80, uint8_t opcode)
 */
 
 /*
-    RL r
-    TODO
+    RL r (0xCB10, 0xCB11, 0xCB12, 0xCB13, 0xCB14, 0xCB15, 0xCB17):
+    Rotate r left one bit. Carry flag is copied to bit 0, and bit 7 is copied
+    to the carry flag.
 */
 static uint8_t z80_inst_rl_r(Z80 *z80, uint8_t opcode)
 {
@@ -1446,8 +1460,9 @@ static uint8_t z80_inst_rl_r(Z80 *z80, uint8_t opcode)
 }
 
 /*
-    RL (HL)
-    TODO
+    RL (HL) (0xCB16):
+    Rotate (HL) left one bit. Carry flag is copied to bit 0, and bit 7 is
+    copied to the carry flag.
 */
 static uint8_t z80_inst_rl_hl(Z80 *z80, uint8_t opcode)
 {
@@ -1470,8 +1485,8 @@ static uint8_t z80_inst_rl_hl(Z80 *z80, uint8_t opcode)
 */
 
 /*
-    RRC r
-    TODO
+    RRC r (0xCB08, 0xCB09, 0xCB0A, 0xCB0B, 0xCB0C, 0xCB0D, 0xCB0F):
+    Rotate r right one bit. Bit 0 is copied to bit 7 and the carry flag.
 */
 static uint8_t z80_inst_rrc_r(Z80 *z80, uint8_t opcode)
 {
@@ -1486,8 +1501,8 @@ static uint8_t z80_inst_rrc_r(Z80 *z80, uint8_t opcode)
 }
 
 /*
-    RRC (HL)
-    TODO
+    RRC (HL) (0xCB0E):
+    Rotate (HL) right one bit. Bit 0 is copied to bit 7 and the carry flag.
 */
 static uint8_t z80_inst_rrc_hl(Z80 *z80, uint8_t opcode)
 {
@@ -1509,8 +1524,9 @@ static uint8_t z80_inst_rrc_hl(Z80 *z80, uint8_t opcode)
 */
 
 /*
-    RR r
-    TODO
+    RR r (0xCB18, 0xCB19, 0xCB1A, 0xCB1B, 0xCB1C, 0xCB1D, 0xCB1F):
+    Rotate r right one bit. Carry flag is copied to bit 7, and bit 0 is copied
+    to the carry flag.
 */
 static uint8_t z80_inst_rr_r(Z80 *z80, uint8_t opcode)
 {
@@ -1526,8 +1542,9 @@ static uint8_t z80_inst_rr_r(Z80 *z80, uint8_t opcode)
 }
 
 /*
-    RR (HL)
-    TODO
+    RR (HL) (0xCB1E):
+    Rotate (HL) right one bit. Carry flag is copied to bit 7, and bit 0 is
+    copied to the carry flag.
 */
 static uint8_t z80_inst_rr_hl(Z80 *z80, uint8_t opcode)
 {
@@ -1550,8 +1567,9 @@ static uint8_t z80_inst_rr_hl(Z80 *z80, uint8_t opcode)
 */
 
 /*
-    SLA r
-    TODO
+    SLA r (0xCB20, 0xCB21, 0xCB22, 0xCB23, 0xCB24, 0xCB25, 0xCB27):
+    Shift r left one bit. 0 is copied to bit 0, and bit 7 is copied to the
+    carry flag.
 */
 static uint8_t z80_inst_sla_r(Z80 *z80, uint8_t opcode)
 {
@@ -1565,8 +1583,9 @@ static uint8_t z80_inst_sla_r(Z80 *z80, uint8_t opcode)
 }
 
 /*
-    SLA (HL)
-    TODO
+    SLA (HL) (0xCB26):
+    Shift (HL) left one bit. 0 is copied to bit 0, and bit 7 is copied to the
+    carry flag.
 */
 static uint8_t z80_inst_sla_hl(Z80 *z80, uint8_t opcode)
 {
@@ -1587,8 +1606,9 @@ static uint8_t z80_inst_sla_hl(Z80 *z80, uint8_t opcode)
 */
 
 /*
-    SRA r
-    TODO
+    SRA r (0xCB28, 0xCB29, 0xCB2A, 0xCB2B, 0xCB2C, 0xCB2D, 0xCB2F):
+    Arithmetic shift r right one bit. The previous bit 7 is copied to the new
+    bit 7, and bit 0 is copied to the carry flag.
 */
 static uint8_t z80_inst_sra_r(Z80 *z80, uint8_t opcode)
 {
@@ -1603,8 +1623,9 @@ static uint8_t z80_inst_sra_r(Z80 *z80, uint8_t opcode)
 }
 
 /*
-    SRA (HL)
-    TODO
+    SRA (HL) (0xCB2E):
+    Arithmetic shift (HL) right one bit. The previous bit 7 is copied to the
+    new bit 7, and bit 0 is copied to the carry flag.
 */
 static uint8_t z80_inst_sra_hl(Z80 *z80, uint8_t opcode)
 {
@@ -1626,8 +1647,9 @@ static uint8_t z80_inst_sra_hl(Z80 *z80, uint8_t opcode)
 */
 
 /*
-    SL1 r
-    TODO
+    SL1 r (0xCB30, 0xCB31, 0xCB32, 0xCB33, 0xCB34, 0xCB35, 0xCB37):
+    Shift r left one bit. 1 is copied to bit 0, and bit 7 is copied to the
+    carry flag.
 */
 static uint8_t z80_inst_sl1_r(Z80 *z80, uint8_t opcode)
 {
@@ -1642,8 +1664,9 @@ static uint8_t z80_inst_sl1_r(Z80 *z80, uint8_t opcode)
 }
 
 /*
-    SL1 (HL)
-    TODO
+    SL1 (HL) (0xCB36):
+    Shift (HL) left one bit. 1 is copied to bit 0, and bit 7 is copied to the
+    carry flag.
 */
 static uint8_t z80_inst_sl1_hl(Z80 *z80, uint8_t opcode)
 {
@@ -1665,8 +1688,9 @@ static uint8_t z80_inst_sl1_hl(Z80 *z80, uint8_t opcode)
 */
 
 /*
-    SRL r
-    TODO
+    SRL r (0xCB38, 0xCB39, 0xCB3A, 0xCB3B, 0xCB3C, 0xCB3D, 0xCB3F):
+    Logical shift r right one bit. 0 is copied to bit 7, and bit 0 is copied to
+    the carry flag.
 */
 static uint8_t z80_inst_srl_r(Z80 *z80, uint8_t opcode)
 {
@@ -1680,8 +1704,9 @@ static uint8_t z80_inst_srl_r(Z80 *z80, uint8_t opcode)
 }
 
 /*
-    SRL (HL)
-    TODO
+    SRL (HL) (0xCB3E):
+    Logical shift (HL) right one bit. 0 is copied to bit 7, and bit 0 is copied
+    to the carry flag.
 */
 static uint8_t z80_inst_srl_hl(Z80 *z80, uint8_t opcode)
 {
@@ -1755,13 +1780,60 @@ static uint8_t z80_inst_bit_b_ixy(Z80 *z80, uint8_t opcode)
     return 20;
 }
 
-// TODO: SET b, r
+/*
+    SET b, r   (0xCBC0, 0xCBC1, 0xCBC2, 0xCBC3, 0xCBC4, 0xCBC5, 0xCBC7, 0xCBC8,
+        0xCBC9, 0xCBCA, 0xCBCB, 0xCBCC, 0xCBCD, 0xCBCF, 0xCBD0, 0xCBD1, 0xCBD2,
+        0xCBD3, 0xCBD4, 0xCBD5, 0xCBD7, 0xCBD8, 0xCBD9, 0xCBDA, 0xCBDB, 0xCBDC,
+        0xCBDD, 0xCBDF, 0xCBE0, 0xCBE1, 0xCBE2, 0xCBE3, 0xCBE4, 0xCBE5, 0xCBE7,
+        0xCBE8, 0xCBE9, 0xCBEA, 0xCBEB, 0xCBEC, 0xCBED, 0xCBEF, 0xCBF0, 0xCBF1,
+        0xCBF2, 0xCBF3, 0xCBF4, 0xCBF5, 0xCBF7, 0xCBF8, 0xCBF9, 0xCBFA, 0xCBFB,
+        0xCBFC, 0xCBFD, 0xCBFF):
+    Set bit b of r.
+*/
+static uint8_t z80_inst_set_b_r(Z80 *z80, uint8_t opcode)
+{
+    uint8_t *reg = extract_reg(z80, opcode << 3);
+    uint8_t bit = (opcode >> 3) & 0x07;
+    *reg |= 1 << bit;
+    z80->regs.pc++;
+    return 8;
+}
 
-// TODO: SET b, (HL)
+/*
+    SET b, (HL) (0xCBC6, 0xCBCE, 0xCBD6, 0xCBDE, 0xCBE6, 0xCBEE, 0xCBF6,
+        0xCBFE):
+    Reset bit b of (HL).
+*/
+static uint8_t z80_inst_set_b_hl(Z80 *z80, uint8_t opcode)
+{
+    uint8_t val = mmu_read_byte(z80->mmu, z80->regs.hl);
+    uint8_t bit = (opcode >> 3) & 0x07;
+    val |= 1 << bit;
+    mmu_write_byte(z80->mmu, z80->regs.hl, val);
+    z80->regs.pc++;
+    return 15;
+}
 
 // TODO: SET b, (IXY+d)
 
-// TODO: RES b, r
+/*
+    RES b, r   (0xCB80, 0xCB81, 0xCB82, 0xCB83, 0xCB84, 0xCB85, 0xCB87, 0xCB88,
+        0xCB89, 0xCB8A, 0xCB8B, 0xCB8C, 0xCB8D, 0xCB8F, 0xCB90, 0xCB91, 0xCB92,
+        0xCB93, 0xCB94, 0xCB95, 0xCB97, 0xCB98, 0xCB99, 0xCB9A, 0xCB9B, 0xCB9C,
+        0xCB9D, 0xCB9F, 0xCBA0, 0xCBA1, 0xCBA2, 0xCBA3, 0xCBA4, 0xCBA5, 0xCBA7,
+        0xCBA8, 0xCBA9, 0xCBAA, 0xCBAB, 0xCBAC, 0xCBAD, 0xCBAF, 0xCBB0, 0xCBB1,
+        0xCBB2, 0xCBB3, 0xCBB4, 0xCBB5, 0xCBB7, 0xCBB8, 0xCBB9, 0xCBBA, 0xCBBB,
+        0xCBBC, 0xCBBD, 0xCBBF):
+    Reset bit b of r.
+*/
+static uint8_t z80_inst_res_b_r(Z80 *z80, uint8_t opcode)
+{
+    uint8_t *reg = extract_reg(z80, opcode << 3);
+    uint8_t bit = (opcode >> 3) & 0x07;
+    *reg &= ~(1 << bit);
+    z80->regs.pc++;
+    return 8;
+}
 
 /*
     RES b, (HL) (0xCB86, 0xCB8E, 0xCB96, 0xCB9E, 0xCBA6, 0xCBAE, 0xCBB6,
