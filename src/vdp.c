@@ -433,43 +433,4 @@ void vdp_dump_registers(const VDP *vdp)
     DEBUG("- $08:  0x%02X (HS)", regs[0x08])
     DEBUG("- $09:  0x%02X (VS)", regs[0x09])
     DEBUG("- $0A:  0x%02X (LC)", regs[0x0A])
-
-    // TODO: remove me!
-    DEBUG("Dumping CRAM:")
-    for (uint8_t i = 0; i < 32; i += 8) {
-        uint16_t w[8];
-        for (uint8_t j = 0; j < 8; j++)
-            w[j] = get_color(vdp, (i + j) % 16, i & 16);
-
-        DEBUG("- %04X %04X %04X %04X %04X %04X %04X %04X",
-            w[0], w[1], w[2], w[3], w[4], w[5], w[6], w[7])
-    }
-
-    return;
-
-    DEBUG("Dumping PNT:")
-    for (uint16_t i = 0; i < 18; i++) {
-        uint16_t w[20];
-        for (uint8_t j = 0; j < 20; j++)
-            w[j] = get_background_tile(vdp, i + 3, j + 6);
-
-        DEBUG("- %03X %03X %03X %03X %03X %03X %03X %03X %03X %03X"
-               " %03X %03X %03X %03X %03X %03X %03X %03X %03X %03X",
-            w[0x00], w[0x01], w[0x02], w[0x03], w[0x04], w[0x05], w[0x06],
-            w[0x07], w[0x08], w[0x09], w[0x0A], w[0x0B], w[0x0C], w[0x0D],
-            w[0x0E], w[0x0F], w[0x10], w[0x11], w[0x12], w[0x13])
-    }
-
-    DEBUG("Dumping PGT:")
-    for (uint16_t i = 0; i < /* 512 */ 32; i++) {
-        uint32_t w[8];
-        for (uint8_t j = 0; j < 8; j++)
-            w[j] = vdp->vram[32 * i + 4 * j] +
-                  (vdp->vram[32 * i + 4 * j + 1] <<  8) +
-                  (vdp->vram[32 * i + 4 * j + 2] << 16) +
-                  (vdp->vram[32 * i + 4 * j + 3] << 24);
-
-        DEBUG("- 0x%04X: %08X %08X %08X %08X %08X %08X %08X %08X", i,
-            w[0], w[1], w[2], w[3], w[4], w[5], w[6], w[7])
-    }
 }

@@ -1969,7 +1969,7 @@ static uint8_t z80_inst_in_a_n(Z80 *z80, uint8_t opcode)
 {
     (void) opcode;
     uint8_t port = mmu_read_byte(z80->mmu, ++z80->regs.pc);
-    z80->regs.a = read_port(z80, port);
+    z80->regs.a = io_port_read(z80->io, port);
     z80->regs.pc++;
     return 11;
 }
@@ -1980,7 +1980,7 @@ static uint8_t z80_inst_in_a_n(Z80 *z80, uint8_t opcode)
 */
 static uint8_t z80_inst_in_r_c(Z80 *z80, uint8_t opcode)
 {
-    uint8_t data = read_port(z80, z80->regs.c);
+    uint8_t data = io_port_read(z80->io, z80->regs.c);
     if (opcode != 0x70)
         *extract_reg(z80, opcode) = data;
 
@@ -1996,7 +1996,8 @@ static uint8_t z80_inst_in_r_c(Z80 *z80, uint8_t opcode)
 static uint8_t z80_inst_ini(Z80 *z80, uint8_t opcode)
 {
     (void) opcode;
-    mmu_write_byte(z80->mmu, z80->regs.hl, read_port(z80, z80->regs.c));
+    uint8_t data = io_port_read(z80->io, z80->regs.c);
+    mmu_write_byte(z80->mmu, z80->regs.hl, data);
     set_flags_blockio(z80);
 
     z80->regs.hl++;
@@ -2025,7 +2026,8 @@ static uint8_t z80_inst_inir(Z80 *z80, uint8_t opcode)
 static uint8_t z80_inst_ind(Z80 *z80, uint8_t opcode)
 {
     (void) opcode;
-    mmu_write_byte(z80->mmu, z80->regs.hl, read_port(z80, z80->regs.c));
+    uint8_t data = io_port_read(z80->io, z80->regs.c);
+    mmu_write_byte(z80->mmu, z80->regs.hl, data);
     set_flags_blockio(z80);
 
     z80->regs.hl--;
@@ -2055,7 +2057,7 @@ static uint8_t z80_inst_out_n_a(Z80 *z80, uint8_t opcode)
 {
     (void) opcode;
     uint8_t port = mmu_read_byte(z80->mmu, ++z80->regs.pc);
-    write_port(z80, port, z80->regs.a);
+    io_port_write(z80->io, port, z80->regs.a);
     z80->regs.pc++;
     return 11;
 }
@@ -2068,7 +2070,7 @@ static uint8_t z80_inst_out_n_a(Z80 *z80, uint8_t opcode)
 static uint8_t z80_inst_out_c_r(Z80 *z80, uint8_t opcode)
 {
     uint8_t value = opcode != 0x71 ? *extract_reg(z80, opcode) : 0;
-    write_port(z80, z80->regs.c, value);
+    io_port_write(z80->io, z80->regs.c, value);
     z80->regs.pc++;
     return 12;
 }
@@ -2080,7 +2082,8 @@ static uint8_t z80_inst_out_c_r(Z80 *z80, uint8_t opcode)
 static uint8_t z80_inst_outi(Z80 *z80, uint8_t opcode)
 {
     (void) opcode;
-    write_port(z80, z80->regs.c, mmu_read_byte(z80->mmu, z80->regs.hl));
+    uint8_t data = mmu_read_byte(z80->mmu, z80->regs.hl);
+    io_port_write(z80->io, z80->regs.c, data);
     set_flags_blockio(z80);
 
     z80->regs.hl++;
@@ -2109,7 +2112,8 @@ static uint8_t z80_inst_otir(Z80 *z80, uint8_t opcode)
 static uint8_t z80_inst_outd(Z80 *z80, uint8_t opcode)
 {
     (void) opcode;
-    write_port(z80, z80->regs.c, mmu_read_byte(z80->mmu, z80->regs.hl));
+    uint8_t data = mmu_read_byte(z80->mmu, z80->regs.hl);
+    io_port_write(z80->io, z80->regs.c, data);
     set_flags_blockio(z80);
 
     z80->regs.hl--;

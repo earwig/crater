@@ -11,7 +11,6 @@
 
 #define Z80_EXC_NOT_POWERED          0
 #define Z80_EXC_UNIMPLEMENTED_OPCODE 1
-#define Z80_EXC_IO_ERROR             2
 
 /* Structs */
 

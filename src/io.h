@@ -14,8 +14,7 @@
 typedef struct {
     VDP *vdp;
     PSG *psg;
-    bool except;
-    uint8_t exc_port;
+    uint8_t ports[6];
 } IO;
 
 /* Functions */

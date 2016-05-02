@@ -130,37 +130,6 @@ static inline uint16_t stack_pop(Z80 *z80)
 }
 
 /*
-    Check for errors after an I/O operation.
-*/
-static void handle_io_errors(Z80 *z80)
-{
-    if (z80->io->except) {
-        z80->except = true;
-        z80->exc_code = Z80_EXC_IO_ERROR;
-        z80->exc_data = z80->io->exc_port;
-    }
-}
-
-/*
-    Read and return a byte from the given port, and check for errors.
-*/
-static inline uint8_t read_port(Z80 *z80, uint8_t port)
-{
-    uint8_t value = io_port_read(z80->io, port);
-    handle_io_errors(z80);
-    return value;
-}
-
-/*
-    Write a byte to the given port, and check for errors.
-*/
-static inline void write_port(Z80 *z80, uint8_t port, uint8_t value)
-{
-    io_port_write(z80->io, port, value);
-    handle_io_errors(z80);
-}
-
-/*
     Extract an 8-bit register from the given opcode and return a pointer to it.
 */
 static inline uint8_t* extract_reg(Z80 *z80, uint8_t opcode)

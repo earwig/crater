@@ -19,3 +19,4 @@ void psg_init(PSG*);
 void psg_free(PSG*);
 void psg_power(PSG*);
 void psg_write(PSG*, uint8_t);
+void psg_stereo(PSG*, uint8_t);

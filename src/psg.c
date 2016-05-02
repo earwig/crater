@@ -41,3 +41,13 @@ void psg_write(PSG *psg, uint8_t byte)
     (void) psg;
     TRACE("PSG ignoring write: 0x%02X", byte)
 }
+
+/*
+    Send a byte to the PSG's stereo control.
+*/
+void psg_stereo(PSG *psg, uint8_t byte)
+{
+    // TODO
+    (void) psg;
+    TRACE("PSG ignoring stereo: 0x%02X", byte)
+}
