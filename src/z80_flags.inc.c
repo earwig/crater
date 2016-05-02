@@ -157,6 +157,33 @@ static inline void set_flags_neg(Z80 *z80)
         HALF(0, -, val), F5(res), ZERO(res), SIGN(res), 0xFF);
 }
 
+/*
+    Set the flags for a LDI/LDIR/LDD/LDDR instruction.
+*/
+static inline void set_flags_blockxfer(Z80 *z80, uint8_t val)
+{
+    bool pv = z80->regs.bc != 0;
+    uint8_t res = val + z80->regs.a;
+    set_flags(z80, 0, 0, pv, res & 0x08, 0, res & 0x02, 0, 0, 0x3E);
+}
+
+/*
+    Set the flags for an IN instruction.
+*/
+static inline void set_flags_in(Z80 *z80, uint8_t val)
+{
+    set_flags(z80, 0, 0, PARITY(val), F3(val), 0, F5(val), ZERO(val),
+        SIGN(val), 0xFE);
+}
+
+/*
+    Set the flags for an INI/INIR/IND/INDR/OUTI/OTIR/OUTD/OTDR instruction.
+*/
+static inline void set_flags_blockio(Z80 *z80)
+{
+    set_flags_dec(z80, z80->regs.b);
+}
+
 #undef POS
 #undef NEG
 #undef CARRY

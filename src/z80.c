@@ -178,7 +178,7 @@ static inline uint8_t* extract_reg(Z80 *z80, uint8_t opcode)
 }
 
 /*
-    Extract a register pair from the given opcode and return a pointer to it.
+    Extract a ss/dd register pair from the given opcode and return a pointer.
 */
 static inline uint16_t* extract_pair(Z80 *z80, uint8_t opcode)
 {
@@ -189,6 +189,20 @@ static inline uint16_t* extract_pair(Z80 *z80, uint8_t opcode)
         case 0x30: return &z80->regs.sp;
     }
     FATAL("invalid call: extract_pair(z80, 0x%02X)", opcode)
+}
+
+/*
+    Extract a qq register pair from the given opcode and return a pointer.
+*/
+static inline uint16_t* extract_pair_qq(Z80 *z80, uint8_t opcode)
+{
+    switch (opcode & 0x30) {
+        case 0x00: return &z80->regs.bc;
+        case 0x10: return &z80->regs.de;
+        case 0x20: return &z80->regs.hl;
+        case 0x30: return &z80->regs.af;
+    }
+    FATAL("invalid call: extract_pair_qq(z80, 0x%02X)", opcode)
 }
 
 /*

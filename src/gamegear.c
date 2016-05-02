@@ -141,10 +141,10 @@ static bool simulate_frame(GameGear *gg)
     bool except;
 
     for (line = 0; line < VDP_LINES_PER_FRAME; line++) {
-        vdp_simulate_line(&gg->vdp);
         except = z80_do_cycles(&gg->cpu, CYCLES_PER_LINE);
         if (except)
             return true;
+        vdp_simulate_line(&gg->vdp);
     }
     return false;
 }

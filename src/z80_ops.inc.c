@@ -311,7 +311,7 @@ static uint8_t z80_inst_ld_inn_dd(Z80 *z80, uint8_t opcode)
     uint16_t addr = mmu_read_double(z80->mmu, ++z80->regs.pc);
     mmu_write_double(z80->mmu, addr, *extract_pair(z80, opcode));
     z80->regs.pc += 2;
-    return 16;
+    return 20;
 }
 
 /*
@@ -357,7 +357,7 @@ static uint8_t z80_inst_ld_sp_ixy(Z80 *z80, uint8_t opcode)
 */
 static uint8_t z80_inst_push_qq(Z80 *z80, uint8_t opcode)
 {
-    stack_push(z80, *extract_pair(z80, opcode));
+    stack_push(z80, *extract_pair_qq(z80, opcode));
     z80->regs.pc++;
     return 11;
 }
@@ -380,7 +380,7 @@ static uint8_t z80_inst_push_ixy(Z80 *z80, uint8_t opcode)
 */
 static uint8_t z80_inst_pop_qq(Z80 *z80, uint8_t opcode)
 {
-    *extract_pair(z80, opcode) = stack_pop(z80);
+    *extract_pair_qq(z80, opcode) = stack_pop(z80);
     z80->regs.pc++;
     return 10;
 }
@@ -479,14 +479,14 @@ static uint8_t z80_inst_ex_sp_ixy(Z80 *z80, uint8_t opcode)
 static uint8_t z80_inst_ldi(Z80 *z80, uint8_t opcode)
 {
     (void) opcode;
-    uint16_t value = mmu_read_double(z80->mmu, z80->regs.hl);
-    mmu_write_double(z80->mmu, z80->regs.de, value);
+    uint8_t value = mmu_read_byte(z80->mmu, z80->regs.hl);
+    mmu_write_byte(z80->mmu, z80->regs.de, value);
 
     z80->regs.hl++;
     z80->regs.de++;
     z80->regs.bc--;
 
-    set_flags(z80, 0, 0, z80->regs.bc == 0, 0, 0, 0, 0, 0, 0x16);
+    set_flags_blockxfer(z80, value);
     z80->regs.pc++;
     return 16;
 }
@@ -511,14 +511,14 @@ static uint8_t z80_inst_ldir(Z80 *z80, uint8_t opcode)
 static uint8_t z80_inst_ldd(Z80 *z80, uint8_t opcode)
 {
     (void) opcode;
-    uint16_t value = mmu_read_double(z80->mmu, z80->regs.hl);
-    mmu_write_double(z80->mmu, z80->regs.de, value);
+    uint8_t value = mmu_read_byte(z80->mmu, z80->regs.hl);
+    mmu_write_byte(z80->mmu, z80->regs.de, value);
 
     z80->regs.hl--;
     z80->regs.de--;
     z80->regs.bc--;
 
-    set_flags(z80, 0, 0, z80->regs.bc == 0, 0, 0, 0, 0, 0, 0x16);
+    set_flags_blockxfer(z80, value);
     z80->regs.pc++;
     return 16;
 }
@@ -1737,7 +1737,7 @@ static uint8_t z80_inst_bit_b_hl(Z80 *z80, uint8_t opcode)
 
     set_flags_bit(z80, val, bit);
     z80->regs.pc++;
-    return 8;
+    return 12;
 }
 
 /*
@@ -1752,7 +1752,7 @@ static uint8_t z80_inst_bit_b_ixy(Z80 *z80, uint8_t opcode)
 
     set_flags_bit(z80, val, bit);
     z80->regs.pc++;
-    return 8;
+    return 20;
 }
 
 // TODO: SET b, r
@@ -1775,7 +1775,7 @@ static uint8_t z80_inst_res_b_hl(Z80 *z80, uint8_t opcode)
     val &= ~(1 << bit);
     mmu_write_byte(z80->mmu, z80->regs.hl, val);
     z80->regs.pc++;
-    return 8;
+    return 15;
 }
 
 // TODO: RES b, (IXY+d)
@@ -1981,12 +1981,10 @@ static uint8_t z80_inst_in_a_n(Z80 *z80, uint8_t opcode)
 static uint8_t z80_inst_in_r_c(Z80 *z80, uint8_t opcode)
 {
     uint8_t data = read_port(z80, z80->regs.c);
-    bool parity = !(__builtin_popcount(data) % 2);
-
     if (opcode != 0x70)
         *extract_reg(z80, opcode) = data;
-    set_flags(z80, 0, 0, parity, !!(data & 0x08), 0, !!(data & 0x20),
-        data == 0, !!(data & 0x80), 0xFE);
+
+    set_flags_in(z80, data);
     z80->regs.pc++;
     return 12;
 }
@@ -1998,15 +1996,11 @@ static uint8_t z80_inst_in_r_c(Z80 *z80, uint8_t opcode)
 static uint8_t z80_inst_ini(Z80 *z80, uint8_t opcode)
 {
     (void) opcode;
-    uint8_t data = read_port(z80, z80->regs.c), *b = &z80->regs.b;
-    bool h = !!(((*b & 0x0F) - 1) & 0x10);
+    mmu_write_byte(z80->mmu, z80->regs.hl, read_port(z80, z80->regs.c));
+    set_flags_blockio(z80);
 
-    mmu_write_byte(z80->mmu, z80->regs.hl, data);
     z80->regs.hl++;
-    (*b)--;
-
-    set_flags(z80, 0, 1, *b == 0x7F, !!(*b & 0x08), h, !!(*b & 0x20),
-        *b == 0, !!(*b & 0x80), 0xFE);
+    z80->regs.b--;
     z80->regs.pc++;
     return 16;
 }
@@ -2031,15 +2025,11 @@ static uint8_t z80_inst_inir(Z80 *z80, uint8_t opcode)
 static uint8_t z80_inst_ind(Z80 *z80, uint8_t opcode)
 {
     (void) opcode;
-    uint8_t data = read_port(z80, z80->regs.c), *b = &z80->regs.b;
-    bool h = !!(((*b & 0x0F) - 1) & 0x10);
+    mmu_write_byte(z80->mmu, z80->regs.hl, read_port(z80, z80->regs.c));
+    set_flags_blockio(z80);
 
-    mmu_write_byte(z80->mmu, z80->regs.hl, data);
     z80->regs.hl--;
-    (*b)--;
-
-    set_flags(z80, 0, 1, *b == 0x7F, !!(*b & 0x08), h, !!(*b & 0x20),
-        *b == 0, !!(*b & 0x80), 0xFE);
+    z80->regs.b--;
     z80->regs.pc++;
     return 16;
 }
@@ -2090,15 +2080,11 @@ static uint8_t z80_inst_out_c_r(Z80 *z80, uint8_t opcode)
 static uint8_t z80_inst_outi(Z80 *z80, uint8_t opcode)
 {
     (void) opcode;
-    uint8_t *b = &z80->regs.b;
-    bool h = !!(((*b & 0x0F) - 1) & 0x10);
-
     write_port(z80, z80->regs.c, mmu_read_byte(z80->mmu, z80->regs.hl));
-    z80->regs.hl++;
-    (*b)--;
+    set_flags_blockio(z80);
 
-    set_flags(z80, 0, 1, *b == 0x7F, !!(*b & 0x08), h, !!(*b & 0x20),
-        *b == 0, !!(*b & 0x80), 0xFE);
+    z80->regs.hl++;
+    z80->regs.b--;
     z80->regs.pc++;
     return 16;
 }
@@ -2123,15 +2109,11 @@ static uint8_t z80_inst_otir(Z80 *z80, uint8_t opcode)
 static uint8_t z80_inst_outd(Z80 *z80, uint8_t opcode)
 {
     (void) opcode;
-    uint8_t *b = &z80->regs.b;
-    bool h = !!(((*b & 0x0F) - 1) & 0x10);
-
     write_port(z80, z80->regs.c, mmu_read_byte(z80->mmu, z80->regs.hl));
-    z80->regs.hl--;
-    (*b)--;
+    set_flags_blockio(z80);
 
-    set_flags(z80, 0, 1, *b == 0x7F, !!(*b & 0x08), h, !!(*b & 0x20),
-        *b == 0, !!(*b & 0x80), 0xFE);
+    z80->regs.hl--;
+    z80->regs.b--;
     z80->regs.pc++;
     return 16;
 }
