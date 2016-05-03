@@ -90,6 +90,14 @@ static bool should_frame_interrupt(const VDP *vdp)
 }
 
 /*
+    Get the height of all sprites in patterns (1 pattern = 8x8 pixels).
+*/
+static uint8_t get_sprite_height(const VDP *vdp)
+{
+    return (vdp->regs[0x01] & 0x02) ? 2 : 1;
+}
+
+/*
     Return the base address of the pattern name table.
 */
 static uint16_t get_pnt_base(const VDP *vdp)
@@ -106,11 +114,11 @@ static uint16_t get_sat_base(const VDP *vdp)
 }
 
 /*
-    Return the base address of the sprite generator table.
+    Return the global offset of the sprite generator table.
 */
-static uint16_t get_sgt_base(const VDP *vdp)
+static uint16_t get_sgt_offset(const VDP *vdp)
 {
-    return (vdp->regs[0x06] & 0x04) << 11;
+    return (vdp->regs[0x06] & 0x04) << 6;
 }
 
 /*
@@ -230,12 +238,55 @@ static void draw_sprites(VDP *vdp)
 {
     uint8_t *sat = vdp->vram + get_sat_base(vdp);
     uint8_t spritebuf[8], nsprites = 0, i;
+    uint8_t height = get_sprite_height(vdp);
 
     for (i = 0; i < 64; i++) {
-        uint8_t y = sat[i] - 1;
-        if (vdp->v_counter >= y && vdp->v_counter < y + 8) {
-            DEBUG("sprite draw!!!")
-            // TODO
+        uint8_t y = sat[i] + 1;
+        if (y == 0xD0)
+            break;
+        if (vdp->v_counter >= y && vdp->v_counter < y + (height * 8)) {
+            if (nsprites >= 8) {
+                vdp->flags |= FLAG_SPR_OVF;
+                break;
+            }
+            spritebuf[nsprites++] = i;
+        }
+    }
+
+    // TODO: collisions
+
+    uint8_t dst_row = vdp->v_counter - 0x18;
+
+    while (nsprites-- > 0) {
+        i = spritebuf[nsprites];
+        uint8_t y = sat[i] + 1;
+        uint8_t x = sat[0x80 + 2 * i];
+        uint8_t vshift;
+        uint16_t pattern;
+
+        if (height == 1) {
+            pattern = get_sgt_offset(vdp) + sat[0x80 + 2 * i + 1];
+            vshift = vdp->v_counter - y;
+        } else if (height == 2) {
+            pattern  = (get_sgt_offset(vdp) + sat[0x80 + 2 * i + 1]) & 0x1FE;
+            pattern |= (vdp->v_counter - y) >> 3;
+            vshift   = (vdp->v_counter - y) % 8;
+        } else {
+            FATAL("TODO: sprite doubling")
+        }
+
+        uint8_t pixel, index;
+        uint16_t color;
+        int16_t dst_col;
+
+        for (pixel = 0; pixel < 8; pixel++) {
+            index = read_pattern(vdp, pattern, vshift, pixel);
+            if (index == 0)
+                continue;
+            color = get_color(vdp, index, 1);
+            dst_col = x + pixel - (6 << 3);
+            if (dst_col >= 0 && dst_col < 160)
+                draw_pixel(vdp, dst_row, dst_col, color);
         }
     }
 }
@@ -428,7 +479,7 @@ void vdp_dump_registers(const VDP *vdp)
     DEBUG("- $03:  0x%02X (CT)", regs[0x03])
     DEBUG("- $04:  0x%02X (BPG)", regs[0x04])
     DEBUG("- $05:  0x%02X (SAT: 0x%04X)", regs[0x05], get_sat_base(vdp))
-    DEBUG("- $06:  0x%02X (SGT: 0x%04X)", regs[0x06], get_sgt_base(vdp))
+    DEBUG("- $06:  0x%02X (SGT: 0x%04X)", regs[0x06], get_sgt_offset(vdp) << 5)
     DEBUG("- $07:  0x%02X (BDC: 0x%02X)", regs[0x07], get_backdrop_color(vdp))
     DEBUG("- $08:  0x%02X (HS)", regs[0x08])
     DEBUG("- $09:  0x%02X (VS)", regs[0x09])
