@@ -34,13 +34,24 @@ typedef struct GameGear {
     char exc_buffer[GG_EXC_BUFF_SIZE];
 } GameGear;
 
+typedef enum {
+    BUTTON_UP        = 0,
+    BUTTON_DOWN      = 1,
+    BUTTON_LEFT      = 2,
+    BUTTON_RIGHT     = 3,
+    BUTTON_TRIGGER_1 = 4,
+    BUTTON_TRIGGER_2 = 5,
+    BUTTON_START
+} GGButton;
+
 /* Functions */
 
 GameGear* gamegear_create();
 void gamegear_destroy(GameGear*);
 void gamegear_load(GameGear*, const ROM*);
 void gamegear_simulate(GameGear*);
-void gamegear_power_off(GameGear*);  // TODO: generic "gamegear_input()" with a power-off option
+void gamegear_input(GameGear*, GGButton, bool);
+void gamegear_power_off(GameGear*);
 
 void gamegear_attach_callback(GameGear*, GGFrameCallback);
 void gamegear_attach_display(GameGear*, uint32_t*);

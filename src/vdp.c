@@ -207,7 +207,7 @@ static void draw_background(VDP *vdp)
     uint8_t start_col   = get_bg_hscroll(vdp) >> 3;
     uint8_t fine_scroll = get_bg_hscroll(vdp) % 8;
 
-    for (col = 6; col < 20 + 6; col++) {
+    for (col = 5; col < 20 + 6; col++) {
         hcell = (32 - start_col + col) % 32;
         uint16_t tile = get_background_tile(vdp, vcell, hcell);
         uint16_t pattern  = tile & 0x01FF;
@@ -217,13 +217,16 @@ static void draw_background(VDP *vdp)
         bool     hflip    = tile & 0x0200;
 
         uint8_t vshift = vflip ? (7 - src_row % 8) : (src_row % 8), hshift;
-        uint8_t pixel, dst_col, index;
+        uint8_t pixel, index;
+        int16_t dst_col;
         uint16_t color;
 
         for (pixel = 0; pixel < 8; pixel++) {
             dst_col = ((col - 6) << 3) + pixel + fine_scroll;
-            hshift = hflip ? (7 - pixel) : pixel;
+            if (dst_col < 0 || dst_col >= 160)
+                continue;
 
+            hshift = hflip ? (7 - pixel) : pixel;
             index = read_pattern(vdp, pattern, vshift, hshift);
             color = get_color(vdp, index, palette);
             draw_pixel(vdp, dst_row, dst_col, color);
@@ -280,13 +283,16 @@ static void draw_sprites(VDP *vdp)
         int16_t dst_col;
 
         for (pixel = 0; pixel < 8; pixel++) {
+            dst_col = x + pixel - (6 << 3);
+            if (dst_col < 0 || dst_col >= 160)
+                continue;
+
             index = read_pattern(vdp, pattern, vshift, pixel);
             if (index == 0)
                 continue;
+
             color = get_color(vdp, index, 1);
-            dst_col = x + pixel - (6 << 3);
-            if (dst_col >= 0 && dst_col < 160)
-                draw_pixel(vdp, dst_row, dst_col, color);
+            draw_pixel(vdp, dst_row, dst_col, color);
         }
     }
 }

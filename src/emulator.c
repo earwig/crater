@@ -86,17 +86,54 @@ static void draw_frame()
 }
 
 /*
+    Handle a keyboard press; translate it into a Game Gear button press.
+*/
+static void handle_keypress(GameGear *gg, SDL_Keycode key, bool state)
+{
+    GGButton button;
+    switch (key) {
+        case SDLK_UP:
+        case SDLK_w:
+            button = BUTTON_UP;        break;
+        case SDLK_DOWN:
+        case SDLK_s:
+            button = BUTTON_DOWN;      break;
+        case SDLK_LEFT:
+        case SDLK_a:
+            button = BUTTON_LEFT;      break;
+        case SDLK_RIGHT:
+        case SDLK_d:
+            button = BUTTON_RIGHT;     break;
+        case SDLK_j:
+            button = BUTTON_TRIGGER_1; break;
+        case SDLK_k:
+            button = BUTTON_TRIGGER_2; break;
+        case SDLK_RETURN:
+            button = BUTTON_START;     break;
+        default:
+            return;
+    }
+    gamegear_input(gg, button, state);
+}
+
+/*
     Handle SDL events, mainly quit events and button presses.
 */
 static void handle_events(GameGear *gg)
 {
-    SDL_Event e;
-    while (SDL_PollEvent(&e)) {
-        if (e.type == SDL_QUIT) {
-            gamegear_power_off(gg);
-            return;
+    SDL_Event event;
+    while (SDL_PollEvent(&event)) {
+        switch (event.type) {
+            case SDL_QUIT:
+                gamegear_power_off(gg);
+                return;
+            case SDL_KEYDOWN:
+                handle_keypress(gg, event.key.keysym.sym, true);
+                break;
+            case SDL_KEYUP:
+                handle_keypress(gg, event.key.keysym.sym, false);
+                break;
         }
-        // TODO: buttons
     }
 }
 

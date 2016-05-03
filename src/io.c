@@ -24,6 +24,9 @@ void io_power(IO *io)
     io->ports[0x03] = 0x00;
     io->ports[0x04] = 0xFF;
     io->ports[0x05] = 0x00;
+
+    io->buttons = 0xFF;
+    io->start = true;
 }
 
 /*
@@ -35,14 +38,29 @@ bool io_check_irq(IO *io)
 }
 
 /*
+    Set the state of the given joystick button.
+*/
+void io_set_button(IO *io, uint8_t button, bool state)
+{
+    io->buttons = (io->buttons & ~(1 << button)) | ((!state) << button);
+}
+
+/*
+    Set the state of the start button.
+*/
+void io_set_start(IO *io, bool state)
+{
+    io->start = !state;
+}
+
+/*
     Read from one of the system ports, which are numbered from 0x00 to 0x06.
 */
 static uint8_t read_system_port(IO *io, uint8_t port)
 {
     switch (port) {
         case 0x00:
-            // TODO: MSB is state of START button
-            return (io->ports[port] & 0x7F) | (0 << 7);
+            return (io->ports[port] & 0x7F) | (io->start << 7);
         case 0x01:
         case 0x02:
         case 0x03:
@@ -91,9 +109,9 @@ uint8_t io_port_read(IO *io, uint8_t port)
     else if (port <= 0xBF)
         return vdp_read_control(io->vdp);
     else if (port == 0xCD || port == 0xDC)
-        return 0xFF;  // TODO: Return the I/O port A/B register
+        return io->buttons;
     else if (port == 0xC1 || port == 0xDD)
-        return 0xFF;  // TODO: Return the I/O port B/misc. register
+        return 0xFF;  // TODO
     else
         return 0xFF;
 }

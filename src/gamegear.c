@@ -68,6 +68,20 @@ void gamegear_load(GameGear *gg, const ROM *rom)
 }
 
 /*
+    Update the GameGear's button/joystick state.
+
+    'state' should be true when the button is pressed, and false when it is
+    released.
+*/
+void gamegear_input(GameGear *gg, GGButton button, bool state)
+{
+    if (button == BUTTON_START)
+        io_set_start(&gg->io, state);
+    else
+        io_set_button(&gg->io, button, state);
+}
+
+/*
     Power on the GameGear.
 
     This clears the exception buffer and executes boot code (e.g. clearing
