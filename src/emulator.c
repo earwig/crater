@@ -105,10 +105,16 @@ static void handle_keypress(GameGear *gg, SDL_Keycode key, bool state)
         case SDLK_d:
             button = BUTTON_RIGHT;     break;
         case SDLK_j:
+        case SDLK_z:
+        case SDLK_PERIOD:
             button = BUTTON_TRIGGER_1; break;
         case SDLK_k:
+        case SDLK_x:
+        case SDLK_SLASH:
             button = BUTTON_TRIGGER_2; break;
         case SDLK_RETURN:
+        case SDLK_RETURN2:
+        case SDLK_ESCAPE:
             button = BUTTON_START;     break;
         default:
             return;

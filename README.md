@@ -48,13 +48,27 @@ Add or symlink ROMs to `roms/` at your leisure. Note that they must end in
 `.gg` or `.bin` to be auto-detected.
 
 Add `--fullscreen` (`-f`) to enable fullscreen mode, or `--scale <n>`
-(`-s <n>`) to scale the game screen by an integer factor.
+(`-s <n>`) to scale the game screen by an integer factor in windowed mode (this
+only sets the starting configuration; the window should be resizeable).
 
 Add `--debug` (`-g`) to show logging information while running. Pass it twice
 (`-gg`) to show more detailed logs, including an emulator trace.
 
 `./crater -h` gives (fairly basic) command-line usage, and `./crater -v` gives
 the current version.
+
+### Key mapping
+
+Custom key mappings are not supported. There are two primary configurations I
+like:
+
+- `Return`/`Esc` for `Start`; `WASD` for D-pad; `.` for `1`/left trigger;
+  `/` for `2`/right trigger
+
+- `Return`/`Esc` for `Start`; arrow keys for D-pad; `Z` for `1`/left trigger;
+  `X` for `2`/right trigger
+
+You can switch between them freely.
 
 ### Assembler/Disassembler
 
