@@ -147,6 +147,15 @@ static inline void set_flags_bitshift(Z80 *z80, uint8_t res, uint8_t bit)
 }
 
 /*
+    Set the flags for a RLD or RRD instruction.
+*/
+static inline void set_flags_rd(Z80 *z80)
+{
+    uint8_t a = z80->regs.a;
+    set_flags(z80, 0, 0, PARITY(a), F3(a), 0, F5(a), ZERO(a), SIGN(a), 0xFE);
+}
+
+/*
     Set the flags for a DAA instruction.
 */
 static inline void set_flags_daa(Z80 *z80, uint8_t old, uint8_t adjust)

@@ -1767,9 +1767,39 @@ static uint8_t z80_inst_srl_hl(Z80 *z80, uint8_t opcode)
     TODO
 */
 
-// TODO: RLD
+/*
+    RLD (0xED6F):
+    Low nibble of (HL) is copied to high nibble of (HL). Old high nibble of
+    (HL) is copied to low nibble of A. Old low nibble of A is copied to low
+    nibble of (HL).
+*/
+static uint8_t z80_inst_rld(Z80 *z80, uint8_t opcode)
+{
+    (void) opcode;
+    uint8_t hl = mmu_read_byte(z80->mmu, z80->regs.hl);
+    uint8_t newhl = (hl << 4) | (z80->regs.a & 0x0F);
+    z80->regs.a = (z80->regs.a & 0xF0) | (hl >> 4);
+    mmu_write_byte(z80->mmu, z80->regs.hl, newhl);
+    set_flags_rd(z80);
+    return 18;
+}
 
-// TODO: RRD
+/*
+    RRD (0xED67):
+    Low nibble of A is copied to high nibble of (HL). Old high nibble of
+    (HL) is copied to low nibble of (HL). Old low nibble of (HL) is copied to
+    low nibble of A.
+*/
+static uint8_t z80_inst_rrd(Z80 *z80, uint8_t opcode)
+{
+    (void) opcode;
+    uint8_t hl = mmu_read_byte(z80->mmu, z80->regs.hl);
+    uint8_t newhl = (z80->regs.a << 4) | (hl >> 4);
+    z80->regs.a = (z80->regs.a & 0xF0) | (hl & 0x0F);
+    mmu_write_byte(z80->mmu, z80->regs.hl, newhl);
+    set_flags_rd(z80);
+    return 18;
+}
 
 /*
     BIT b, r   (0xCB40, 0xCB41, 0xCB42, 0xCB43, 0xCB44, 0xCB45, 0xCB47, 0xCB48,
