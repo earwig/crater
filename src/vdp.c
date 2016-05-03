@@ -245,7 +245,7 @@ static void draw_sprites(VDP *vdp)
 
     for (i = 0; i < 64; i++) {
         uint8_t y = sat[i] + 1;
-        if (y == 0xD0)
+        if (y == 0xD0 + 1)
             break;
         if (vdp->v_counter >= y && vdp->v_counter < y + (height * 8)) {
             if (nsprites >= 8) {
