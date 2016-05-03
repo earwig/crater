@@ -1118,7 +1118,28 @@ static uint8_t z80_inst_dec_ixy(Z80 *z80, uint8_t opcode)
     return 23;
 }
 
-// TODO: DAA
+/*
+    DAA (0x27):
+    Adjust A for BCD addition and subtraction.
+*/
+static uint8_t z80_inst_daa(Z80 *z80, uint8_t opcode)
+{
+    (void) opcode;
+    uint8_t a = z80->regs.a, adjust = 0x00;
+    bool n = get_flag(z80, FLAG_SUBTRACT);
+
+    if ((a & 0x0F) > 0x09 || get_flag(z80, FLAG_HALFCARRY))
+        adjust += 0x06;
+
+    uint8_t temp = n ? (a - adjust) : (a + adjust);
+    if ((temp >> 4) > 0x09 || get_flag(z80, FLAG_CARRY))
+        adjust += 0x60;
+
+    z80->regs.a += n ? -adjust : adjust;
+    set_flags_daa(z80, a, adjust);
+    z80->regs.pc++;
+    return 4;
+}
 
 /*
     CPL (0x2F):
@@ -1130,7 +1151,7 @@ static uint8_t z80_inst_cpl(Z80 *z80, uint8_t opcode)
     z80->regs.a = ~z80->regs.a;
     set_flags_cpl(z80);
     z80->regs.pc++;
-    return 8;
+    return 4;
 }
 
 /*
@@ -1146,9 +1167,29 @@ static uint8_t z80_inst_neg(Z80 *z80, uint8_t opcode)
     return 8;
 }
 
-// TODO: CCF
+/*
+    CCF (0x3F):
+    Invert the carry flag.
+*/
+static uint8_t z80_inst_ccf(Z80 *z80, uint8_t opcode)
+{
+    (void) opcode;
+    set_flags_ccf(z80);
+    z80->regs.pc++;
+    return 4;
+}
 
-// TODO: SCF
+/*
+    SCF (0x37):
+    Set the carry flag.
+*/
+static uint8_t z80_inst_scf(Z80 *z80, uint8_t opcode)
+{
+    (void) opcode;
+    set_flags_scf(z80);
+    z80->regs.pc++;
+    return 4;
+}
 
 /*
     NOP (0x00):
@@ -1278,9 +1319,9 @@ static uint8_t z80_inst_sbc_hl_ss(Z80 *z80, uint8_t opcode)
         0xFD39):
     Add pp to IX or IY.
 */
-static uint8_t z80_inst_add_ixy_ss(Z80 *z80, uint8_t opcode)
+static uint8_t z80_inst_add_ixy_pp(Z80 *z80, uint8_t opcode)
 {
-    uint16_t lh = *z80->regs.ixy, rh = *extract_pair(z80, opcode);
+    uint16_t lh = *z80->regs.ixy, rh = *extract_pair_pp(z80, opcode);
     *z80->regs.ixy += rh;
 
     set_flags_add16(z80, lh, rh);

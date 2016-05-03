@@ -147,6 +147,22 @@ static inline void set_flags_bitshift(Z80 *z80, uint8_t res, uint8_t bit)
 }
 
 /*
+    Set the flags for a DAA instruction.
+*/
+static inline void set_flags_daa(Z80 *z80, uint8_t old, uint8_t adjust)
+{
+    uint8_t res = z80->regs.a;
+
+    bool c = adjust >= 0x60;
+    bool h = get_flag(z80, FLAG_SUBTRACT) ?
+        (get_flag(z80, FLAG_HALFCARRY) && (old & 0x0F) < 0x06) :
+        ((old & 0x0F) > 0x09);
+
+    set_flags(z80, c, 0, PARITY(res), F3(res), h, F5(res), ZERO(res),
+        SIGN(res), 0xFD);
+}
+
+/*
     Set the flags for a CPL instruction.
 */
 static inline void set_flags_cpl(Z80 *z80)
@@ -164,6 +180,25 @@ static inline void set_flags_neg(Z80 *z80)
     uint8_t val = -res;
     set_flags(z80, CARRY(0, -, val), SUB, OV_SUB(0, val, res), F3(res),
         HALF(0, -, val), F5(res), ZERO(res), SIGN(res), 0xFF);
+}
+
+/*
+    Set the flags for a CCF instruction.
+*/
+static inline void set_flags_ccf(Z80 *z80)
+{
+    uint8_t val = z80->regs.a;
+    bool c = get_flag(z80, FLAG_CARRY);
+    set_flags(z80, 1 - c, 0, 0, F3(val), c, F5(val), 0, 0, 0x3B);
+}
+
+/*
+    Set the flags for a SCF instruction.
+*/
+static inline void set_flags_scf(Z80 *z80)
+{
+    uint8_t val = z80->regs.a;
+    set_flags(z80, 1, 0, 0, F3(val), 0, F5(val), 0, 0, 0x3B);
 }
 
 /*
