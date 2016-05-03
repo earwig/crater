@@ -1855,7 +1855,22 @@ static uint8_t z80_inst_set_b_hl(Z80 *z80, uint8_t opcode)
     return 15;
 }
 
-// TODO: SET b, (IXY+d)
+/*
+    SET b, (IXY+d) (0xDDCBC6, 0xDDCBCE, 0xDDCBD6, 0xDDCBDE, 0xDDCBE6, 0xDDCBEE,
+          0xDDCBF6, 0xDDCBFE, 0xFDCBC6, 0xFDCBCE, 0xFDCBD6, 0xFDCBDE, 0xFDCBE6,
+          0xFDCBEE, 0xFDCBF6, 0xFDCBFE):
+    Set bit b of (IX+d) or (IY+d).
+*/
+static uint8_t z80_inst_set_b_ixy(Z80 *z80, uint8_t opcode)
+{
+    uint16_t addr = get_index_addr(z80, z80->regs.pc - 1);
+    uint8_t val = mmu_read_byte(z80->mmu, addr);
+    uint8_t bit = (opcode >> 3) & 0x07;
+    val |= 1 << bit;
+    mmu_write_byte(z80->mmu, addr, val);
+    z80->regs.pc++;
+    return 15;
+}
 
 /*
     RES b, r   (0xCB80, 0xCB81, 0xCB82, 0xCB83, 0xCB84, 0xCB85, 0xCB87, 0xCB88,
@@ -1891,7 +1906,22 @@ static uint8_t z80_inst_res_b_hl(Z80 *z80, uint8_t opcode)
     return 15;
 }
 
-// TODO: RES b, (IXY+d)
+/*
+    RES b, (IXY+d) (0xDDCB86, 0xDDCB8E, 0xDDCB96, 0xDDCB9E, 0xDDCBA6, 0xDDCBAE,
+          0xDDCBB6, 0xDDCBBE, 0xFDCB86, 0xFDCB8E, 0xFDCBA6, 0xFDCBAE, 0xFDCBB6,
+          0xFDCBBE, 0xFDCBC6, 0xFDCBCE):
+    Set bit b of (IX+d) or (IY+d).
+*/
+static uint8_t z80_inst_res_b_ixy(Z80 *z80, uint8_t opcode)
+{
+    uint16_t addr = get_index_addr(z80, z80->regs.pc - 1);
+    uint8_t val = mmu_read_byte(z80->mmu, addr);
+    uint8_t bit = (opcode >> 3) & 0x07;
+    val &= ~(1 << bit);
+    mmu_write_byte(z80->mmu, addr, val);
+    z80->regs.pc++;
+    return 15;
+}
 
 /*
     JP nn (0xC3):
