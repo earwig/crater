@@ -216,6 +216,8 @@ static void draw_background(VDP *vdp)
         bool     vflip    = tile & 0x0400;
         bool     hflip    = tile & 0x0200;
 
+        (void) priority;  // TODO
+
         uint8_t vshift = vflip ? (7 - src_row % 8) : (src_row % 8), hshift;
         uint8_t pixel, index;
         int16_t dst_col;
@@ -275,7 +277,7 @@ static void draw_sprites(VDP *vdp)
             pattern |= (vdp->v_counter - y) >> 3;
             vshift   = (vdp->v_counter - y) % 8;
         } else {
-            FATAL("TODO: sprite doubling")
+            // TODO: sprite doubling
         }
 
         uint8_t pixel, index;

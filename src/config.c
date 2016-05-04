@@ -39,10 +39,11 @@ static void print_help(const char *arg1)
 "                      to show more detailed logs, including an emulator trace\n"
 "    -s, --scale <n>   scale the game screen by an integer factor\n"
 "                      (applies to windowed mode only; defaults to 4)\n"
-"    -a, --assemble <in> [<out>]     convert z80 assembly source code into a\n"
-"                                    binary file that can be run by crater\n"
-"    -d, --disassemble <in> [<out>]  convert a binary file into z80 assembly\n"
-"                                    source code\n"
+"    -a, --assemble <in> [<out>]\n"
+"                      convert z80 assembly source code into a binary file that\n"
+"                      can be run by crater\n"
+"    -d, --disassemble <in> [<out>]\n"
+"                      convert a binary file into z80 assembly source code\n"
 "    -r, --overwrite   allow crater to write assembler output to the same\n"
 "                      filename as the input\n",
     arg1);

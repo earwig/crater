@@ -4,6 +4,8 @@ crater
 **crater** is an emulator for the [Sega Game Gear][game gear], with an included
 [Z80][z80] assembler/disassembler, written in C.
 
+![Tails Adventure (1995)](/docs/tailsadventure.png?raw=true "Tails Adventure (1995)")
+
 [game gear]: https://en.wikipedia.org/wiki/Sega_Game_Gear
 [z80]: https://en.wikipedia.org/wiki/Zilog_Z80
 
@@ -81,6 +83,23 @@ the opposite operation. If no output file is given, crater will use the name of
 the input file, with the extension replaced with `.gg` for `-a` and `.asm` for
 `-d`. By default, this will never overwrite the original filename; pass
 `--overwrite` (`-r`) to let crater do so.
+
+Status
+------
+
+The emulator is almost fully functional, lacking only audio support, a few
+uncommon CPU instructions, and some advanced graphics features. Most games are
+playable with only minor bugs. Future goals include save states and a more
+sophisticated debugging mode.
+
+The assembler is complete. Future goals include more documentation, macros, and
+additional directives.
+
+The disassembler works, but can't differentiate between code and data yet, so
+it's not very useful.
+
+The testing infrasture is limited. The assembler has decent coverage, other
+components minimal.
 
 Credits
 -------

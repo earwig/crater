@@ -42,7 +42,7 @@ static void setup_graphics(bool fullscreen, unsigned scale)
     if (fullscreen)
         flags = SDL_WINDOW_FULLSCREEN_DESKTOP;
     else
-        flags = SDL_WINDOW_BORDERLESS|SDL_WINDOW_RESIZABLE;
+        flags = SDL_WINDOW_RESIZABLE;
 
     SDL_CreateWindowAndRenderer(
         scale * GG_SCREEN_WIDTH, scale * GG_SCREEN_HEIGHT,
