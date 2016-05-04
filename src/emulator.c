@@ -66,6 +66,7 @@ static void setup_graphics(bool fullscreen, unsigned scale)
     SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "nearest");
     SDL_SetWindowTitle(emu.window, "crater");
     SDL_ShowCursor(SDL_DISABLE);
+    SDL_GL_SetSwapInterval(1);  // Vsync
 
     SDL_SetRenderDrawColor(emu.renderer, 0x00, 0x00, 0x00, 0xFF);
     SDL_RenderClear(emu.renderer);
