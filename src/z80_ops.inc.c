@@ -1349,7 +1349,7 @@ static uint8_t z80_inst_inc_xy(Z80 *z80, uint8_t opcode)
     (void) opcode;
     (*z80->regs.ixy)++;
     z80->regs.pc++;
-    return 6;
+    return 10;
 }
 
 /*
@@ -1372,7 +1372,7 @@ static uint8_t z80_inst_dec_xy(Z80 *z80, uint8_t opcode)
     (void) opcode;
     (*z80->regs.ixy)--;
     z80->regs.pc++;
-    return 6;
+    return 10;
 }
 
 /*
