@@ -4,7 +4,7 @@ crater
 **crater** is an emulator for the [Sega Game Gear][game gear], with an included
 [Z80][z80] assembler/disassembler, written in C.
 
-![Tails Adventure (1995)](/docs/tailsadventure.png?raw=true "Tails Adventure (1995)")
+<img src="/docs/tailsadventure.png?raw=true" title="Tails Adventure (1995)" alt="Tails Adventure (1995)" width="320px">
 
 [game gear]: https://en.wikipedia.org/wiki/Sega_Game_Gear
 [z80]: https://en.wikipedia.org/wiki/Zilog_Z80
