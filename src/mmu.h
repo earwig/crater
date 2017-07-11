@@ -10,14 +10,18 @@
 #define MMU_NUM_SLOTS       (3)
 #define MMU_NUM_ROM_BANKS   (64)
 #define MMU_ROM_BANK_SIZE   (16 * 1024)
-#define MMU_SYSTEM_RAM_SIZE (8 * 1024)
+#define MMU_SYSTEM_RAM_SIZE ( 8 * 1024)
+#define MMU_CART_RAM_SIZE   (32 * 1024)
 
 /* Structs */
 
 typedef struct {
     uint8_t *system_ram;
-    const uint8_t *map_slots[MMU_NUM_SLOTS];
+    uint8_t *cart_ram;
+    const uint8_t *rom_slots[MMU_NUM_SLOTS];
     const uint8_t *rom_banks[MMU_NUM_ROM_BANKS];
+    uint8_t *cart_ram_slot;
+    bool cart_ram_mapped;
 } MMU;
 
 /* Functions */

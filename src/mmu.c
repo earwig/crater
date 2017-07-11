@@ -15,9 +15,12 @@
 void mmu_init(MMU *mmu)
 {
     mmu->system_ram = cr_malloc(sizeof(uint8_t) * MMU_SYSTEM_RAM_SIZE);
+    mmu->cart_ram = cr_malloc(sizeof(uint8_t) * MMU_CART_RAM_SIZE);
+    mmu->cart_ram_slot = mmu->cart_ram;
+    mmu->cart_ram_mapped = false;
 
     for (size_t slot = 0; slot < MMU_NUM_SLOTS; slot++)
-        mmu->map_slots[slot] = NULL;
+        mmu->rom_slots[slot] = NULL;
 
     for (size_t bank = 0; bank < MMU_NUM_ROM_BANKS; bank++)
         mmu->rom_banks[bank] = NULL;
@@ -29,6 +32,7 @@ void mmu_init(MMU *mmu)
 void mmu_free(MMU *mmu)
 {
     free(mmu->system_ram);
+    free(mmu->cart_ram);
 }
 
 /*
@@ -84,10 +88,10 @@ void mmu_load_rom(MMU *mmu, const uint8_t *data, size_t size)
 /*
     Map the given RAM slot to the given ROM bank.
 */
-static inline void map_slot(MMU *mmu, size_t slot, size_t bank)
+static inline void map_rom_slot(MMU *mmu, size_t slot, size_t bank)
 {
-    TRACE("MMU mapping memory slot %zu to bank 0x%02zX", slot, bank)
-    mmu->map_slots[slot] = mmu->rom_banks[bank];
+    TRACE("MMU mapping memory slot %zu to ROM bank 0x%02zX", slot, bank)
+    mmu->rom_slots[slot] = mmu->rom_banks[bank];
 }
 
 /*
@@ -99,9 +103,10 @@ static inline void map_slot(MMU *mmu, size_t slot, size_t bank)
 void mmu_power(MMU *mmu)
 {
     for (size_t slot = 0; slot < MMU_NUM_SLOTS; slot++)
-        map_slot(mmu, slot, slot);
+        map_rom_slot(mmu, slot, slot);
 
     memset(mmu->system_ram, 0xFF, MMU_SYSTEM_RAM_SIZE);
+    memset(mmu->cart_ram,   0xFF, MMU_CART_RAM_SIZE);
 }
 
 /*
@@ -121,18 +126,21 @@ static inline uint8_t bank_byte_read(const uint8_t* bank, uint16_t addr)
 */
 uint8_t mmu_read_byte(const MMU *mmu, uint16_t addr)
 {
-    if (addr < 0x0400)  // First kilobyte is unpaged, for interrupt handlers
+    if (addr < 0x0400) {  // First kilobyte is unpaged, for interrupt handlers
         return bank_byte_read(mmu->rom_banks[0], addr);
-    else if (addr < 0x4000)  // Slot 0 (0x0400 - 0x3FFF)
-        return bank_byte_read(mmu->map_slots[0], addr);
-    else if (addr < 0x8000)  // Slot 1 (0x4000 - 0x7FFF)
-        return bank_byte_read(mmu->map_slots[1], addr - 0x4000);
-    else if (addr < 0xC000)  // Slot 2 (0x8000 - 0xBFFF)
-        return bank_byte_read(mmu->map_slots[2], addr - 0x8000);
-    else if (addr < 0xE000) // System RAM (0xC000 - 0xDFFF)
+    } else if (addr < 0x4000) {  // Slot 0 (0x0400 - 0x3FFF)
+        return bank_byte_read(mmu->rom_slots[0], addr);
+    } else if (addr < 0x8000) {  // Slot 1 (0x4000 - 0x7FFF)
+        return bank_byte_read(mmu->rom_slots[1], addr - 0x4000);
+    } else if (addr < 0xC000) {  // Slot 2 (0x8000 - 0xBFFF)
+        if (mmu->cart_ram_mapped)
+            return mmu->cart_ram_slot[addr - 0x8000];
+        return bank_byte_read(mmu->rom_slots[2], addr - 0x8000);
+    } else if (addr < 0xE000) {  // System RAM (0xC000 - 0xDFFF)
         return mmu->system_ram[addr - 0xC000];
-    else  // System RAM, mirrored (0xE000 - 0xFFFF)
+    } else {  // System RAM, mirrored (0xE000 - 0xFFFF)
         return mmu->system_ram[addr - 0xE000];
+    }
 }
 
 /*
@@ -156,6 +164,25 @@ uint32_t mmu_read_quad(const MMU *mmu, uint16_t addr)
 }
 
 /*
+    Write to the cartridge RAM mapping control register at 0xFFFC.
+*/
+static void write_ram_control_register(MMU *mmu, uint8_t value)
+{
+    // TODO: 0x03 = bank shift, 0x10 = 0xC000-0xFFFF enable, 0x80 = ROM write
+    bool bank_select  = value & 0x04;
+    bool slot2_enable = value & 0x08;
+
+    if (slot2_enable)
+        TRACE("MMU enabling cart RAM bank %d in memory slot 2", bank_select)
+    else if (!slot2_enable && mmu->cart_ram_mapped)
+        TRACE("MMU disabling cart RAM in memory slot 2")
+
+    mmu->cart_ram_slot =
+        bank_select ? (mmu->cart_ram + 0x4000) : mmu->cart_ram;
+    mmu->cart_ram_mapped = slot2_enable;
+}
+
+/*
     Write a byte of memory to the given address.
 
     Return true if the byte was written, and false if it wasn't. Writes will
@@ -163,20 +190,24 @@ uint32_t mmu_read_quad(const MMU *mmu, uint16_t addr)
 */
 bool mmu_write_byte(MMU *mmu, uint16_t addr, uint8_t value)
 {
-    if (addr < 0xC000) {  // TODO: implement writes to on-cartridge RAM
+    if (addr < 0xC000) {
+        if (addr >= 0x8000 && mmu->cart_ram_mapped) {
+            mmu->cart_ram_slot[addr - 0x8000] = value;
+            return true;
+        }
         return false;
     } else if (addr < 0xE000) {  // System RAM (0xC000 - 0xDFFF)
         mmu->system_ram[addr - 0xC000] = value;
         return true;
     } else {  // System RAM, mirrored (0xE000 - 0xFFFF)
-        if (addr == 0xFFFC) {
-            // TODO: handle cartridge RAM mapping control
-        } else if (addr == 0xFFFD)
-            map_slot(mmu, 0, value & 0x3F);
+        if (addr == 0xFFFC)
+            write_ram_control_register(mmu, value);
+        else if (addr == 0xFFFD)
+            map_rom_slot(mmu, 0, value & 0x3F);
         else if (addr == 0xFFFE)
-            map_slot(mmu, 1, value & 0x3F);
+            map_rom_slot(mmu, 1, value & 0x3F);
         else if (addr == 0xFFFF)
-            map_slot(mmu, 2, value & 0x3F);
+            map_rom_slot(mmu, 2, value & 0x3F);
         mmu->system_ram[addr - 0xE000] = value;
         return true;
     }
