@@ -50,13 +50,13 @@ Add or symlink ROMs to `roms/` at your leisure. Note that they must end in
 `.gg` or `.bin` to be auto-detected.
 
 Add `--fullscreen` (`-f`) to enable fullscreen mode, or `--scale <n>`
-(`-s <n>`) to scale the game screen by an integer factor in windowed mode (this
+(`-x <n>`) to scale the game screen by an integer factor in windowed mode (this
 only sets the starting configuration; the window should be resizeable).
 
 By default, crater will save cartridge RAM ("battery saves"; these are distinct
 from save states, which are not yet supported) to a file named `<rom>.sav`,
 where `<rom>` is the path to the ROM file. You can set a custom save location
-with `--save <path>` or disable saving entirely with `--no-save`.
+with `--save <path>` (`-s <path>`) or disable saving entirely with `--no-save`.
 
 Add `--debug` (`-g`) to show logging information while running. Pass it twice
 (`-gg`) to show more detailed logs, including an emulator trace.
@@ -94,7 +94,7 @@ Status
 
 The emulator is almost fully functional, lacking only audio support, a few
 uncommon CPU instructions, and some advanced graphics features. Most games are
-playable with only minor bugs. Future goals include save states and a more
+playable with only minor bugs. Future goals include full save states and a more
 sophisticated debugging mode.
 
 The assembler is complete. Future goals include more documentation, macros, and

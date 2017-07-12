@@ -37,9 +37,9 @@ static void print_help(const char *arg1)
 "advanced options:\n"
 "    -g, --debug       show logging information while running; add twice (-gg)\n"
 "                      to show more detailed logs, including an emulator trace\n"
-"    -s, --scale <n>   scale the game screen by an integer factor\n"
+"    -x, --scale <n>   scale the game screen by an integer factor\n"
 "                      (applies to windowed mode only; defaults to 4)\n"
-"    -b, --save <path> save cartridge RAM (\"battery save\") to the given file\n"
+"    -s, --save <path> save cartridge RAM (\"battery save\") to the given file\n"
 "                      (defaults to <rom_path>.sav)\n"
 "    -n, --no-save     disable saving cartridge RAM entirely\n"
 "    -a, --assemble <in> [<out>]\n"
@@ -230,7 +230,7 @@ static int parse_opt_arg(Config *config, Arguments *args, const char *arg)
     else if (arg_check(arg, "f", "fullscreen")) {
         config->fullscreen = true;
     }
-    else if (arg_check(arg, "s", "scale")) {
+    else if (arg_check(arg, "x", "scale")) {
         const char *next = consume_next(args);
         if (!next) {
             ERROR("the scale option requires an argument")
@@ -243,7 +243,7 @@ static int parse_opt_arg(Config *config, Arguments *args, const char *arg)
         }
         config->scale = scale;
     }
-    else if (arg_check(arg, "b", "save")) {
+    else if (arg_check(arg, "s", "save")) {
         const char *next = consume_next(args);
         if (!next) {
             ERROR("the save option requires an argument")
