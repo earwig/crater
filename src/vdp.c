@@ -1,4 +1,4 @@
-/* Copyright (C) 2014-2016 Ben Kurtovic <ben.kurtovic@gmail.com>
+/* Copyright (C) 2014-2017 Ben Kurtovic <ben.kurtovic@gmail.com>
    Released under the terms of the MIT License. See LICENSE for details. */
 
 #include <string.h>
@@ -17,6 +17,9 @@
 #define CODE_VRAM_WRITE 1
 #define CODE_REG_WRITE  2
 #define CODE_CRAM_WRITE 3
+
+#define COLBUF_BG_PRIORITY   0x10
+#define COLBUF_OPAQUE_SPRITE 0x20
 
 /*
     Initialize the Video Display Processor (VDP).
@@ -87,6 +90,14 @@ static bool should_line_interrupt(const VDP *vdp)
 static bool should_frame_interrupt(const VDP *vdp)
 {
     return vdp->regs[0x01] & 0x20;
+}
+
+/*
+    Return whether the display should be visible or completely blank.
+*/
+static bool is_display_visible(const VDP *vdp)
+{
+    return vdp->regs[0x01] & 0x40;
 }
 
 /*
@@ -180,24 +191,41 @@ static uint16_t get_color(const VDP *vdp, uint8_t index, bool palette)
 }
 
 /*
+    Toggle visibility of the display.
+
+    This sets the alpha channel of every pixel to be 0xFF (if true)
+    or 0x00 (if false).
+*/
+static void toggle_display_visibility(VDP *vdp, bool visible)
+{
+    if (!vdp->pixels)
+        return;
+
+    uint8_t a = visible ? 0xFF : 0x00;
+    for (size_t i = 0; i < 160 * 144; i++)
+        vdp->pixels[i] = (a << 24) | (vdp->pixels[i] & 0x00FFFFFF);
+}
+
+/*
     Draw a pixel onto our pixel array at the given coordinates.
 
     The color should be in BGR444 format, as returned by get_color().
 */
 static void draw_pixel(VDP *vdp, uint8_t y, uint8_t x, uint16_t color)
 {
+    uint8_t a = is_display_visible(vdp) ? 0xFF : 0x00;
     uint8_t r = 0x11 *  (color & 0x000F);
     uint8_t g = 0x11 * ((color & 0x00F0) >> 4);
     uint8_t b = 0x11 * ((color & 0x0F00) >> 8);
 
-    uint32_t argb = (0xFF << 24) + (r << 16) + (g << 8) + b;
+    uint32_t argb = (a << 24) + (r << 16) + (g << 8) + b;
     vdp->pixels[y * 160 + x] = argb;
 }
 
 /*
     Draw the background of the current scanline.
 */
-static void draw_background(VDP *vdp)
+static void draw_background(VDP *vdp, uint8_t *colbuf)
 {
     uint8_t src_row = (vdp->v_counter + get_bg_vscroll(vdp)) % (28 << 3);
     uint8_t dst_row = vdp->v_counter - 0x18;
@@ -216,8 +244,6 @@ static void draw_background(VDP *vdp)
         bool     vflip    = tile & 0x0400;
         bool     hflip    = tile & 0x0200;
 
-        (void) priority;  // TODO
-
         uint8_t vshift = vflip ? (7 - src_row % 8) : (src_row % 8), hshift;
         uint8_t pixel, index;
         int16_t dst_col;
@@ -232,6 +258,9 @@ static void draw_background(VDP *vdp)
             index = read_pattern(vdp, pattern, vshift, hshift);
             color = get_color(vdp, index, palette);
             draw_pixel(vdp, dst_row, dst_col, color);
+
+            if (priority && index != 0)
+                colbuf[dst_col] |= COLBUF_BG_PRIORITY;
         }
     }
 }
@@ -239,7 +268,7 @@ static void draw_background(VDP *vdp)
 /*
     Draw sprites in the current scanline.
 */
-static void draw_sprites(VDP *vdp)
+static void draw_sprites(VDP *vdp, uint8_t *colbuf)
 {
     uint8_t *sat = vdp->vram + get_sat_base(vdp);
     uint8_t spritebuf[8], nsprites = 0, i;
@@ -257,8 +286,6 @@ static void draw_sprites(VDP *vdp)
             spritebuf[nsprites++] = i;
         }
     }
-
-    // TODO: collisions
 
     uint8_t dst_row = vdp->v_counter - 0x18;
 
@@ -288,10 +315,17 @@ static void draw_sprites(VDP *vdp)
             dst_col = x + pixel - (6 << 3);
             if (dst_col < 0 || dst_col >= 160)
                 continue;
+            if (colbuf[dst_col] & COLBUF_BG_PRIORITY)
+                continue;
 
             index = read_pattern(vdp, pattern, vshift, pixel);
             if (index == 0)
                 continue;
+
+            if (colbuf[dst_col] & COLBUF_OPAQUE_SPRITE)
+                vdp->flags |= FLAG_SPR_COL;
+            else
+                colbuf[dst_col] |= COLBUF_OPAQUE_SPRITE;
 
             color = get_color(vdp, index, 1);
             draw_pixel(vdp, dst_row, dst_col, color);
@@ -307,8 +341,9 @@ static void draw_scanline(VDP *vdp)
     if (!vdp->pixels)
         return;
 
-    draw_background(vdp);
-    draw_sprites(vdp);
+    uint8_t colbuf[160] = {0x00};
+    draw_background(vdp, colbuf);
+    draw_sprites(vdp, colbuf);
 }
 
 /*
@@ -396,6 +431,16 @@ uint8_t vdp_read_data(VDP *vdp)
 }
 
 /*
+    Set the given VDP register.
+*/
+static void write_reg(VDP *vdp, uint8_t reg, uint8_t byte)
+{
+    if (reg == 0x01 && (vdp->regs[reg] & 0x40) != (byte & 0x40))
+        toggle_display_visibility(vdp, byte & 0x40);
+    vdp->regs[reg] = byte;
+}
+
+/*
     Write a byte into the VDP's control port.
 
     Depending on the status of the control flag, this will either update the
@@ -425,7 +470,7 @@ void vdp_write_control(VDP *vdp, uint8_t byte)
     } else if (vdp->control_code == CODE_REG_WRITE) {
         uint8_t reg = byte & 0x0F;
         if (reg <= VDP_REGS)
-            vdp->regs[reg] = vdp->control_addr & 0xFF;
+            write_reg(vdp, reg, vdp->control_addr & 0xFF);
     }
 }
 

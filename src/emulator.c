@@ -39,6 +39,8 @@ static void setup_graphics(bool fullscreen, unsigned scale)
     if (SDL_Init(SDL_INIT_VIDEO) < 0)
         FATAL("SDL failed to initialize: %s", SDL_GetError());
 
+    SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "nearest");
+
     uint32_t flags;
     if (fullscreen)
         flags = SDL_WINDOW_FULLSCREEN_DESKTOP;
@@ -64,7 +66,7 @@ static void setup_graphics(bool fullscreen, unsigned scale)
         sizeof(uint32_t) * GG_SCREEN_WIDTH * GG_SCREEN_HEIGHT);
 
     SDL_RenderSetLogicalSize(emu.renderer, GG_SCREEN_WIDTH, GG_SCREEN_HEIGHT);
-    SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "nearest");
+    SDL_SetTextureBlendMode(emu.texture, SDL_BLENDMODE_BLEND);
     SDL_SetWindowTitle(emu.window, "crater");
     SDL_ShowCursor(SDL_DISABLE);
     SDL_GL_SetSwapInterval(1);  // Vsync
