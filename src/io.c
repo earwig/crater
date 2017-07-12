@@ -1,4 +1,4 @@
-/* Copyright (C) 2014-2016 Ben Kurtovic <ben.kurtovic@gmail.com>
+/* Copyright (C) 2014-2017 Ben Kurtovic <ben.kurtovic@gmail.com>
    Released under the terms of the MIT License. See LICENSE for details. */
 
 #include "io.h"
@@ -7,9 +7,10 @@
 /*
     Initialize an IO object.
 */
-void io_init(IO *io, VDP *vdp, PSG *psg)
+void io_init(IO *io, MMU *mmu, VDP *vdp, PSG *psg)
 {
     io->vdp = vdp;
+    io->mmu = mmu;
     io->psg = psg;
 }
 
@@ -92,6 +93,14 @@ static void write_system_port(IO *io, uint8_t port, uint8_t value)
 }
 
 /*
+    Write to the memory control port, $3E.
+*/
+static void write_memory_control(IO *io, uint8_t value)
+{
+    io->mmu->bios_enabled = !(value & 0x08);
+}
+
+/*
     Read and return a byte from the given port.
 */
 uint8_t io_port_read(IO *io, uint8_t port)
@@ -111,7 +120,7 @@ uint8_t io_port_read(IO *io, uint8_t port)
     else if (port == 0xCD || port == 0xDC)
         return io->buttons;
     else if (port == 0xC1 || port == 0xDD)
-        return 0xFF;  // TODO
+        return 0xFF;  // B/Misc port, always set (unless in SMS mode?)
     else
         return 0xFF;
 }
@@ -124,7 +133,7 @@ void io_port_write(IO *io, uint8_t port, uint8_t value)
     if (port <= 0x06)
         write_system_port(io, port, value);
     else if (port <= 0x3F && !(port % 2))
-        return;  // TODO: Write to memory control register
+        write_memory_control(io, value);
     else if (port <= 0x3F)
         return;  // TODO: Write to I/O control register
     else if (port <= 0x7F)

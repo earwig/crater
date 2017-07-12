@@ -50,6 +50,7 @@ typedef enum {
 GameGear* gamegear_create();
 void gamegear_destroy(GameGear*);
 void gamegear_load_rom(GameGear*, const ROM*);
+void gamegear_load_bios(GameGear*, const BIOS*);
 void gamegear_load_save(GameGear*, Save*);
 void gamegear_simulate(GameGear*);
 void gamegear_input(GameGear*, GGButton, bool);

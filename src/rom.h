@@ -1,4 +1,4 @@
-/* Copyright (C) 2014-2015 Ben Kurtovic <ben.kurtovic@gmail.com>
+/* Copyright (C) 2014-2017 Ben Kurtovic <ben.kurtovic@gmail.com>
    Released under the terms of the MIT License. See LICENSE for details. */
 
 #pragma once
@@ -8,6 +8,8 @@
 
 #define ROM_SIZE_MIN (32 << 10)  // 32 KB
 #define ROM_SIZE_MAX ( 1 << 20)  //  1 MB
+
+#define BIOS_SIZE 1024
 
 /* Header info */
 
@@ -40,9 +42,15 @@ typedef struct {
     uint8_t declared_size;
 } ROM;
 
+typedef struct {
+    uint8_t data[BIOS_SIZE];
+} BIOS;
+
 /* Functions */
 
 const char* rom_open(ROM*, const char*);
 void rom_close(ROM*);
 const char* rom_product(const ROM*);
 const char* rom_region(const ROM*);
+BIOS* bios_open(const char*);
+void bios_close(BIOS*);

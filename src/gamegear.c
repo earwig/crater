@@ -30,7 +30,7 @@ GameGear* gamegear_create()
     mmu_init(&gg->mmu);
     vdp_init(&gg->vdp);
     psg_init(&gg->psg);
-    io_init(&gg->io, &gg->vdp, &gg->psg);
+    io_init(&gg->io, &gg->mmu, &gg->vdp, &gg->psg);
     z80_init(&gg->cpu, &gg->mmu, &gg->io);
 
     gg->powered = false;
@@ -63,8 +63,19 @@ void gamegear_load_rom(GameGear *gg, const ROM *rom)
 {
     if (gg->powered)
         return;
-
     mmu_load_rom(&gg->mmu, rom->data, rom->size);
+}
+
+/*
+    Load BIOS into the GameGear object.
+
+    The same rules with gamegear_load_rom() apply here.
+*/
+void gamegear_load_bios(GameGear *gg, const BIOS *bios)
+{
+    if (gg->powered)
+        return;
+    mmu_load_bios(&gg->mmu, bios->data);
 }
 
 /*
@@ -76,7 +87,6 @@ void gamegear_load_save(GameGear *gg, Save *save)
 {
     if (gg->powered)
         return;
-
     mmu_load_save(&gg->mmu, save);
 }
 

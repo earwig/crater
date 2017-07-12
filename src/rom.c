@@ -1,4 +1,4 @@
-/* Copyright (C) 2014-2016 Ben Kurtovic <ben.kurtovic@gmail.com>
+/* Copyright (C) 2014-2017 Ben Kurtovic <ben.kurtovic@gmail.com>
    Released under the terms of the MIT License. See LICENSE for details. */
 
 #include <ctype.h>
@@ -262,4 +262,55 @@ const char* rom_product(const ROM *rom)
 const char* rom_region(const ROM *rom)
 {
     return region_code_to_string(rom->region_code);
+}
+
+/*
+    Open a BIOS ROM from the given path.
+
+    Return a BIOS pointer if successful, or NULL on error. An error message
+    will be printed. The BIOS must be deallocated with bios_close().
+*/
+BIOS* bios_open(const char *path)
+{
+    FILE *fp;
+    struct stat st;
+
+    if (!(fp = fopen(path, "rb"))) {
+        ERROR("couldn't load BIOS '%s': fopen(): %s", path, strerror(errno));
+        return NULL;
+    }
+    if (fstat(fileno(fp), &st)) {
+        ERROR("couldn't load BIOS '%s': fstat(): %s", path, strerror(errno));
+        fclose(fp);
+        return NULL;
+    }
+    if (!(st.st_mode & S_IFREG)) {
+        ERROR("couldn't load BIOS '%s': not a regular file", path);
+        fclose(fp);
+        return NULL;
+    }
+    if (st.st_size != BIOS_SIZE) {
+        ERROR("couldn't load BIOS '%s': incorrect size", path);
+        fclose(fp);
+        return NULL;
+    }
+
+    BIOS *bios = cr_malloc(sizeof(BIOS));
+    if (!(fread(bios->data, BIOS_SIZE, 1, fp))) {
+        ERROR("couldn't load BIOS '%s': fread(): %s", path, strerror(errno));
+        fclose(fp);
+        bios_close(bios);
+        return NULL;
+    }
+
+    fclose(fp);
+    return bios;
+}
+
+/*
+    Deallocate a BIOS object previously returned by bios_open().
+*/
+void bios_close(BIOS *bios)
+{
+    free(bios);
 }

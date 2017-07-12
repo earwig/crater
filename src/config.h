@@ -25,13 +25,14 @@ typedef struct {
     bool assemble;
     bool disassemble;
     bool fullscreen;
+    bool no_saving;
     unsigned scale;
     char *rom_path;
     char *sav_path;
+    char *bios_path;
     char *src_path;
     char *dst_path;
     bool overwrite;
-    bool no_saving;
 } Config;
 
 /* Functions */

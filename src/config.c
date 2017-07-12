@@ -25,23 +25,25 @@ typedef struct {
 */
 static void print_help(const char *arg1)
 {
-    printf("%s [-h] [-v] [-f] [-s <n>] [<rom_path>] ...\n"
+    printf("%s [-h] [-v] [-f] [-s <save_path> | -n] [<rom_path>] ...\n"
 "\n"
 "basic options:\n"
 "    -h, --help        show this help message and exit\n"
 "    -v, --version     show crater's version number and exit\n"
 "    -f, --fullscreen  enable fullscreen mode\n"
+"    -s, --save <path> save cartridge RAM (\"battery save\") to the given file\n"
+"                      (defaults to <rom_path>.sav)\n"
+"    -n, --no-save     disable saving cartridge RAM entirely\n"
 "    <rom_path>        path to the rom file to execute; if not given, will look\n"
 "                      in the roms/ directory and prompt the user\n"
 "\n"
 "advanced options:\n"
 "    -g, --debug       show logging information while running; add twice (-gg)\n"
 "                      to show more detailed logs, including an emulator trace\n"
+"    -b, --bios <path> load BIOS from the given ROM file (no default;\n"
+"                      the Game Gear does not usually require BIOS)\n"
 "    -x, --scale <n>   scale the game screen by an integer factor\n"
 "                      (applies to windowed mode only; defaults to 4)\n"
-"    -s, --save <path> save cartridge RAM (\"battery save\") to the given file\n"
-"                      (defaults to <rom_path>.sav)\n"
-"    -n, --no-save     disable saving cartridge RAM entirely\n"
 "    -a, --assemble <in> [<out>]\n"
 "                      convert z80 assembly source code into a binary file that\n"
 "                      can be run by crater\n"
@@ -230,19 +232,6 @@ static int parse_opt_arg(Config *config, Arguments *args, const char *arg)
     else if (arg_check(arg, "f", "fullscreen")) {
         config->fullscreen = true;
     }
-    else if (arg_check(arg, "x", "scale")) {
-        const char *next = consume_next(args);
-        if (!next) {
-            ERROR("the scale option requires an argument")
-            return CONFIG_EXIT_FAILURE;
-        }
-        long scale = strtol(next, NULL, 10);
-        if (scale <= 0 || scale > SCALE_MAX) {
-            ERROR("scale factor of %s is not an integer or is out of range", next)
-            return CONFIG_EXIT_FAILURE;
-        }
-        config->scale = scale;
-    }
     else if (arg_check(arg, "s", "save")) {
         const char *next = consume_next(args);
         if (!next) {
@@ -257,6 +246,28 @@ static int parse_opt_arg(Config *config, Arguments *args, const char *arg)
     }
     else if (arg_check(arg, "g", "debug")) {
         config->debug++;
+    }
+    else if (arg_check(arg, "b", "bios")) {
+        const char *next = consume_next(args);
+        if (!next) {
+            ERROR("the bios option requires an argument")
+            return CONFIG_EXIT_FAILURE;
+        }
+        free(config->bios_path);
+        config->bios_path = cr_strdup(next);
+    }
+    else if (arg_check(arg, "x", "scale")) {
+        const char *next = consume_next(args);
+        if (!next) {
+            ERROR("the scale option requires an argument")
+            return CONFIG_EXIT_FAILURE;
+        }
+        long scale = strtol(next, NULL, 10);
+        if (scale <= 0 || scale > SCALE_MAX) {
+            ERROR("scale factor of %s is not an integer or is out of range", next)
+            return CONFIG_EXIT_FAILURE;
+        }
+        config->scale = scale;
     }
     else if (arg_check(arg, "a", "assemble")) {
         if (args->paths_read >= 1) {
@@ -347,7 +358,10 @@ static bool sanity_check(Config *config)
 {
     bool assembler = config->assemble || config->disassemble;
 
-    if (config->fullscreen && config->scale) {
+    if (config->sav_path && config->no_saving) {
+        ERROR("cannot use a save game file if saving is disabled")
+        return false;
+    } else if (config->fullscreen && config->scale) {
         ERROR("cannot specify a scale in fullscreen mode")
         return false;
     } else if (config->assemble && config->disassemble) {
@@ -408,13 +422,14 @@ int config_create(Config** config_ptr, int argc, char* argv[])
     config->assemble = false;
     config->disassemble = false;
     config->fullscreen = false;
+    config->no_saving = false;
     config->scale = 0;
     config->rom_path = NULL;
     config->sav_path = NULL;
+    config->bios_path = NULL;
     config->src_path = NULL;
     config->dst_path = NULL;
     config->overwrite = false;
-    config->no_saving = false;
 
     retval = parse_args(config, argc, argv);
     if (retval == CONFIG_OK && !(sanity_check(config) && set_defaults(config)))
@@ -435,6 +450,7 @@ void config_destroy(Config *config)
 {
     free(config->rom_path);
     free(config->sav_path);
+    free(config->bios_path);
     free(config->src_path);
     free(config->dst_path);
     free(config);
@@ -448,14 +464,15 @@ void config_dump_args(const Config* config)
 {
     DEBUG("Dumping arguments:")
     DEBUG("- debug:       %d", config->debug)
-    DEBUG("- assemble:    %s", config->assemble ? "true" : "false")
+    DEBUG("- assemble:    %s", config->assemble    ? "true" : "false")
     DEBUG("- disassemble: %s", config->disassemble ? "true" : "false")
-    DEBUG("- fullscreen:  %s", config->fullscreen ? "true" : "false")
+    DEBUG("- fullscreen:  %s", config->fullscreen  ? "true" : "false")
+    DEBUG("- no_saving:   %s", config->no_saving   ? "true" : "false")
     DEBUG("- scale:       %d", config->scale)
-    DEBUG("- rom_path:    %s", config->rom_path ? config->rom_path : "(null)")
-    DEBUG("- sav_path:    %s", config->sav_path ? config->sav_path : "(null)")
-    DEBUG("- src_path:    %s", config->src_path ? config->src_path : "(null)")
-    DEBUG("- dst_path:    %s", config->dst_path ? config->dst_path : "(null)")
+    DEBUG("- rom_path:    %s", config->rom_path  ? config->rom_path  : "(null)")
+    DEBUG("- sav_path:    %s", config->sav_path  ? config->sav_path  : "(null)")
+    DEBUG("- bios_path:   %s", config->bios_path ? config->bios_path : "(null)")
+    DEBUG("- src_path:    %s", config->src_path  ? config->src_path  : "(null)")
+    DEBUG("- dst_path:    %s", config->dst_path  ? config->dst_path  : "(null)")
     DEBUG("- overwrite:   %s", config->overwrite ? "true" : "false")
-    DEBUG("- no_saving:   %s", config->no_saving ? "true" : "false")
 }

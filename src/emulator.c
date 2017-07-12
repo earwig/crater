@@ -183,6 +183,12 @@ void emulate(ROM *rom, Config *config)
             return;
     }
 
+    BIOS *bios = NULL;
+    if (config->bios_path) {
+         if (!(bios = bios_open(config->bios_path)))
+            return;
+    }
+
     emu.gg = gamegear_create();
     signal(SIGINT, handle_sigint);
     setup_graphics(config->fullscreen, config->scale);
@@ -190,6 +196,8 @@ void emulate(ROM *rom, Config *config)
     gamegear_attach_callback(emu.gg, frame_callback);
     gamegear_attach_display(emu.gg, emu.pixels);
     gamegear_load_rom(emu.gg, rom);
+    if (bios)
+        gamegear_load_bios(emu.gg, bios);
     if (!config->no_saving)
         gamegear_load_save(emu.gg, &save);
 

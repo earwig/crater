@@ -17,8 +17,10 @@ void mmu_init(MMU *mmu)
     mmu->system_ram = cr_malloc(sizeof(uint8_t) * MMU_SYSTEM_RAM_SIZE);
     mmu->cart_ram = NULL;
     mmu->cart_ram_slot = NULL;
+    mmu->bios_rom = NULL;
     mmu->cart_ram_mapped = false;
     mmu->cart_ram_external = false;
+    mmu->bios_enabled = false;
     mmu->save = NULL;
 
     for (size_t slot = 0; slot < MMU_NUM_SLOTS; slot++)
@@ -89,6 +91,20 @@ void mmu_load_rom(MMU *mmu, const uint8_t *data, size_t size)
 }
 
 /*
+    Load BIOS into the MMU.
+
+    The BIOS must be exactly 1KB. (Extra bytes will be ignored; if it is too
+    small, the system will crash.) The BIOS will automatically be enabled when
+    the MMU is powered on.
+
+    Pass in NULL to disable the BIOS.
+*/
+void mmu_load_bios(MMU *mmu, const uint8_t *data)
+{
+    mmu->bios_rom = data;
+}
+
+/*
     Load a save into the MMU.
 
     If the save has valid cartridge RAM from a previous game, we will load that
@@ -133,6 +149,9 @@ void mmu_power(MMU *mmu)
         map_rom_slot(mmu, slot, slot);
 
     memset(mmu->system_ram, 0xFF, MMU_SYSTEM_RAM_SIZE);
+
+    if (mmu->bios_rom)
+        mmu->bios_enabled = true;
 }
 
 /*
@@ -153,6 +172,8 @@ static inline uint8_t bank_byte_read(const uint8_t* bank, uint16_t addr)
 uint8_t mmu_read_byte(const MMU *mmu, uint16_t addr)
 {
     if (addr < 0x0400) {  // First kilobyte is unpaged, for interrupt handlers
+        if (mmu->bios_enabled && mmu->bios_rom)
+            return mmu->bios_rom[addr];
         return bank_byte_read(mmu->rom_banks[0], addr);
     } else if (addr < 0x4000) {  // Slot 0 (0x0400 - 0x3FFF)
         return bank_byte_read(mmu->rom_slots[0], addr);
