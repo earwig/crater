@@ -5,3 +5,4 @@ crater
 crater-dev
 tests/runner
 tests/asm/*.gg
+*.sav

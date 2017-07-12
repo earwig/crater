@@ -1,4 +1,4 @@
-/* Copyright (C) 2014-2016 Ben Kurtovic <ben.kurtovic@gmail.com>
+/* Copyright (C) 2014-2017 Ben Kurtovic <ben.kurtovic@gmail.com>
    Released under the terms of the MIT License. See LICENSE for details. */
 
 #pragma once
@@ -10,6 +10,7 @@
 #include "mmu.h"
 #include "psg.h"
 #include "rom.h"
+#include "save.h"
 #include "z80.h"
 
 #define GG_SCREEN_WIDTH  160
@@ -48,7 +49,8 @@ typedef enum {
 
 GameGear* gamegear_create();
 void gamegear_destroy(GameGear*);
-void gamegear_load(GameGear*, const ROM*);
+void gamegear_load_rom(GameGear*, const ROM*);
+void gamegear_load_save(GameGear*, Save*);
 void gamegear_simulate(GameGear*);
 void gamegear_input(GameGear*, GGButton, bool);
 void gamegear_power_off(GameGear*);

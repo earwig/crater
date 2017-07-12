@@ -1,4 +1,4 @@
-/* Copyright (C) 2014-2016 Ben Kurtovic <ben.kurtovic@gmail.com>
+/* Copyright (C) 2014-2017 Ben Kurtovic <ben.kurtovic@gmail.com>
    Released under the terms of the MIT License. See LICENSE for details. */
 
 #pragma once
@@ -27,9 +27,11 @@ typedef struct {
     bool fullscreen;
     unsigned scale;
     char *rom_path;
+    char *sav_path;
     char *src_path;
     char *dst_path;
     bool overwrite;
+    bool no_saving;
 } Config;
 
 /* Functions */

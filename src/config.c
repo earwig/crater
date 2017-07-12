@@ -1,4 +1,4 @@
-/* Copyright (C) 2014-2016 Ben Kurtovic <ben.kurtovic@gmail.com>
+/* Copyright (C) 2014-2017 Ben Kurtovic <ben.kurtovic@gmail.com>
    Released under the terms of the MIT License. See LICENSE for details. */
 
 #include <dirent.h>
@@ -39,6 +39,9 @@ static void print_help(const char *arg1)
 "                      to show more detailed logs, including an emulator trace\n"
 "    -s, --scale <n>   scale the game screen by an integer factor\n"
 "                      (applies to windowed mode only; defaults to 4)\n"
+"    -b, --save <path> save cartridge RAM (\"battery save\") to the given file\n"
+"                      (defaults to <rom_path>.sav)\n"
+"    -n, --no-save     disable saving cartridge RAM entirely\n"
 "    -a, --assemble <in> [<out>]\n"
 "                      convert z80 assembly source code into a binary file that\n"
 "                      can be run by crater\n"
@@ -179,9 +182,7 @@ static int parse_pos_arg(Config *config, Arguments *args, const char *arg)
         return CONFIG_EXIT_FAILURE;
     }
 
-    char *path = cr_malloc(sizeof(char) * (strlen(arg) + 1));
-    strcpy(path, arg);
-
+    char *path = cr_strdup(arg);
     if (args->paths_read == 1) {
         /* If this is the second path given, it can only be an output file for
            the assembler. If the assembler is not enabled by subsequent
@@ -242,6 +243,18 @@ static int parse_opt_arg(Config *config, Arguments *args, const char *arg)
         }
         config->scale = scale;
     }
+    else if (arg_check(arg, "b", "save")) {
+        const char *next = consume_next(args);
+        if (!next) {
+            ERROR("the save option requires an argument")
+            return CONFIG_EXIT_FAILURE;
+        }
+        free(config->sav_path);
+        config->sav_path = cr_strdup(next);
+    }
+    else if (arg_check(arg, "n", "no-save")) {
+        config->no_saving = true;
+    }
     else if (arg_check(arg, "g", "debug")) {
         config->debug++;
     }
@@ -287,17 +300,19 @@ static int parse_args(Config *config, int argc, char *argv[])
             return retval;
     }
 
-    if (!config->assemble && !config->disassemble && args.paths_read >= 2) {
-        ERROR("too many arguments given - emulator mode accepts one ROM file")
-        return CONFIG_EXIT_FAILURE;
-    }
-    if (!config->assemble && !config->disassemble && args.paths_read == 0) {
-        char *path = get_rom_path_from_user();
-        if (path[0] == '\0') {
-            ERROR("no ROM image given")
+    if (!config->assemble && !config->disassemble) {
+        if (args.paths_read >= 2) {
+            ERROR("too many arguments given - emulator mode accepts one ROM file")
             return CONFIG_EXIT_FAILURE;
         }
-        config->rom_path = path;
+        if (args.paths_read == 0) {
+            char *path = get_rom_path_from_user();
+            if (path[0] == '\0') {
+                ERROR("no ROM image given")
+                return CONFIG_EXIT_FAILURE;
+            }
+            config->rom_path = path;
+        }
     }
 
     return CONFIG_OK;
@@ -367,6 +382,12 @@ static bool set_defaults(Config *config)
         ERROR("refusing to overwrite the assembler input file; pass -r to override")
         return false;
     }
+    if (!assembler && !config->sav_path && !config->no_saving) {
+        config->sav_path = cr_malloc(sizeof(char) *
+            (strlen(config->rom_path) + 4));
+        strcpy(config->sav_path, config->rom_path);
+        strcat(config->sav_path, ".sav");
+    }
     return true;
 }
 
@@ -389,9 +410,11 @@ int config_create(Config** config_ptr, int argc, char* argv[])
     config->fullscreen = false;
     config->scale = 0;
     config->rom_path = NULL;
+    config->sav_path = NULL;
     config->src_path = NULL;
     config->dst_path = NULL;
     config->overwrite = false;
+    config->no_saving = false;
 
     retval = parse_args(config, argc, argv);
     if (retval == CONFIG_OK && !(sanity_check(config) && set_defaults(config)))
@@ -411,6 +434,7 @@ int config_create(Config** config_ptr, int argc, char* argv[])
 void config_destroy(Config *config)
 {
     free(config->rom_path);
+    free(config->sav_path);
     free(config->src_path);
     free(config->dst_path);
     free(config);
@@ -429,7 +453,9 @@ void config_dump_args(const Config* config)
     DEBUG("- fullscreen:  %s", config->fullscreen ? "true" : "false")
     DEBUG("- scale:       %d", config->scale)
     DEBUG("- rom_path:    %s", config->rom_path ? config->rom_path : "(null)")
+    DEBUG("- sav_path:    %s", config->sav_path ? config->sav_path : "(null)")
     DEBUG("- src_path:    %s", config->src_path ? config->src_path : "(null)")
     DEBUG("- dst_path:    %s", config->dst_path ? config->dst_path : "(null)")
     DEBUG("- overwrite:   %s", config->overwrite ? "true" : "false")
+    DEBUG("- no_saving:   %s", config->no_saving ? "true" : "false")
 }

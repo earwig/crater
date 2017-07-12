@@ -1,4 +1,4 @@
-/* Copyright (C) 2014-2016 Ben Kurtovic <ben.kurtovic@gmail.com>
+/* Copyright (C) 2014-2017 Ben Kurtovic <ben.kurtovic@gmail.com>
    Released under the terms of the MIT License. See LICENSE for details. */
 
 #include <stdlib.h>
@@ -59,12 +59,25 @@ void gamegear_destroy(GameGear *gg)
     until another ROM is loaded or the GameGear is destroyed. Calling this
     function while the GameGear is powered on has no effect.
 */
-void gamegear_load(GameGear *gg, const ROM *rom)
+void gamegear_load_rom(GameGear *gg, const ROM *rom)
 {
     if (gg->powered)
         return;
 
     mmu_load_rom(&gg->mmu, rom->data, rom->size);
+}
+
+/*
+    Load a game save into the GameGear object.
+
+    The same rules with gamegear_load_rom() apply here.
+*/
+void gamegear_load_save(GameGear *gg, Save *save)
+{
+    if (gg->powered)
+        return;
+
+    mmu_load_save(&gg->mmu, save);
 }
 
 /*

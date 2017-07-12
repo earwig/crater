@@ -1,4 +1,4 @@
-/* Copyright (C) 2014-2016 Ben Kurtovic <ben.kurtovic@gmail.com>
+/* Copyright (C) 2014-2017 Ben Kurtovic <ben.kurtovic@gmail.com>
    Released under the terms of the MIT License. See LICENSE for details. */
 
 #include <stdlib.h>
@@ -15,9 +15,11 @@
 void mmu_init(MMU *mmu)
 {
     mmu->system_ram = cr_malloc(sizeof(uint8_t) * MMU_SYSTEM_RAM_SIZE);
-    mmu->cart_ram = cr_malloc(sizeof(uint8_t) * MMU_CART_RAM_SIZE);
-    mmu->cart_ram_slot = mmu->cart_ram;
+    mmu->cart_ram = NULL;
+    mmu->cart_ram_slot = NULL;
     mmu->cart_ram_mapped = false;
+    mmu->cart_ram_external = false;
+    mmu->save = NULL;
 
     for (size_t slot = 0; slot < MMU_NUM_SLOTS; slot++)
         mmu->rom_slots[slot] = NULL;
@@ -32,7 +34,8 @@ void mmu_init(MMU *mmu)
 void mmu_free(MMU *mmu)
 {
     free(mmu->system_ram);
-    free(mmu->cart_ram);
+    if (!mmu->cart_ram_external)
+        free(mmu->cart_ram);
 }
 
 /*
@@ -86,6 +89,30 @@ void mmu_load_rom(MMU *mmu, const uint8_t *data, size_t size)
 }
 
 /*
+    Load a save into the MMU.
+
+    If the save has valid cartridge RAM from a previous game, we will load that
+    into the MMU. Otherwise, we will defer creating fresh cartridge RAM until
+    it is requested by the system.
+
+    This function can be called while the system is running, but it may have
+    strange consequences. It will replace any existing cart RAM with the save
+    RAM, which will likely confuse the program.
+*/
+void mmu_load_save(MMU *mmu, Save *save)
+{
+    mmu->save = save;
+    if (save_has_cart_ram(save)) {
+        if (mmu->cart_ram && !mmu->cart_ram_external)
+            free(mmu->cart_ram);
+
+        DEBUG("MMU loading cartridge RAM from external save")
+        mmu->cart_ram = save_get_cart_ram(save);
+        mmu->cart_ram_external = true;
+    }
+}
+
+/*
     Map the given RAM slot to the given ROM bank.
 */
 static inline void map_rom_slot(MMU *mmu, size_t slot, size_t bank)
@@ -106,7 +133,6 @@ void mmu_power(MMU *mmu)
         map_rom_slot(mmu, slot, slot);
 
     memset(mmu->system_ram, 0xFF, MMU_SYSTEM_RAM_SIZE);
-    memset(mmu->cart_ram,   0xFF, MMU_CART_RAM_SIZE);
 }
 
 /*
@@ -176,6 +202,18 @@ static void write_ram_control_register(MMU *mmu, uint8_t value)
         TRACE("MMU enabling cart RAM bank %d in memory slot 2", bank_select)
     else if (!slot2_enable && mmu->cart_ram_mapped)
         TRACE("MMU disabling cart RAM in memory slot 2")
+
+    if (slot2_enable && !mmu->cart_ram) {
+        DEBUG("MMU initializing cartridge RAM (fresh battery save)")
+        if (mmu->save && save_init_cart_ram(mmu->save)) {
+            mmu->cart_ram = save_get_cart_ram(mmu->save);
+            mmu->cart_ram_external = true;
+        } else {
+            mmu->cart_ram = cr_malloc(sizeof(uint8_t) * MMU_CART_RAM_SIZE);
+            mmu->cart_ram_external = false;
+        }
+        memset(mmu->cart_ram, 0xFF, MMU_CART_RAM_SIZE);
+    }
 
     mmu->cart_ram_slot =
         bank_select ? (mmu->cart_ram + 0x4000) : mmu->cart_ram;

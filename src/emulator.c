@@ -1,4 +1,4 @@
-/* Copyright (C) 2014-2016 Ben Kurtovic <ben.kurtovic@gmail.com>
+/* Copyright (C) 2014-2017 Ben Kurtovic <ben.kurtovic@gmail.com>
    Released under the terms of the MIT License. See LICENSE for details. */
 
 #include <signal.h>
@@ -8,6 +8,7 @@
 #include "emulator.h"
 #include "gamegear.h"
 #include "logging.h"
+#include "save.h"
 #include "util.h"
 
 typedef struct {
@@ -176,13 +177,21 @@ static void cleanup_graphics()
 */
 void emulate(ROM *rom, Config *config)
 {
+    Save save;
+    if (!config->no_saving) {
+        if (!save_init(&save, config->sav_path, rom))
+            return;
+    }
+
     emu.gg = gamegear_create();
     signal(SIGINT, handle_sigint);
     setup_graphics(config->fullscreen, config->scale);
 
     gamegear_attach_callback(emu.gg, frame_callback);
     gamegear_attach_display(emu.gg, emu.pixels);
-    gamegear_load(emu.gg, rom);
+    gamegear_load_rom(emu.gg, rom);
+    if (!config->no_saving)
+        gamegear_load_save(emu.gg, &save);
 
     gamegear_simulate(emu.gg);
 
@@ -197,4 +206,6 @@ void emulate(ROM *rom, Config *config)
     signal(SIGINT, SIG_DFL);
     gamegear_destroy(emu.gg);
     emu.gg = NULL;
+    if (!config->no_saving)
+        save_free(&save);
 }

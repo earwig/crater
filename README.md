@@ -53,6 +53,11 @@ Add `--fullscreen` (`-f`) to enable fullscreen mode, or `--scale <n>`
 (`-s <n>`) to scale the game screen by an integer factor in windowed mode (this
 only sets the starting configuration; the window should be resizeable).
 
+By default, crater will save cartridge RAM ("battery saves"; these are distinct
+from save states, which are not yet supported) to a file named `<rom>.sav`,
+where `<rom>` is the path to the ROM file. You can set a custom save location
+with `--save <path>` or disable saving entirely with `--no-save`.
+
 Add `--debug` (`-g`) to show logging information while running. Pass it twice
 (`-gg`) to show more detailed logs, including an emulator trace.
 
