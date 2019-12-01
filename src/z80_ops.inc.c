@@ -1,4 +1,4 @@
-/* Copyright (C) 2014-2016 Ben Kurtovic <ben.kurtovic@gmail.com>
+/* Copyright (C) 2014-2019 Ben Kurtovic <ben.kurtovic@gmail.com>
    Released under the terms of the MIT License. See LICENSE for details. */
 
 /*
@@ -193,16 +193,28 @@ static uint8_t z80_inst_ld_nn_a(Z80 *z80, uint8_t opcode)
 /*
     LD A, I (0xED57):
     Load I into A.
-    TODO
 */
-// static uint8_t z80_inst_ld_a_i(Z80 *z80, uint8_t opcode)
+static uint8_t z80_inst_ld_a_i(Z80 *z80, uint8_t opcode)
+{
+    (void) opcode;
+    z80->regs.a = z80->regs.i;
+    set_flags_ld_a_ir(z80);
+    z80->regs.pc++;
+    return 9;
+}
 
 /*
     LD A, R (0xED5F):
     Load R into A.
-    TODO
 */
-// static uint8_t z80_inst_ld_a_r(Z80 *z80, uint8_t opcode)
+static uint8_t z80_inst_ld_a_r(Z80 *z80, uint8_t opcode)
+{
+    (void) opcode;
+    z80->regs.a = z80->regs.r;
+    set_flags_ld_a_ir(z80);
+    z80->regs.pc++;
+    return 9;
+}
 
 /*
     LD I, A (0xED47):
@@ -536,13 +548,65 @@ static uint8_t z80_inst_lddr(Z80 *z80, uint8_t opcode)
     return 21;
 }
 
-// TODO: CPI
+/*
+    CPI (0xEDA1):
+    CP (HL); INC HL; DEC BL
+*/
+static uint8_t z80_inst_cpi(Z80 *z80, uint8_t opcode)
+{
+    (void) opcode;
+    uint8_t value = mmu_read_byte(z80->mmu, z80->regs.hl);
 
-// TODO: CPIR
+    z80->regs.hl++;
+    z80->regs.bc--;
 
-// TODO: CPD
+    set_flags_blockcp(z80, value);
+    z80->regs.pc++;
+    return 16;
+}
 
-// TODO: CPDR
+/*
+    CPIR (0xEDB1):
+    CPI; JR PV; -2
+*/
+static uint8_t z80_inst_cpir(Z80 *z80, uint8_t opcode)
+{
+    z80_inst_cpi(z80, opcode);
+    if (z80->regs.bc == 0)
+        return 16;
+    z80->regs.pc -= 2;
+    return 21;
+}
+
+/*
+    CPD (0xEDA9):
+    CP (HL); DEC HL; DEC BL
+*/
+static uint8_t z80_inst_cpd(Z80 *z80, uint8_t opcode)
+{
+    (void) opcode;
+    uint8_t value = mmu_read_byte(z80->mmu, z80->regs.hl);
+
+    z80->regs.hl--;
+    z80->regs.bc--;
+
+    set_flags_blockcp(z80, value);
+    z80->regs.pc++;
+    return 16;
+}
+
+/*
+    CPDR (0xEDB9):
+    CPD; JR PV; -2
+*/
+static uint8_t z80_inst_cpdr(Z80 *z80, uint8_t opcode)
+{
+    z80_inst_cpd(z80, opcode);
+    if (z80->regs.bc == 0)
+        return 16;
+    z80->regs.pc -= 2;
+    return 21;
+}
 
 /*
     ADD A, r (0x80, 0x81, 0x82, 0x83, 0x84, 0x85, 0x87):

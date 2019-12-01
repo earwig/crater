@@ -1,4 +1,4 @@
-/* Copyright (C) 2014-2016 Ben Kurtovic <ben.kurtovic@gmail.com>
+/* Copyright (C) 2014-2019 Ben Kurtovic <ben.kurtovic@gmail.com>
    Released under the terms of the MIT License. See LICENSE for details. */
 
 #define POS(x) (!((x) & 0x80))
@@ -211,6 +211,15 @@ static inline void set_flags_scf(Z80 *z80)
 }
 
 /*
+    Set the flags for a LD A, I/R instruction.
+*/
+static inline void set_flags_ld_a_ir(Z80 *z80)
+{
+    uint8_t val = z80->regs.a;
+    set_flags(z80, 0, 0, z80->regs.iff2, F3(val), 0, F5(val), ZERO(val), SIGN(val), 0xFE);
+}
+
+/*
     Set the flags for a LDI/LDIR/LDD/LDDR instruction.
 */
 static inline void set_flags_blockxfer(Z80 *z80, uint8_t val)
@@ -218,6 +227,19 @@ static inline void set_flags_blockxfer(Z80 *z80, uint8_t val)
     bool pv = z80->regs.bc != 0;
     uint8_t res = val + z80->regs.a;
     set_flags(z80, 0, 0, pv, res & 0x08, 0, res & 0x02, 0, 0, 0x3E);
+}
+
+/*
+    Set the flags for a CPI/CPIR/CPD/CPDR instruction.
+*/
+static inline void set_flags_blockcp(Z80 *z80, uint16_t rh)
+{
+    uint8_t lh = z80->regs.a;
+    bool pv = z80->regs.bc != 0;
+    bool h = HALF(lh, -, rh);
+    uint8_t res = lh - rh;
+    uint8_t resh = res - h;
+    set_flags(z80, 0, 1, pv, F3(resh), h, F5(resh), ZERO(res), SIGN(res), 0xFE);
 }
 
 /*
