@@ -102,13 +102,25 @@ static void setup_graphics(Config *config)
     int height = config->scale * GG_SCREEN_HEIGHT;
     if (!config->square_par)
         height = height * GG_PIXEL_HEIGHT / GG_PIXEL_WIDTH;
-    SDL_CreateWindowAndRenderer(width, height, flags,
-        &emu.window, &emu.renderer);
 
+    emu.window = SDL_CreateWindow("crater", SDL_WINDOWPOS_UNDEFINED,
+        SDL_WINDOWPOS_UNDEFINED, width, height, flags);
     if (!emu.window)
         FATAL("SDL failed to create a window: %s", SDL_GetError());
-    if (!emu.renderer)
-        FATAL("SDL failed to create a renderer: %s", SDL_GetError());
+
+    emu.renderer = SDL_CreateRenderer(emu.window, -1,
+        SDL_RENDERER_ACCELERATED|SDL_RENDERER_PRESENTVSYNC);
+    if (!emu.renderer) {
+        // Fall back to software renderer (or a hardware renderer
+        // without vsync, if one exists?)
+        emu.renderer = SDL_CreateRenderer(emu.window, -1, 0);
+        if (!emu.renderer)
+            FATAL("SDL failed to create a renderer: %s", SDL_GetError());
+    }
+
+    SDL_RendererInfo info;
+    SDL_GetRendererInfo(emu.renderer, &info);
+    DEBUG("Using %s renderer", info.name);
 
     emu.texture = SDL_CreateTexture(emu.renderer, SDL_PIXELFORMAT_ARGB8888,
         SDL_TEXTUREACCESS_STREAMING, GG_SCREEN_WIDTH, GG_SCREEN_HEIGHT);
@@ -123,9 +135,7 @@ static void setup_graphics(Config *config)
         config->square_par ? GG_SCREEN_WIDTH  : GG_LOGICAL_WIDTH,
         config->square_par ? GG_SCREEN_HEIGHT : GG_LOGICAL_HEIGHT);
     SDL_SetTextureBlendMode(emu.texture, SDL_BLENDMODE_BLEND);
-    SDL_SetWindowTitle(emu.window, "crater");
     SDL_ShowCursor(SDL_DISABLE);
-    SDL_GL_SetSwapInterval(1);  // Vsync
 
     SDL_SetRenderDrawColor(emu.renderer, 0x00, 0x00, 0x00, 0xFF);
     SDL_RenderClear(emu.renderer);
