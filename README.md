@@ -83,7 +83,7 @@ You can switch between them freely.
 For controllers, crater uses SDL controller mappings. Many common controllers
 are supported out of the box, but you may define your own mappings by creating
 a file named `gamecontrollerdb.txt` in the working directory. For more info,
-see [this community mapping database](gcdb).
+see [this community mapping database][gcdb].
 
 [gcdb]: https://github.com/gabomdq/SDL_GameControllerDB
 
