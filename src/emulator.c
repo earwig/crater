@@ -1,15 +1,22 @@
-/* Copyright (C) 2014-2017 Ben Kurtovic <ben.kurtovic@gmail.com>
+/* Copyright (C) 2014-2019 Ben Kurtovic <ben.kurtovic@gmail.com>
    Released under the terms of the MIT License. See LICENSE for details. */
 
 #include <signal.h>
 #include <stdint.h>
+#include <unistd.h>
 #include <SDL.h>
 
 #include "emulator.h"
+#include "config.h"
 #include "gamegear.h"
 #include "logging.h"
 #include "save.h"
 #include "util.h"
+
+typedef struct {
+    SDL_GameController **items;
+    int num, capacity;
+} Controllers;
 
 typedef struct {
     GameGear *gg;
@@ -17,6 +24,7 @@ typedef struct {
     SDL_Renderer *renderer;
     SDL_Texture *texture;
     uint32_t *pixels;
+    Controllers controllers;
 } Emulator;
 
 static Emulator emu;
@@ -32,13 +40,56 @@ static void handle_sigint(int sig)
 }
 
 /*
+    Get the name of a SDL game controller.
+*/
+static const char *get_controller_name(SDL_GameController *controller)
+{
+    const char *name = SDL_GameControllerName(controller);
+    if (name)
+        return name;
+    return "(UNKNOWN)";
+}
+
+/*
+    Set up SDL for accepting controller input.
+*/
+static void setup_input()
+{
+    if (!access(CONTROLLER_DB_PATH, R_OK)) {
+        if (SDL_GameControllerAddMappingsFromFile(CONTROLLER_DB_PATH) < 0)
+            ERROR("SDL failed to load controller mappings: %s", SDL_GetError());
+    }
+
+    int i, c = 0, n = SDL_NumJoysticks();
+    if (n <= 0)
+        return;
+
+    SDL_GameController **items = cr_calloc(n, sizeof(SDL_GameController*));
+    for (i = 0; i < n; i++) {
+        if (!SDL_IsGameController(i)) {
+            DEBUG("Ignoring joystick %i: not a game controller", i);
+            continue;
+        }
+
+        SDL_GameController *controller = SDL_GameControllerOpen(i);
+        if (!controller) {
+            ERROR("SDL failed to open controller %i: %s", i, SDL_GetError());
+            continue;
+        }
+        DEBUG("Loaded controller %i: %s", i, get_controller_name(controller));
+        items[c++] = controller;
+    }
+
+    emu.controllers.items = items;
+    emu.controllers.num = c;
+    emu.controllers.capacity = n;
+}
+
+/*
     Set up SDL for drawing the game.
 */
 static void setup_graphics(bool fullscreen, unsigned scale)
 {
-    if (SDL_Init(SDL_INIT_VIDEO) < 0)
-        FATAL("SDL failed to initialize: %s", SDL_GetError());
-
     SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "nearest");
 
     uint32_t flags;
@@ -74,6 +125,18 @@ static void setup_graphics(bool fullscreen, unsigned scale)
     SDL_SetRenderDrawColor(emu.renderer, 0x00, 0x00, 0x00, 0xFF);
     SDL_RenderClear(emu.renderer);
     SDL_RenderPresent(emu.renderer);
+}
+
+/*
+    Set up SDL.
+*/
+static void setup_sdl(bool fullscreen, unsigned scale)
+{
+    if (SDL_Init(SDL_INIT_VIDEO|SDL_INIT_GAMECONTROLLER) < 0)
+        FATAL("SDL failed to initialize: %s", SDL_GetError());
+
+    setup_input();
+    setup_graphics(fullscreen, scale);
 }
 
 /*
@@ -127,6 +190,102 @@ static void handle_keypress(GameGear *gg, SDL_Keycode key, bool state)
 }
 
 /*
+    Handle controller input.
+*/
+static void handle_controller_input(
+    GameGear *gg, SDL_GameControllerButton input, bool state)
+{
+    GGButton button;
+    switch (input) {
+        case SDL_CONTROLLER_BUTTON_A:
+            button = BUTTON_TRIGGER_1; break;
+        case SDL_CONTROLLER_BUTTON_B:
+            button = BUTTON_TRIGGER_2; break;
+        case SDL_CONTROLLER_BUTTON_START:
+            button = BUTTON_START;     break;
+        case SDL_CONTROLLER_BUTTON_DPAD_UP:
+            button = BUTTON_UP;        break;
+        case SDL_CONTROLLER_BUTTON_DPAD_DOWN:
+            button = BUTTON_DOWN;      break;
+        case SDL_CONTROLLER_BUTTON_DPAD_LEFT:
+            button = BUTTON_LEFT;      break;
+        case SDL_CONTROLLER_BUTTON_DPAD_RIGHT:
+            button = BUTTON_RIGHT;     break;
+        default:
+            return;
+    }
+    gamegear_input(gg, button, state);
+}
+
+/*
+    Handle a controller being added.
+*/
+static void handle_controller_added(int i)
+{
+    SDL_Joystick *joy = SDL_JoystickOpen(i);
+    SDL_JoystickID id = SDL_JoystickInstanceID(joy);
+
+    for (int i = 0; i < emu.controllers.num; i++) {
+        SDL_Joystick *other = SDL_GameControllerGetJoystick(
+            emu.controllers.items[i]);
+        if (SDL_JoystickInstanceID(other) == id) {
+            TRACE("SDL added duplicate joystick %i", i);
+            SDL_JoystickClose(joy);
+            return;
+        }
+    }
+
+    SDL_JoystickClose(joy);
+    if (!SDL_IsGameController(i)) {
+        DEBUG("SDL added joystick %i: not a game controller", i);
+        return;
+    }
+
+    SDL_GameController *controller = SDL_GameControllerOpen(i);
+    if (!controller) {
+        ERROR("SDL failed to open controller %i: %s", i, SDL_GetError());
+        return;
+    }
+
+    DEBUG("Added controller %i: %s", i, get_controller_name(controller));
+    if (emu.controllers.num == 0) {
+        int n = 4;
+        emu.controllers.items = cr_calloc(n, sizeof(SDL_GameController*));
+        emu.controllers.capacity = n;
+    }
+    else if (emu.controllers.num >= emu.controllers.capacity) {
+        emu.controllers.capacity *= 2;
+        emu.controllers.items = cr_realloc(emu.controllers.items,
+            emu.controllers.capacity * sizeof(SDL_GameController*));
+    }
+    emu.controllers.items[emu.controllers.num++] = controller;
+}
+
+/*
+    Handle a controller being removed.
+*/
+static void handle_controller_removed(int id)
+{
+    for (int i = 0; i < emu.controllers.num; i++) {
+        SDL_GameController *controller = emu.controllers.items[i];
+        SDL_Joystick *joy = SDL_GameControllerGetJoystick(controller);
+        if (!joy)
+            continue;
+
+        if (SDL_JoystickInstanceID(joy) == id) {
+            DEBUG("Removed controller %i: %s", i,
+                get_controller_name(controller));
+            SDL_GameControllerClose(controller);
+            for (; i < emu.controllers.num; i++)
+                emu.controllers.items[i] = emu.controllers.items[i + 1];
+            emu.controllers.num--;
+            return;
+        }
+    }
+    DEBUG("SDL removed unknown controller: %i", id)
+}
+
+/*
     Handle SDL events, mainly quit events and button presses.
 */
 static void handle_events(GameGear *gg)
@@ -143,6 +302,18 @@ static void handle_events(GameGear *gg)
             case SDL_KEYUP:
                 handle_keypress(gg, event.key.keysym.sym, false);
                 break;
+            case SDL_CONTROLLERBUTTONDOWN:
+                handle_controller_input(gg, event.cbutton.button, true);
+                break;
+            case SDL_CONTROLLERBUTTONUP:
+                handle_controller_input(gg, event.cbutton.button, false);
+                break;
+            case SDL_CONTROLLERDEVICEADDED:
+                handle_controller_added(event.cdevice.which);
+                break;
+            case SDL_CONTROLLERDEVICEREMOVED:
+                handle_controller_removed(event.cdevice.which);
+                break;
         }
     }
 }
@@ -157,19 +328,25 @@ static void frame_callback(GameGear *gg)
 }
 
 /*
-    Clean up SDL stuff allocated in setup_graphics().
+    Clean up SDL stuff allocated in setup_sdl().
 */
-static void cleanup_graphics()
+static void cleanup_sdl()
 {
     free(emu.pixels);
     SDL_DestroyTexture(emu.texture);
     SDL_DestroyRenderer(emu.renderer);
     SDL_DestroyWindow(emu.window);
+    for (int i = 0; i < emu.controllers.num; i++)
+        SDL_GameControllerClose(emu.controllers.items[i]);
+    if (emu.controllers.items)
+        free(emu.controllers.items);
     SDL_Quit();
 
     emu.window = NULL;
     emu.renderer = NULL;
     emu.texture = NULL;
+    emu.controllers.items = NULL;
+    emu.controllers.num = emu.controllers.capacity = 0;
 }
 
 /*
@@ -193,7 +370,7 @@ void emulate(ROM *rom, Config *config)
 
     emu.gg = gamegear_create();
     signal(SIGINT, handle_sigint);
-    setup_graphics(config->fullscreen, config->scale);
+    setup_sdl(config->fullscreen, config->scale);
 
     gamegear_attach_callback(emu.gg, frame_callback);
     gamegear_attach_display(emu.gg, emu.pixels);
@@ -212,7 +389,7 @@ void emulate(ROM *rom, Config *config)
     if (DEBUG_LEVEL)
         gamegear_print_state(emu.gg);
 
-    cleanup_graphics();
+    cleanup_sdl();
     signal(SIGINT, SIG_DFL);
     gamegear_destroy(emu.gg);
     emu.gg = NULL;

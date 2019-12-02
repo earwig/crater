@@ -53,10 +53,11 @@ Add `--fullscreen` (`-f`) to enable fullscreen mode, or `--scale <n>`
 (`-x <n>`) to scale the game screen by an integer factor in windowed mode (this
 only sets the starting configuration; the window should be resizeable).
 
-By default, crater will save cartridge RAM ("battery saves"; these are distinct
-from save states, which are not yet supported) to a file named `<rom>.sav`,
-where `<rom>` is the path to the ROM file. You can set a custom save location
-with `--save <path>` (`-s <path>`) or disable saving entirely with `--no-save`.
+For games that support it, crater will save cartridge RAM ("battery saves";
+these are distinct from save states, which are not yet supported) to a file
+named `<rom>.sav`, where `<rom>` is the path to the ROM file. You can set a
+custom save location with `--save <path>` (`-s <path>`) or disable saving
+entirely with `--no-save`.
 
 Add `--debug` (`-g`) to show logging information while running. Pass it twice
 (`-gg`) to show more detailed logs, including an emulator trace.
@@ -64,18 +65,27 @@ Add `--debug` (`-g`) to show logging information while running. Pass it twice
 `./crater -h` gives (fairly basic) command-line usage, and `./crater -v` gives
 the current version.
 
-### Key mapping
+### Input
 
-Custom key mappings are not supported. There are two primary configurations I
-like:
+crater supports keyboard and joystick/controller input.
 
-- `Return`/`Esc` for `Start`; `WASD` for D-pad; `.` for `1`/left trigger;
-  `/` for `2`/right trigger
+For keyboards, custom mappings are not yet supported. There are two primary
+configurations I like:
+
+- `Return`/`Esc` for `Start`; `WASD` for D-pad; `J` for `1`/left trigger;
+  `K` for `2`/right trigger
 
 - `Return`/`Esc` for `Start`; arrow keys for D-pad; `Z` for `1`/left trigger;
   `X` for `2`/right trigger
 
 You can switch between them freely.
+
+For controllers, crater uses SDL controller mappings. Many common controllers
+are supported out of the box, but you may define your own mappings by creating
+a file named `gamecontrollerdb.txt` in the working directory. For more info,
+see [this community mapping database](gcdb).
+
+[gcdb]: https://github.com/gabomdq/SDL_GameControllerDB
 
 ### Assembler/Disassembler
 
@@ -103,7 +113,7 @@ additional directives.
 The disassembler works, but can't differentiate between code and data yet, so
 it's not very useful.
 
-The testing infrasture is limited. The assembler has decent coverage, other
+The testing infrastructure is limited. The assembler has decent coverage, other
 components minimal.
 
 Credits

@@ -6,6 +6,7 @@
 #include <stdbool.h>
 
 #define ROMS_DIR "roms"
+#define CONTROLLER_DB_PATH "gamecontrollerdb.txt"
 
 #define CONFIG_OK 0
 #define CONFIG_EXIT_SUCCESS 1
