@@ -403,10 +403,11 @@ static bool set_defaults(Config *config)
         return false;
     }
     if (!assembler && !config->sav_path && !config->no_saving) {
+        const char *ext = ".sav";
         config->sav_path = cr_malloc(sizeof(char) *
-            (strlen(config->rom_path) + 4));
+            (strlen(config->rom_path) + strlen(ext) + 1));
         strcpy(config->sav_path, config->rom_path);
-        strcat(config->sav_path, ".sav");
+        strcat(config->sav_path, ext);
     }
     return true;
 }
