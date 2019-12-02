@@ -62,8 +62,15 @@ entirely with `--no-save`.
 Add `--debug` (`-g`) to show logging information while running. Pass it twice
 (`-gg`) to show more detailed logs, including an emulator trace.
 
+crater tries to reproduce the Game Gear's native display resolution, which had
+a pixel aspect ratio (PAR) of [8:7][par]; this means the pixels were slightly
+wider than square, unlike modern LCD displays with a 1:1 PAR. Add `--square`
+(`-q`) to force square pixels.
+
 `./crater -h` gives (fairly basic) command-line usage, and `./crater -v` gives
 the current version.
+
+[par]: https://pineight.com/mw/index.php?title=Dot_clock_rates
 
 ### Input
 

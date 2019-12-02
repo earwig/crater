@@ -14,10 +14,9 @@
 
 /*
     We need some sort of maximum scale - with a native resolution of 160 x 144,
-    a scale factor of 1024 will let us go up to 163,840 x 147,456 pixels.
-    No one has a screen this large.
+    a scale factor of 128 will let us go up to 20,480 x 18,432 pixels.
 */
-#define SCALE_MAX 1024
+#define SCALE_MAX 128
 
 /* Structs */
 
@@ -28,6 +27,7 @@ typedef struct {
     bool fullscreen;
     bool no_saving;
     unsigned scale;
+    bool square_par;
     char *rom_path;
     char *sav_path;
     char *bios_path;

@@ -88,19 +88,22 @@ static void setup_input()
 /*
     Set up SDL for drawing the game.
 */
-static void setup_graphics(bool fullscreen, unsigned scale)
+static void setup_graphics(Config *config)
 {
     SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "nearest");
 
     uint32_t flags;
-    if (fullscreen)
+    if (config->fullscreen)
         flags = SDL_WINDOW_FULLSCREEN_DESKTOP;
     else
         flags = SDL_WINDOW_RESIZABLE;
 
-    SDL_CreateWindowAndRenderer(
-        scale * GG_SCREEN_WIDTH, scale * GG_SCREEN_HEIGHT,
-        flags, &emu.window, &emu.renderer);
+    int width  = config->scale * GG_SCREEN_WIDTH;
+    int height = config->scale * GG_SCREEN_HEIGHT;
+    if (!config->square_par)
+        height = height * GG_PIXEL_HEIGHT / GG_PIXEL_WIDTH;
+    SDL_CreateWindowAndRenderer(width, height, flags,
+        &emu.window, &emu.renderer);
 
     if (!emu.window)
         FATAL("SDL failed to create a window: %s", SDL_GetError());
@@ -116,7 +119,9 @@ static void setup_graphics(bool fullscreen, unsigned scale)
     emu.pixels = cr_malloc(
         sizeof(uint32_t) * GG_SCREEN_WIDTH * GG_SCREEN_HEIGHT);
 
-    SDL_RenderSetLogicalSize(emu.renderer, GG_SCREEN_WIDTH, GG_SCREEN_HEIGHT);
+    SDL_RenderSetLogicalSize(emu.renderer,
+        config->square_par ? GG_SCREEN_WIDTH  : GG_LOGICAL_WIDTH,
+        config->square_par ? GG_SCREEN_HEIGHT : GG_LOGICAL_HEIGHT);
     SDL_SetTextureBlendMode(emu.texture, SDL_BLENDMODE_BLEND);
     SDL_SetWindowTitle(emu.window, "crater");
     SDL_ShowCursor(SDL_DISABLE);
@@ -130,13 +135,13 @@ static void setup_graphics(bool fullscreen, unsigned scale)
 /*
     Set up SDL.
 */
-static void setup_sdl(bool fullscreen, unsigned scale)
+static void setup_sdl(Config *config)
 {
     if (SDL_Init(SDL_INIT_VIDEO|SDL_INIT_GAMECONTROLLER) < 0)
         FATAL("SDL failed to initialize: %s", SDL_GetError());
 
     setup_input();
-    setup_graphics(fullscreen, scale);
+    setup_graphics(config);
 }
 
 /*
@@ -370,7 +375,7 @@ void emulate(ROM *rom, Config *config)
 
     emu.gg = gamegear_create();
     signal(SIGINT, handle_sigint);
-    setup_sdl(config->fullscreen, config->scale);
+    setup_sdl(config);
 
     gamegear_attach_callback(emu.gg, frame_callback);
     gamegear_attach_display(emu.gg, emu.pixels);

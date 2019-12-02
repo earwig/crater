@@ -44,6 +44,8 @@ static void print_help(const char *arg1)
 "                      the Game Gear does not usually require BIOS)\n"
 "    -x, --scale <n>   scale the game screen by an integer factor\n"
 "                      (applies to windowed mode only; defaults to 4)\n"
+"    -q, --square      force a square pixel aspect ratio instead of the more\n"
+"                      faithful 8:7 PAR\n"
 "    -a, --assemble <in> [<out>]\n"
 "                      convert z80 assembly source code into a binary file that\n"
 "                      can be run by crater\n"
@@ -269,6 +271,9 @@ static int parse_opt_arg(Config *config, Arguments *args, const char *arg)
         }
         config->scale = scale;
     }
+    else if (arg_check(arg, "q", "square")) {
+        config->square_par = true;
+    }
     else if (arg_check(arg, "a", "assemble")) {
         if (args->paths_read >= 1) {
             config->src_path = config->rom_path;
@@ -367,7 +372,8 @@ static bool sanity_check(Config *config)
     } else if (config->assemble && config->disassemble) {
         ERROR("cannot assemble and disassemble at the same time")
         return false;
-    } else if (assembler && (config->fullscreen || config->scale)) {
+    } else if (assembler && (config->fullscreen || config->scale ||
+                             config->square_par)) {
         ERROR("cannot specify emulator options in assembler mode")
         return false;
     } else if (assembler && !config->src_path) {
@@ -424,6 +430,7 @@ int config_create(Config** config_ptr, int argc, char* argv[])
     config->fullscreen = false;
     config->no_saving = false;
     config->scale = 0;
+    config->square_par = false;
     config->rom_path = NULL;
     config->sav_path = NULL;
     config->bios_path = NULL;
@@ -469,6 +476,7 @@ void config_dump_args(const Config* config)
     DEBUG("- fullscreen:  %s", config->fullscreen  ? "true" : "false")
     DEBUG("- no_saving:   %s", config->no_saving   ? "true" : "false")
     DEBUG("- scale:       %d", config->scale)
+    DEBUG("- square_par:  %s", config->square_par  ? "true" : "false")
     DEBUG("- rom_path:    %s", config->rom_path  ? config->rom_path  : "(null)")
     DEBUG("- sav_path:    %s", config->sav_path  ? config->sav_path  : "(null)")
     DEBUG("- bios_path:   %s", config->bios_path ? config->bios_path : "(null)")
