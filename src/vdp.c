@@ -93,7 +93,7 @@ static bool should_frame_interrupt(const VDP *vdp)
 }
 
 /*
-    Return whether the display should be visible or completely blank.
+    Return whether the display is on or if the backdrop color should be used.
 */
 static bool is_display_visible(const VDP *vdp)
 {
@@ -133,11 +133,11 @@ static uint16_t get_sgt_offset(const VDP *vdp)
 }
 
 /*
-    Return the backdrop color as a CRAM index.
+    Return the backdrop color as a CRAM index (in palette 1).
 */
 static uint8_t get_backdrop_color(const VDP *vdp)
 {
-    return ((vdp->regs[0x07] & 0x0F) << 1) + 0x20;
+    return vdp->regs[0x07] & 0x0F;
 }
 
 /*
@@ -191,34 +191,17 @@ static uint16_t get_color(const VDP *vdp, uint8_t index, bool palette)
 }
 
 /*
-    Toggle visibility of the display.
-
-    This sets the alpha channel of every pixel to be 0xFF (if true)
-    or 0x00 (if false).
-*/
-static void toggle_display_visibility(VDP *vdp, bool visible)
-{
-    if (!vdp->pixels)
-        return;
-
-    uint8_t a = visible ? 0xFF : 0x00;
-    for (size_t i = 0; i < 160 * 144; i++)
-        vdp->pixels[i] = (a << 24) | (vdp->pixels[i] & 0x00FFFFFF);
-}
-
-/*
     Draw a pixel onto our pixel array at the given coordinates.
 
     The color should be in BGR444 format, as returned by get_color().
 */
 static void draw_pixel(VDP *vdp, uint8_t y, uint8_t x, uint16_t color)
 {
-    uint8_t a = is_display_visible(vdp) ? 0xFF : 0x00;
     uint8_t r = 0x11 *  (color & 0x000F);
     uint8_t g = 0x11 * ((color & 0x00F0) >> 4);
     uint8_t b = 0x11 * ((color & 0x0F00) >> 8);
 
-    uint32_t argb = (a << 24) + (r << 16) + (g << 8) + b;
+    uint32_t argb = (0xFF << 24) + (r << 16) + (g << 8) + b;
     vdp->pixels[y * 160 + x] = argb;
 }
 
@@ -256,7 +239,10 @@ static void draw_background(VDP *vdp, uint8_t *colbuf)
 
             hshift = hflip ? (7 - pixel) : pixel;
             index = read_pattern(vdp, pattern, vshift, hshift);
-            color = get_color(vdp, index, palette);
+            if (is_display_visible(vdp))
+                color = get_color(vdp, index, palette);
+            else
+                color = get_color(vdp, get_backdrop_color(vdp), 1);
             draw_pixel(vdp, dst_row, dst_col, color);
 
             if (priority && index != 0)
@@ -327,8 +313,10 @@ static void draw_sprites(VDP *vdp, uint8_t *colbuf)
             else
                 colbuf[dst_col] |= COLBUF_OPAQUE_SPRITE;
 
-            color = get_color(vdp, index, 1);
-            draw_pixel(vdp, dst_row, dst_col, color);
+            if (is_display_visible(vdp)) {
+                color = get_color(vdp, index, 1);
+                draw_pixel(vdp, dst_row, dst_col, color);
+            }
         }
     }
 }
@@ -435,8 +423,6 @@ uint8_t vdp_read_data(VDP *vdp)
 */
 static void write_reg(VDP *vdp, uint8_t reg, uint8_t byte)
 {
-    if (reg == 0x01 && (vdp->regs[reg] & 0x40) != (byte & 0x40))
-        toggle_display_visibility(vdp, byte & 0x40);
     vdp->regs[reg] = byte;
 }
 

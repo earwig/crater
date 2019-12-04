@@ -159,8 +159,16 @@ static void setup_sdl(Config *config)
 */
 static void draw_frame()
 {
-    SDL_UpdateTexture(emu.texture, NULL, emu.pixels,
-        GG_SCREEN_WIDTH * sizeof(uint32_t));
+    void *pixels;
+    int pitch;
+    if (SDL_LockTexture(emu.texture, NULL, &pixels, &pitch) < 0)
+        FATAL("SDL failed to lock texture: %s", SDL_GetError());
+    if (pitch != sizeof(uint32_t) * GG_SCREEN_WIDTH)
+        FATAL("SDL returned an unexpected texture pitch: %d, expected %zu",
+            pitch, sizeof(uint32_t) * GG_SCREEN_WIDTH);
+    memcpy(pixels, emu.pixels, sizeof(uint32_t) * GG_SCREEN_WIDTH * GG_SCREEN_HEIGHT);
+    SDL_UnlockTexture(emu.texture);
+
     SDL_SetRenderDrawColor(emu.renderer, 0x00, 0x00, 0x00, 0xFF);
     SDL_RenderClear(emu.renderer);
     SDL_RenderCopy(emu.renderer, emu.texture, NULL, NULL);
